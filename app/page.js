@@ -6,6 +6,9 @@ import Image from "next/image";
 import Image1 from "@/public/images/sliders/Luxury-Interior-Of-Sheikh-Zayed-Grand-Mosque-Abu-Dhabi.webp";
 import Image2 from "@/public/images/sliders/Ortakoy-Mosque-Interior.webp";
 import Image3 from "@/public/images/sliders/Inside-the-Grand-Mosque.jpg";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export default function HomePage() {
   const sliderSettings = {
@@ -55,6 +58,8 @@ export default function HomePage() {
   ];
   return (
     <>
+      <Navbar />
+
       <section className="hero-slider">
         <Slider {...sliderSettings}>
           {slides.map((slide, index) => (
@@ -71,9 +76,9 @@ export default function HomePage() {
                 <div className="slide-content">
                   <h2>{slide.title}</h2>
                   <p>{slide.description}</p>
-                  <a href="#" className="btn-primary">
+                  <Link href="/auth/signup" className="btn-primary">
                     {slide.cta}
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -192,67 +197,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <footer className="footer">
-        <div className="container footer-container">
-          <div className="footer-section">
-            <h3>About Us</h3>
-            <p>
-              At Mosque Match, we are dedicated to fostering meaningful
-              connections within the Muslim community. Our platform is designed
-              to empower individuals to discover mosques, connect with fellow
-              muslims, and build lasting relationships grounded in faith and
-              shared values.
-            </p>
-          </div>
-
-          <div className="footer-section">
-            <h3>Sitemap</h3>
-            <ul className="footer-links">
-              <li>
-                <a href="#">Home</a>
-              </li>
-              <li>
-                <a href="#">User Login</a>
-              </li>
-              <li>
-                <a href="#">User Register</a>
-              </li>
-              <li>
-                <a href="#">Imam Login</a>
-              </li>
-              <li>
-                <a href="#">Imam Register</a>
-              </li>
-            </ul>
-          </div>
-
-          <div className="footer-section">
-            <h3>Our Social</h3>
-            <div className="social-links">
-              <a href="#">
-                <i className="fab fa-facebook-f"></i>
-              </a>
-              <a href="#">
-                <i className="fab fa-twitter"></i>
-              </a>
-              <a href="#">
-                <i className="fab fa-youtube"></i>
-              </a>
-              <a href="#">
-                <i className="fab fa-instagram"></i>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div className="copyright container">
-          <p>Copyright 2025 MosqueMatch.Co. All Rights are reserved</p>
-          <div className="terms">
-            <a href="#">Privacy Policy</a> | <a href="#">Terms of use</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

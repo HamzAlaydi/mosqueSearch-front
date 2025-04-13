@@ -1,5 +1,6 @@
-import Navbar from "@/components/Navbar";
 import "./globals.css";
+import { ReduxProvider } from "@/redux/Provider";
+import ClientLayout from "@/components/ClientLayout"; // Adjust path if needed
 
 export const metadata = {
   title: "MosqueMatch - Find Your Muslim Partner",
@@ -10,7 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        {/* External CSS for slick carousel and font-awesome */}
+        {/* External CSS */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.css"
@@ -25,10 +26,11 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <Navbar />
-        {children}
+        <ReduxProvider>
+          <ClientLayout>{children}</ClientLayout>
+        </ReduxProvider>
 
-        {/* JS Scripts for jQuery & slick-carousel */}
+        {/* Scripts */}
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.js"></script>
       </body>

@@ -20,13 +20,12 @@ export default function Navbar() {
         </div>
 
         <div className={`navbar-links ${isMenuOpen ? "active" : ""}`}>
-          <Link href="/login" className="btn">
+          <Link href="/auth/login" className="btn">
             Login
           </Link>
-          <Link href="/signup" className="btn">
+          <Link href="/auth/signup" className="btn">
             SignUp
           </Link>
-          <Link href="/imam-login">Login Imam</Link>
         </div>
 
         <div className="mobile-toggle" onClick={toggleMenu}>
