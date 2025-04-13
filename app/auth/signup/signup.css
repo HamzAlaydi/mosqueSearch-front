@@ -287,6 +287,6 @@
 }
 .form-navigation {
   display: flex;
-  justify-content:space-evenly;
+  justify-content: space-evenly;
   align-items: center;
 }

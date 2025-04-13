@@ -1,0 +1,99 @@
+"use client";
+import { useState, useEffect } from "react";
+import Image from "next/image";
+
+const AvatarUpload = ({ field, form, preview, setFieldValue }) => {
+  const [previewUrl, setPreviewUrl] = useState(preview || "");
+
+  // Update preview when the prop changes (e.g., when navigating between steps)
+  useEffect(() => {
+    setPreviewUrl(preview);
+  }, [preview]);
+
+  const handleChange = (event) => {
+    const file = event.currentTarget.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.match('image/jpeg|image/png|image/gif')) {
+        form.setFieldError(field.name, "Please upload a valid image file (JPEG, PNG, GIF)");
+        return;
+      }
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        form.setFieldError(field.name, "Image must be smaller than 5MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target.result;
+        setPreviewUrl(result);
+        setFieldValue("profilePicturePreview", result);
+        setFieldValue(field.name, file);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemove = () => {
+    setPreviewUrl("");
+    setFieldValue("profilePicturePreview", "");
+    setFieldValue(field.name, null);
+  };
+
+  return (
+    <div className="whatsapp-avatar-upload">
+      <div className="avatar-container">
+        <div
+          className="avatar-preview rounded-full w-24 h-24 relative overflow-hidden mx-auto"
+          style={{
+            backgroundImage: previewUrl
+              ? `url(${previewUrl})`
+              : "url(/images/default-avatar.jpg)",
+            backgroundSize: "cover",
+            backgroundPosition: "center"
+          }}
+        >
+          <div className="edit-overlay absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            <input
+              type="file"
+              name={field.name}
+              id={field.name}
+              accept="image/png, image/jpeg, image/gif"
+              onChange={handleChange}
+              className="avatar-input hidden"
+            />
+            <label htmlFor={field.name} className="edit-button text-white cursor-pointer">
+              <i className="fas fa-camera text-xl"></i>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div className="upload-instructions text-center mt-2">
+        <p className="text-sm text-gray-600">Tap to change profile photo</p>
+        {field.value && field.value.name && (
+          <p className="file-name text-xs text-gray-500">{field.value.name}</p>
+        )}
+      </div>
+      {previewUrl && (
+        <div className="text-center mt-2">
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="text-red-500 text-sm hover:text-red-700"
+          >
+            Remove Photo
+          </button>
+        </div>
+      )}
+      {form.errors[field.name] && (
+        <div className="error-message text-red-500 text-sm text-center mt-1">
+          {form.errors[field.name]}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AvatarUpload;

@@ -1,47 +1,51 @@
-import { createSlice } from '@reduxjs/toolkit';
+// redux/auth/authSlice.js
+import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
+  token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
   user: null,
-  token: null,
-  isLoading: false,
+  isAuthenticated:
+    typeof window !== "undefined" ? !!localStorage.getItem("token") : false,
+  loading: false,
   error: null,
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
-    logout: (state) => {
-      state.user = null;
-      state.token = null;
+    setCredentials: (state, action) => {
+      const { token, user } = action.payload;
+      state.token = token;
+      state.user = user;
+      state.isAuthenticated = true;
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", token);
+      }
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addMatcher(
-        (action) => action.type.endsWith('/pending'),
-        (state) => {
-          state.isLoading = true;
-          state.error = null;
-        }
-      )
-      .addMatcher(
-        (action) => action.type.endsWith('/fulfilled'),
-        (state, action) => {
-          state.isLoading = false;
-          state.user = action.payload.user;
-          state.token = action.payload.token;
-        }
-      )
-      .addMatcher(
-        (action) => action.type.endsWith('/rejected'),
-        (state, action) => {
-          state.isLoading = false;
-          state.error = action.error.message;
-        }
-      );
+    logoutUser: (state) => {
+      state.token = null;
+      state.user = null;
+      state.isAuthenticated = false;
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+      }
+    },
+    setUser: (state, action) => {
+      state.user = action.payload;
+    },
+    setLoading: (state, action) => {
+      state.loading = action.payload;
+    },
+    setError: (state, action) => {
+      state.error = action.payload;
+    },
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { setCredentials, logoutUser, setUser, setLoading, setError } =
+  authSlice.actions;
+
 export default authSlice.reducer;

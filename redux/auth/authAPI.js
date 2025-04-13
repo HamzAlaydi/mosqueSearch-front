@@ -1,35 +1,73 @@
+// redux/auth/authAPI.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { setCredentials, logoutUser } from "./authSlice";
+import { rootRoute } from "@/shared/constants/backendLink";
 
-export const authApi = createApi({
-  reducerPath: "authApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "/api/" }),
+export const authAPI = createApi({
+  reducerPath: "authAPI",
+  baseQuery: fetchBaseQuery({
+    baseUrl: rootRoute,
+    prepareHeaders: (headers, { getState }) => {
+      const token = getState().auth.token;
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials) => ({
-        url: "auth/login",
+        url: "/auth/login",
         method: "POST",
         body: credentials,
       }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setCredentials(data));
+        } catch (error) {
+          // Handle error if needed
+        }
+      },
     }),
     signup: builder.mutation({
-      query: (userData) => ({
-        url: "auth/signup",
+      query: ({ url, body }) => ({
+        url,
         method: "POST",
-        body: userData,
+        body,
+        formData: true,
       }),
     }),
-    verifyEmail: builder.mutation({
-      query: ({ token }) => ({
-        url: "auth/verify-email",
+    logout: builder.mutation({
+      query: () => ({
+        url: "/auth/logout",
         method: "POST",
-        body: { token },
       }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(logoutUser());
+        } catch (error) {
+          // Handle error if needed
+        }
+      },
     }),
-    resendVerification: builder.mutation({
+    getUserProfile: builder.query({
+      query: () => "/user/profile",
+    }),
+    forgotPassword: builder.mutation({
       query: (email) => ({
-        url: "auth/resend-verification",
+        url: "/auth/forgot-password",
         method: "POST",
         body: { email },
+      }),
+    }),
+    resetPassword: builder.mutation({
+      query: ({ token, password }) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body: { token, password },
       }),
     }),
   }),
@@ -38,6 +76,8 @@ export const authApi = createApi({
 export const {
   useLoginMutation,
   useSignupMutation,
-  useVerifyEmailMutation,
-  useResendVerificationMutation,
-} = authApi;
+  useLogoutMutation,
+  useGetUserProfileQuery,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+} = authAPI;
