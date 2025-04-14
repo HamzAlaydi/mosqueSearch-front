@@ -12,7 +12,11 @@ const FilterTag = ({ category, value, removeFilter }) => (
   </div>
 );
 
-export default function ActiveFilters({ activeFilters, removeFilter, clearAllFilters }) {
+export default function ActiveFilters({
+  activeFilters,
+  removeFilter,
+  clearAllFilters,
+}) {
   // Skip rendering if no active filters
   if (
     activeFilters.prayer.length === 0 &&
@@ -54,7 +58,7 @@ export default function ActiveFilters({ activeFilters, removeFilter, clearAllFil
       {activeFilters.distance && (
         <FilterTag
           category="distance"
-          value={`Within ${activeFilters.distance}km`}
+          value={`Within ${activeFilters.distance} miles`}
           removeFilter={removeFilter}
         />
       )}

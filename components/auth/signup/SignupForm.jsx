@@ -13,6 +13,7 @@ import SignupStep5 from "./SignupStep5";
 import SignupStep6 from "./SignupStep6";
 import SignupStep7 from "./SignupStep7";
 import SignupStep8 from "./SignupStep8";
+import SignupStep9 from "./SignupStep9"; // Add the new step
 import ProgressBar from "@/shared/ui/ProgressBar";
 import Link from "next/link";
 import { rootRoute } from "@/shared/constants/backendLink";
@@ -24,27 +25,30 @@ const SignupForm = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
 
-  const totalSteps = 8;
+  const totalSteps = 9; // Updated total steps
 
-  const nextStep = () => dispatch(setStep(currentStep + 1)); 
+  const nextStep = () => dispatch(setStep(currentStep + 1));
   const prevStep = () => dispatch(setStep(currentStep - 1));
 
   const handleSubmit = async (values, { setSubmitting, setErrors }) => {
     try {
       const finalData = { ...formData, ...values };
       const formDataToSend = new FormData();
-      console.log({formDataToSend});
 
       Object.keys(finalData).forEach((key) => {
         if (key === "profilePicture" && finalData[key]) {
           formDataToSend.append(key, finalData[key]);
-        } else if (typeof finalData[key] !== 'undefined' && finalData[key] !== null) {
+        } else if (key === "attachedMosques" && finalData[key]) {
+          // Convert attached mosques array to JSON string before sending
+          formDataToSend.append(key, JSON.stringify(finalData[key]));
+        } else if (
+          typeof finalData[key] !== "undefined" &&
+          finalData[key] !== null
+        ) {
           // Only append values that are defined
           formDataToSend.append(key, finalData[key]);
         }
       });
-      console.log({formDataToSend});
-      
 
       const response = await signup({
         url: `${rootRoute}/auth/signup`,
@@ -97,34 +101,73 @@ const SignupForm = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>{currentStep === 1 ? "Create Account" : "Complete Your Profile"}</h1>
+          <h1>
+            {currentStep === 1
+              ? "Create Account"
+              : currentStep === 9
+              ? "Connect with Mosques"
+              : "Complete Your Profile"}
+          </h1>
           <p>
             Step {currentStep} of {totalSteps}
           </p>
           <ProgressBar step={currentStep} totalSteps={totalSteps} />
         </div>
 
-        {currentStep === 1 && <SignupStep1 nextStep={handleStepSubmit} formData={formData} />}
+        {currentStep === 1 && (
+          <SignupStep1 nextStep={handleStepSubmit} formData={formData} />
+        )}
         {currentStep === 2 && (
-          <SignupStep2 nextStep={handleStepSubmit} prevStep={prevStep} formData={formData} />
+          <SignupStep2
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
         )}
         {currentStep === 3 && (
-          <SignupStep3 nextStep={handleStepSubmit} prevStep={prevStep} formData={formData} />
+          <SignupStep3
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
         )}
         {currentStep === 4 && (
-          <SignupStep4 nextStep={handleStepSubmit} prevStep={prevStep} formData={formData} />
+          <SignupStep4
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
         )}
         {currentStep === 5 && (
-          <SignupStep5 nextStep={handleStepSubmit} prevStep={prevStep} formData={formData} />
+          <SignupStep5
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
         )}
         {currentStep === 6 && (
-          <SignupStep6 nextStep={handleStepSubmit} prevStep={prevStep} formData={formData} />
+          <SignupStep6
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
         )}
         {currentStep === 7 && (
-          <SignupStep7 nextStep={handleStepSubmit} prevStep={prevStep} formData={formData} />
+          <SignupStep7
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
         )}
         {currentStep === 8 && (
           <SignupStep8
+            nextStep={handleStepSubmit}
+            prevStep={prevStep}
+            formData={formData}
+          />
+        )}
+        {currentStep === 9 && (
+          <SignupStep9
             onSubmit={handleSubmit}
             prevStep={prevStep}
             isLoading={isLoading}

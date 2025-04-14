@@ -14,7 +14,7 @@ import {
 
 // Distance Range Slider Component
 const DistanceFilter = ({ value, onChange }) => {
-  const [distance, setDistance] = useState(value || 10);
+  const [distance, setDistance] = useState(value || 6); // Default to 6 miles
 
   const handleChange = (e) => {
     const newValue = parseInt(e.target.value);
@@ -25,12 +25,12 @@ const DistanceFilter = ({ value, onChange }) => {
   return (
     <div className="relative flex flex-col min-w-[120px]">
       <label className="text-xs text-gray-500 mb-1">
-        Distance: {distance} km
+        Distance: {distance} miles
       </label>
       <input
         type="range"
         min="1"
-        max="50"
+        max="30" // Reduced max from 50km to ~30 miles
         value={distance}
         onChange={handleChange}
         className="h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"

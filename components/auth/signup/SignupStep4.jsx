@@ -3,9 +3,15 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import { locationSchema } from "@/shared/constants/validationSchemas";
 import Select from "react-select";
 import makeAnimated from "react-select/animated";
-import { countries, incomeRanges } from "@/shared/constants/signupData";
+import {
+  incomeRanges,
+  marriageTimelineOptions,
+} from "@/shared/constants/signupData";
+import CountrySelect from "@/components/common/CountrySelect";
 
 const animatedComponents = makeAnimated();
+
+// Add marriage timeline options
 
 const SignupStep4 = ({ nextStep, prevStep, formData }) => {
   return (
@@ -25,17 +31,13 @@ const SignupStep4 = ({ nextStep, prevStep, formData }) => {
       {({ setFieldValue, values, isSubmitting }) => (
         <Form className="auth-form">
           <div className="form-group">
-            <label>Citizenship</label>
-            <Select
-              options={countries}
-              value={countries.find((opt) => opt.value === values.citizenship)}
-              onChange={(option) =>
-                setFieldValue("citizenship", option?.value || "")
-              }
-              components={animatedComponents}
-              placeholder="Select your citizenship"
-              className="react-select-container"
-              classNamePrefix="react-select"
+            <label>Citizenship*</label>
+            <CountrySelect
+              name="citizenship"
+              value={values.citizenship}
+              onChange={setFieldValue}
+              placeholder="Search for your citizenship country"
+              isRequired={true}
             />
             <ErrorMessage
               name="citizenship"
@@ -45,19 +47,13 @@ const SignupStep4 = ({ nextStep, prevStep, formData }) => {
           </div>
 
           <div className="form-group">
-            <label>Country of Origin</label>
-            <Select
-              options={countries}
-              value={countries.find(
-                (opt) => opt.value === values.originCountry
-              )}
-              onChange={(option) =>
-                setFieldValue("originCountry", option?.value || "")
-              }
-              components={animatedComponents}
-              placeholder="Select your country of origin"
-              className="react-select-container"
-              classNamePrefix="react-select"
+            <label>Country of Origin*</label>
+            <CountrySelect
+              name="originCountry"
+              value={values.originCountry}
+              onChange={setFieldValue}
+              placeholder="Search for your country of origin"
+              isRequired={true}
             />
             <ErrorMessage
               name="originCountry"
@@ -97,13 +93,20 @@ const SignupStep4 = ({ nextStep, prevStep, formData }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="marriageWithin">Looking to marry within</label>
-            <Field
-              type="text"
-              name="marriageWithin"
-              id="marriageWithin"
-              className="form-input"
-              placeholder="E.g., my community, any Muslim, etc."
+            <label>Looking to marry within</label>
+            <Select
+              options={marriageTimelineOptions}
+              value={marriageTimelineOptions.find(
+                (opt) => opt.value === values.marriageWithin
+              )}
+              onChange={(option) =>
+                setFieldValue("marriageWithin", option?.value || "")
+              }
+              components={animatedComponents}
+              placeholder="Select your marriage timeline"
+              className="react-select-container"
+              classNamePrefix="react-select"
+              isClearable
             />
           </div>
 

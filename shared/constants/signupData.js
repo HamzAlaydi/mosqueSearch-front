@@ -101,3 +101,10 @@ export const phoneUsage = [
   { value: "3h", label: "2-3 hours" },
   { value: "4h", label: "More than 3 hours" },
 ];
+
+export const marriageTimelineOptions = [
+  { value: "this_year", label: "This year" },
+  { value: "next_year", label: "Next year" },
+  { value: "asap", label: "As soon as possible" },
+  { value: "any_time", label: "Any time" },
+];

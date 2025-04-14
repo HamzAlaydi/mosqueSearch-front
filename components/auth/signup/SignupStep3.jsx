@@ -11,6 +11,14 @@ import {
 
 const animatedComponents = makeAnimated();
 
+// Define sector options
+const sectorOptions = [
+  { value: "muslim", label: "Muslim" },
+  { value: "sunni", label: "Sunni" },
+  { value: "shia", label: "Shia" },
+  { value: "other", label: "Other" },
+];
+
 const SignupStep3 = ({ nextStep, prevStep, formData }) => {
   return (
     <Formik
@@ -52,13 +60,23 @@ const SignupStep3 = ({ nextStep, prevStep, formData }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="sector">Sector</label>
-            <Field
-              type="text"
+            <label>Sector*</label>
+            <Select
+              options={sectorOptions}
+              value={sectorOptions.find((opt) => opt.value === values.sector)}
+              onChange={(option) =>
+                setFieldValue("sector", option?.value || "")
+              }
+              components={animatedComponents}
+              placeholder="Select your Islamic sector"
+              className="react-select-container"
+              classNamePrefix="react-select"
+              isSearchable={false}
+            />
+            <ErrorMessage
               name="sector"
-              id="sector"
-              className="form-input"
-              placeholder="Enter your sector (optional)"
+              component="div"
+              className="error-message"
             />
           </div>
 

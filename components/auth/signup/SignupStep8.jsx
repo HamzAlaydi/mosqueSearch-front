@@ -4,7 +4,7 @@ import { finalStepSchema } from "@/shared/constants/validationSchemas";
 import AvatarUpload from "@/shared/ui/AvatarUpload";
 import Link from "next/link";
 
-const SignupStep8 = ({ onSubmit, prevStep, isLoading, formData }) => {
+const SignupStep8 = ({ nextStep, prevStep, formData }) => {
   return (
     <Formik
       initialValues={{
@@ -13,10 +13,10 @@ const SignupStep8 = ({ onSubmit, prevStep, isLoading, formData }) => {
         terms: formData.terms || false,
       }}
       validationSchema={finalStepSchema}
-      onSubmit={(values, actions) => {
-        onSubmit(values, actions);
+      onSubmit={(values) => {
+        nextStep(values); // Changed to use nextStep instead of onSubmit
       }}
-      enableReinitialize={true} // Enable re-initialization when formData changes
+      enableReinitialize={true}
     >
       {({ setFieldValue, values, isSubmitting }) => (
         <Form className="auth-form">
@@ -59,7 +59,6 @@ const SignupStep8 = ({ onSubmit, prevStep, isLoading, formData }) => {
             <button
               type="button"
               onClick={() => {
-                // Store current values in formData before going back
                 prevStep({
                   profilePicture: values.profilePicture,
                   profilePicturePreview: values.profilePicturePreview,
@@ -73,11 +72,9 @@ const SignupStep8 = ({ onSubmit, prevStep, isLoading, formData }) => {
             <button
               type="submit"
               className="auth-button"
-              disabled={isSubmitting || isLoading}
+              disabled={isSubmitting}
             >
-              {isSubmitting || isLoading
-                ? "Creating Account..."
-                : "Complete Registration"}
+              Next
             </button>
           </div>
         </Form>

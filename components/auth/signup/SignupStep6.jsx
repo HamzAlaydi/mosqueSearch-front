@@ -43,7 +43,7 @@ const SignupStep6 = ({ nextStep, prevStep, formData }) => {
           </div>
 
           <div className="form-group">
-            <label>Ethnicity</label>
+            <label>Ethnicity*</label>
             <Select
               options={ethnicities}
               value={ethnicities.find((opt) => opt.value === values.ethnicity)}

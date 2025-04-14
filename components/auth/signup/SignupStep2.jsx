@@ -86,7 +86,7 @@ const SignupStep2 = ({ nextStep, prevStep, formData }) => {
           </div>
 
           <div className="form-group">
-            <label>First Language</label>
+            <label>First Language*</label>
             <Select
               options={languages}
               value={languages.find(

@@ -22,7 +22,7 @@ export default function MosqueSearchPage() {
     prayer: [],
     facilities: [],
     rating: null,
-    distance: 10, // Default single distance value
+    distance: 6, // Default single distance value in miles
   });
 
   const toggleFilter = () => {
@@ -72,7 +72,7 @@ export default function MosqueSearchPage() {
       prayer: [],
       facilities: [],
       rating: null,
-      distance: 10, // Reset to default distance
+      distance: 6, // Reset to default distance in miles
     });
     setActiveCategory("all");
   };
@@ -258,7 +258,9 @@ export default function MosqueSearchPage() {
           <button
             onClick={toggleFilter}
             className="bg-primary text-white rounded-full px-6 py-3 shadow-lg flex items-center"
-          >Filter</button>
+          >
+            Filter
+          </button>
         </div>
       </div>
     </>
