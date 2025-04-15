@@ -1,6 +1,8 @@
 // shared/constants/validationSchemas.js
 import * as Yup from "yup";
 
+
+
 export const basicInfoSchema = Yup.object().shape({
   gender: Yup.string().required("Gender selection is required"),
   email: Yup.string()
@@ -14,6 +16,16 @@ export const basicInfoSchema = Yup.object().shape({
         .required("Wali email is required"),
     otherwise: (schema) => schema.notRequired(),
   }),
+  waliName: Yup.string().when("gender", {
+    is: "female",
+    then: (schema) => schema.required("Wali name is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  waliPhone: Yup.string().when("gender", {
+    is: "female",
+    then: (schema) => schema.required("Wali phone number is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
   password: Yup.string()
     .min(8, "Password must contain at least 8 characters")
     .required("Password is required"),
@@ -21,6 +33,8 @@ export const basicInfoSchema = Yup.object().shape({
     .oneOf([Yup.ref("password"), null], "Passwords do not match")
     .required("Please confirm your password"),
 });
+
+// Rest of the validation schemas remain the same
 
 export const educationSchema = Yup.object().shape({
   educationLevel: Yup.string(),

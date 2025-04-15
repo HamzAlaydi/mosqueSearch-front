@@ -19,7 +19,7 @@ const Login = () => {
 
   useEffect(() => {
     if (token) {
-      router.push("/dashboard");
+      router.push("/mosqueSearch");
     }
   }, [token, router]);
 
@@ -37,7 +37,7 @@ const Login = () => {
           onSubmit={async (values, { setSubmitting, setErrors }) => {
             try {
               await login(values).unwrap();
-              router.push("/dashboard");
+              router.push("/mosqueSearch");
             } catch (error) {
               setErrors({ email: " ", password: "Invalid credentials" });
             } finally {

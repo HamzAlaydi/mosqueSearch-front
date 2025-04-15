@@ -8,15 +8,53 @@ const initialState = {
     email: "",
     password: "",
     confirmPassword: "",
-
-    // Personal info
-    firstName: "",
-    lastName: "",
     gender: "",
 
-    // Education & Work
-    education: "",
-    occupation: "",
+    // Wali information (for female users)
+    waliName: "",
+    waliPhone: "",
+    waliEmail: "",
+
+    // Education & Language
+    educationLevel: "",
+    profession: "",
+    jobTitle: "",
+    firstLanguage: "",
+    secondLanguage: "",
+
+    // Religious info
+    religiousness: "",
+    sector: "",
+    isRevert: false,
+    keepsHalal: false,
+    prayerFrequency: "",
+    quranReading: "",
+
+    // Location & Financial
+    citizenship: "",
+    originCountry: "",
+    willingToRelocate: false,
+    income: "",
+    marriageWithin: "",
+
+    // Family
+    maritalStatus: "",
+    childrenDesire: "",
+    hasChildren: "",
+    livingArrangement: "",
+    height: "",
+
+    // Physical & Habits
+    build: "",
+    ethnicity: "",
+    smokes: false,
+    drinks: false,
+    disability: false,
+    phoneUsage: "",
+
+    // Gender-specific attributes
+    hasBeard: false,
+    wearsHijab: false,
 
     // Location
     currentLocation: "",
@@ -27,10 +65,6 @@ const initialState = {
     tagLine: "",
     about: "",
     lookingFor: "",
-
-    // Gender-specific
-    hasBeard: false,
-    wearsHijab: false,
 
     // Profile picture
     profilePicture: null,

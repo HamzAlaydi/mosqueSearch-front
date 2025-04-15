@@ -1,28 +1,36 @@
 // components/auth/signup/SignupStep2.jsx
 "use client";
 import { Formik, Form, Field, ErrorMessage } from "formik";
-import { educationSchema } from "@/shared/constants/validationSchemas";
-import Select from "react-select";
-import makeAnimated from "react-select/animated";
-import {
-  educationLevels,
-  professions,
-  languages,
-} from "@/shared/constants/signupData";
-
-const animatedComponents = makeAnimated();
+import { useState, useMemo } from "react";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
+import CountrySelect from "@/components/common/CountrySelect";
+import LocationSelect from "@/components/common/LocationSelect";
+import { additionalInfoSchema } from "@/shared/constants/validationSchemas";
 
 const SignupStep2 = ({ nextStep, prevStep, formData }) => {
+  const [birthDate, setBirthDate] = useState(
+    formData.birthDate ? dayjs(formData.birthDate) : null
+  );
+
+  // Gender-specific fields
+  const isGenderMale = formData.gender === "male";
+
   return (
     <Formik
       initialValues={{
-        educationLevel: formData.educationLevel || "",
-        profession: formData.profession || "",
-        jobTitle: formData.jobTitle || "",
-        firstLanguage: formData.firstLanguage || "",
-        secondLanguage: formData.secondLanguage || "",
+        currentLocation: formData.currentLocation || "",
+        countryOfBirth: formData.countryOfBirth || "",
+        birthDate: formData.birthDate || "",
+        tagLine: formData.tagLine || "",
+        about: formData.about || "",
+        lookingFor: formData.lookingFor || "",
+        // Gender-specific fields
+        hasBeard: isGenderMale ? formData.hasBeard || false : false,
       }}
-      validationSchema={educationSchema}
+      validationSchema={additionalInfoSchema}
       onSubmit={(values) => {
         nextStep(values);
       }}
@@ -30,98 +38,128 @@ const SignupStep2 = ({ nextStep, prevStep, formData }) => {
       {({ setFieldValue, values, isSubmitting }) => (
         <Form className="auth-form">
           <div className="form-group">
-            <label>Education Level</label>
-            <Select
-              options={educationLevels}
-              value={educationLevels.find(
-                (opt) => opt.value === values.educationLevel
-              )}
-              onChange={(option) =>
-                setFieldValue("educationLevel", option.value)
-              }
-              components={animatedComponents}
-              placeholder="Select education level"
-              className="react-select-container"
-              classNamePrefix="react-select"
+            <label>Where do you live?*</label>
+            <LocationSelect
+              name="currentLocation"
+              value={values.currentLocation}
+              onChange={setFieldValue}
+              placeholder="Start typing your location..."
+              isRequired={true}
             />
             <ErrorMessage
-              name="educationLevel"
+              name="currentLocation"
               component="div"
               className="error-message"
             />
           </div>
 
           <div className="form-group">
-            <label>Profession</label>
-            <Select
-              options={professions}
-              value={professions.find((opt) => opt.value === values.profession)}
-              onChange={(option) => setFieldValue("profession", option.value)}
-              components={animatedComponents}
-              placeholder="Select your profession"
-              className="react-select-container"
-              classNamePrefix="react-select"
+            <label>Country of Birth*</label>
+            <CountrySelect
+              name="countryOfBirth"
+              value={values.countryOfBirth}
+              onChange={setFieldValue}
+              placeholder="Select country of birth"
+              isRequired={true}
             />
             <ErrorMessage
-              name="profession"
+              name="countryOfBirth"
               component="div"
               className="error-message"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="jobTitle">Job Title</label>
+            <label>Date of Birth*</label>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                value={birthDate}
+                onChange={(date) => {
+                  setBirthDate(date);
+                  setFieldValue("birthDate", date ? date.toISOString() : "");
+                }}
+                format="DD/MM/YYYY"
+                maxDate={dayjs()}
+                sx={{
+                  width: "100%",
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    height: "42px",
+                    fontSize: "14px",
+                    "& fieldset": {
+                      borderColor: "#e2e8f0",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "#cbd5e1",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#3b82f6",
+                    },
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "14px",
+                  },
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: "small",
+                    placeholder: "DD/MM/YYYY",
+                    className: "form-input date-input",
+                  },
+                }}
+              />
+            </LocalizationProvider>
+            <ErrorMessage
+              name="birthDate"
+              component="div"
+              className="error-message"
+            />
+          </div>
+
+          {/* Gender-specific questions */}
+          {isGenderMale && (
+            <div className="form-checkbox-group">
+              <Field
+                type="checkbox"
+                name="hasBeard"
+                id="hasBeard"
+                className="form-checkbox"
+              />
+              <label htmlFor="hasBeard">Do you have a beard?</label>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="tagLine">Tag Line</label>
             <Field
-              type="text"
-              name="jobTitle"
-              id="jobTitle"
+              name="tagLine"
+              as="textarea"
+              rows="1"
               className="form-input"
-              placeholder="Enter your job title"
-            />
-            <ErrorMessage
-              name="jobTitle"
-              component="div"
-              className="error-message"
+              placeholder="A short tagline about yourself"
             />
           </div>
 
           <div className="form-group">
-            <label>First Language*</label>
-            <Select
-              options={languages}
-              value={languages.find(
-                (opt) => opt.value === values.firstLanguage
-              )}
-              onChange={(option) =>
-                setFieldValue("firstLanguage", option.value)
-              }
-              components={animatedComponents}
-              placeholder="Select your first language"
-              className="react-select-container"
-              classNamePrefix="react-select"
-            />
-            <ErrorMessage
-              name="firstLanguage"
-              component="div"
-              className="error-message"
+            <label htmlFor="about">A Little About You</label>
+            <Field
+              name="about"
+              as="textarea"
+              rows="3"
+              className="form-input"
+              placeholder="Describe yourself in a few sentences"
             />
           </div>
 
           <div className="form-group">
-            <label>Second Language</label>
-            <Select
-              options={languages}
-              value={languages.find(
-                (opt) => opt.value === values.secondLanguage
-              )}
-              onChange={(option) =>
-                setFieldValue("secondLanguage", option.value)
-              }
-              components={animatedComponents}
-              placeholder="Select your second language"
-              isClearable
-              className="react-select-container"
-              classNamePrefix="react-select"
+            <label htmlFor="lookingFor">What I'm Looking For</label>
+            <Field
+              name="lookingFor"
+              as="textarea"
+              rows="3"
+              className="form-input"
+              placeholder="Describe what you're looking for in a partner"
             />
           </div>
 

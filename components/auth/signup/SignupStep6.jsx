@@ -1,3 +1,4 @@
+// components/auth/signup/SignupStep6.jsx
 "use client";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { physicalSchema } from "@/shared/constants/validationSchemas";
@@ -12,6 +13,8 @@ import {
 const animatedComponents = makeAnimated();
 
 const SignupStep6 = ({ nextStep, prevStep, formData }) => {
+  const isGenderFemale = formData.gender === "female";
+
   return (
     <Formik
       initialValues={{
@@ -21,6 +24,7 @@ const SignupStep6 = ({ nextStep, prevStep, formData }) => {
         drinks: formData.drinks || false,
         disability: formData.disability || false,
         phoneUsage: formData.phoneUsage || "",
+        wearsHijab: isGenderFemale ? formData.wearsHijab || false : false,
       }}
       validationSchema={physicalSchema}
       onSubmit={(values) => {
@@ -91,6 +95,18 @@ const SignupStep6 = ({ nextStep, prevStep, formData }) => {
             />
             <label htmlFor="disability">Do you have any disability?</label>
           </div>
+
+          {isGenderFemale && (
+            <div className="form-checkbox-group">
+              <Field
+                type="checkbox"
+                name="wearsHijab"
+                id="wearsHijab"
+                className="form-checkbox"
+              />
+              <label htmlFor="wearsHijab">Do you wear hijab?</label>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Phone Usage</label>

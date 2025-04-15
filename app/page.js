@@ -58,8 +58,6 @@ export default function HomePage() {
   ];
   return (
     <>
-      <Navbar />
-
       <section className="hero-slider">
         <Slider {...sliderSettings}>
           {slides.map((slide, index) => (

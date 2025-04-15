@@ -10,7 +10,7 @@ import {
 } from "@react-google-maps/api";
 import { Search, MapPin } from "lucide-react";
 import * as Yup from "yup";
-import '@/app/mosqueSearch/mosqueSearchPage.css'
+import "@/app/mosqueSearch/mosqueSearchPage.css";
 const mapContainerStyle = {
   width: "100%",
   height: "400px",
@@ -335,7 +335,9 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
 
               {/* Map */}
               <div className="mb-4">
-                <LoadScript googleMapsApiKey={googleMapsApiKey}>
+                <LoadScript
+                  googleMapsApiKey={"AIzaSyDWxhNp15n52e7kPQkfTTumYZT9E20cMHg"}
+                >
                   <GoogleMap
                     mapContainerStyle={mapContainerStyle}
                     center={mapCenter}

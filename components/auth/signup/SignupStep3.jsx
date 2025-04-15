@@ -7,17 +7,11 @@ import {
   religiousnessOptions,
   prayerFrequency,
   quranReading,
+  sectorOptions,
 } from "@/shared/constants/signupData";
 
 const animatedComponents = makeAnimated();
 
-// Define sector options
-const sectorOptions = [
-  { value: "muslim", label: "Muslim" },
-  { value: "sunni", label: "Sunni" },
-  { value: "shia", label: "Shia" },
-  { value: "other", label: "Other" },
-];
 
 const SignupStep3 = ({ nextStep, prevStep, formData }) => {
   return (

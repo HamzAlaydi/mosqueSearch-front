@@ -1,4 +1,8 @@
 // Dummy data for dropdowns (replace with API calls in real implementation)
+export const genderOptions = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+];
 export const educationLevels = [
   { value: "preparatory", label: "Preparatory or Junior" },
   { value: "high_school", label: "High School" },
@@ -56,10 +60,10 @@ export const countries = [
 ];
 
 export const incomeRanges = [
-  { value: "under_20k", label: "Under $20,000" },
-  { value: "20k_50k", label: "$20,000 - $50,000" },
-  { value: "50k_100k", label: "$50,000 - $100,000" },
-  { value: "over_100k", label: "Over $100,000" },
+  { value: "under_20k", label: "Under £20,000" },
+  { value: "20k_50k", label: "£20,000 - £50,000" },
+  { value: "50k_100k", label: "£50,000 - £100,000" },
+  { value: "over_100k", label: "Over £100,000" },
 ];
 
 export const maritalStatuses = [
@@ -71,7 +75,7 @@ export const maritalStatuses = [
 export const childrenOptions = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
-  { value: "want", label: "Would like to have" },
+  { value: "maybe", label: "Maybe" },
 ];
 
 export const livingArrangements = [
@@ -103,8 +107,14 @@ export const phoneUsage = [
 ];
 
 export const marriageTimelineOptions = [
+  { value: "any_time", label: "Any time" },
+  { value: "asap", label: "As soon as possible" },
   { value: "this_year", label: "This year" },
   { value: "next_year", label: "Next year" },
-  { value: "asap", label: "As soon as possible" },
-  { value: "any_time", label: "Any time" },
+];
+
+export const sectorOptions = [
+  { value: "sunni", label: "Sunni" },
+  { value: "shia", label: "Shia" },
+  { value: "other", label: "Other" },
 ];

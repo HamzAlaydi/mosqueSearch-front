@@ -116,7 +116,7 @@ export default function MapView({
   return (
     <div className="sticky top-20 md:w-2/5 lg:w-5/12 h-[calc(100vh-144px)] shadow-inner">
       <LoadScript
-        googleMapsApiKey={googleMapsApiKey}
+        googleMapsApiKey={"AIzaSyDWxhNp15n52e7kPQkfTTumYZT9E20cMHg"}
         onLoad={() => {
           console.log("Google Maps script loaded");
           loadingRef.current = true;
