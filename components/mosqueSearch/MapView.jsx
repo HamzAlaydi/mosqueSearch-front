@@ -7,6 +7,7 @@ import {
   Marker,
   InfoWindow,
 } from "@react-google-maps/api";
+import { GOOGLE_API } from "@/shared/constants/backendLink";
 
 const mapContainerStyle = {
   width: "100%",
@@ -33,8 +34,6 @@ export default function MapView({
   const [isLoaded, setIsLoaded] = useState(false);
   const mapRef = useRef(null);
   const loadingRef = useRef(false);
-
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   // Handle mosque selection
   useEffect(() => {
@@ -116,7 +115,7 @@ export default function MapView({
   return (
     <div className="sticky top-20 md:w-2/5 lg:w-5/12 h-[calc(100vh-144px)] shadow-inner">
       <LoadScript
-        googleMapsApiKey={"AIzaSyDWxhNp15n52e7kPQkfTTumYZT9E20cMHg"}
+        googleMapsApiKey={GOOGLE_API}
         onLoad={() => {
           console.log("Google Maps script loaded");
           loadingRef.current = true;
