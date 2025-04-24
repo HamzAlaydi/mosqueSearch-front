@@ -14,7 +14,10 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
       }}
       validationSchema={finalStepSchema}
       onSubmit={(values) => {
-        nextStep(values); // Changed to use nextStep instead of onSubmit
+        nextStep({
+          ...values,
+          profilePicture: values.profilePicture || null,
+        });
       }}
       enableReinitialize={true}
     >
@@ -25,29 +28,46 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
             <Field
               name="profilePicture"
               component={AvatarUpload}
-              preview={values.profilePicturePreview}
-              setFieldValue={setFieldValue}
+              props={{
+                preview: values.profilePicturePreview,
+                onChange: (file, previewUrl) => {
+                  setFieldValue("profilePicture", file);
+                  setFieldValue("profilePicturePreview", previewUrl);
+                },
+                onClear: () => {
+                  setFieldValue("profilePicture", null);
+                  setFieldValue("profilePicturePreview", "");
+                },
+              }}
+            />
+            <ErrorMessage
+              name="profilePicture"
+              component="div"
+              className="error-message"
             />
           </div>
 
           <div className="form-terms">
-            <Field
-              type="checkbox"
-              id="terms"
-              name="terms"
-              required
-              className="form-checkbox"
-            />
-            <label htmlFor="terms">
-              I agree to the{" "}
-              <Link href="/terms" className="auth-link">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="auth-link">
-                Privacy Policy
-              </Link>
-            </label>
+            <div className="checkbox-group">
+              <Field
+                type="checkbox"
+                id="terms"
+                name="terms"
+                className="form-checkbox"
+                required
+              />
+              <label htmlFor="terms">
+                I agree to the{" "}
+                <Link href="/terms" className="auth-link" target="_blank">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="auth-link" target="_blank">
+                  Privacy Policy
+                </Link>{" "}
+                *
+              </label>
+            </div>
             <ErrorMessage
               name="terms"
               component="div"
@@ -58,20 +78,14 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
           <div className="form-navigation">
             <button
               type="button"
-              onClick={() => {
-                prevStep({
-                  profilePicture: values.profilePicture,
-                  profilePicturePreview: values.profilePicturePreview,
-                  terms: values.terms,
-                });
-              }}
+              onClick={() => prevStep(values)}
               className="auth-button secondary"
             >
               Previous
             </button>
             <button
               type="submit"
-              className="auth-button"
+              className="auth-button primary"
               disabled={isSubmitting}
             >
               Next

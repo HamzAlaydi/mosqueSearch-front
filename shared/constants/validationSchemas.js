@@ -1,8 +1,6 @@
 // shared/constants/validationSchemas.js
 import * as Yup from "yup";
 
-
-
 export const basicInfoSchema = Yup.object().shape({
   gender: Yup.string().required("Gender selection is required"),
   email: Yup.string()
@@ -13,17 +11,17 @@ export const basicInfoSchema = Yup.object().shape({
     then: (schema) =>
       schema
         .email("Please enter a valid email address")
-        .required("Wali email is required"),
+        .required("Wali email is required"), // Required for females
     otherwise: (schema) => schema.notRequired(),
   }),
   waliName: Yup.string().when("gender", {
     is: "female",
-    then: (schema) => schema.required("Wali name is required"),
+    then: (schema) => schema, // Optional
     otherwise: (schema) => schema.notRequired(),
   }),
   waliPhone: Yup.string().when("gender", {
     is: "female",
-    then: (schema) => schema.required("Wali phone number is required"),
+    then: (schema) => schema, // Optional
     otherwise: (schema) => schema.notRequired(),
   }),
   password: Yup.string()
@@ -33,7 +31,6 @@ export const basicInfoSchema = Yup.object().shape({
     .oneOf([Yup.ref("password"), null], "Passwords do not match")
     .required("Please confirm your password"),
 });
-
 // Rest of the validation schemas remain the same
 
 export const educationSchema = Yup.object().shape({
@@ -79,7 +76,7 @@ export const physicalSchema = Yup.object().shape({
 });
 
 export const finalStepSchema = Yup.object().shape({
-  profilePicture: Yup.mixed(),
+  profilePicture: Yup.mixed().nullable(), // Changed to explicitly allow null
   terms: Yup.boolean().required(
     "Acceptance of terms and conditions is required"
   ),

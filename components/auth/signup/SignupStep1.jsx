@@ -66,13 +66,13 @@ const SignupStep1 = ({ nextStep, formData }) => {
           {values.gender === "female" && (
             <>
               <div className="form-group">
-                <label htmlFor="waliName">Wali Name*</label>
+                <label htmlFor="waliName">Wali Name</label> {/* Optional */}
                 <Field
                   type="text"
                   name="waliName"
                   id="waliName"
                   className="form-input"
-                  placeholder="Enter your wali's name"
+                  placeholder="Enter your wali's name (optional)"
                 />
                 <ErrorMessage
                   name="waliName"
@@ -82,13 +82,14 @@ const SignupStep1 = ({ nextStep, formData }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="waliPhone">Wali Phone Number*</label>
+                <label htmlFor="waliPhone">Wali Phone Number</label>{" "}
+                {/* Optional */}
                 <Field
                   type="tel"
                   name="waliPhone"
                   id="waliPhone"
                   className="form-input"
-                  placeholder="Enter your wali's phone number"
+                  placeholder="Enter your wali's phone number (optional)"
                 />
                 <ErrorMessage
                   name="waliPhone"
@@ -98,13 +99,14 @@ const SignupStep1 = ({ nextStep, formData }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="waliEmail">Wali Email*</label>
+                <label htmlFor="waliEmail">Wali Email*</label> {/* Required */}
                 <Field
                   type="email"
                   name="waliEmail"
                   id="waliEmail"
                   className="form-input"
                   placeholder="Enter your wali's email address"
+                  required
                 />
                 <ErrorMessage
                   name="waliEmail"
