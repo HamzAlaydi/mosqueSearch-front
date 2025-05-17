@@ -32,7 +32,7 @@ const DistanceFilter = ({ value, onChange }) => {
       <input
         type="range"
         min="1"
-        max="30" // Reduced max from 50km to ~30 miles
+        max="100"
         value={distance}
         onChange={handleChange}
         className="h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"

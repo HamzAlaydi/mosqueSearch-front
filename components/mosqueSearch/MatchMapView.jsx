@@ -74,7 +74,7 @@ export default function OptimizedMosqueMap({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredMosqueId, setHoveredMosqueId] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [showAttachedMosques, setShowAttachedMosques] = useState(false);
+  const [showAttachedMosques, setShowAttachedMosques] = useState(false); // State to toggle showing only attached mosques
   const mapRef = useRef(null);
 
   // Fetch user profile on component mount
@@ -114,59 +114,68 @@ export default function OptimizedMosqueMap({
       // Pick the source data based on current filter
       let sourceMosques = showAttachedMosques
         ? currentUser?.attachedMosques || []
-        : allMosques;
+        : allMosques; // Default to allMosques if not showing attached
 
-      // Apply standard filtering if not showing attached mosques
+      // Apply standard filtering if not showing attached mosques and filteredMosques is available
       if (!showAttachedMosques && filteredMosques?.length > 0) {
         sourceMosques = filteredMosques;
+      } else if (!showAttachedMosques && !filteredMosques?.length) {
+        // If not showing attached and no filtered mosques, use all mosques
+        sourceMosques = allMosques;
       }
 
       // Process each mosque to ensure it has the required properties
-      return sourceMosques
-        .map((mosque) => {
-          // Handle both {lat, lng} and GeoJSON formats
-          let lat = 0;
-          let lng = 0;
+      return (
+        sourceMosques
+          .map((mosque) => {
+            // Handle both {lat, lng} and GeoJSON formats
+            let lat = 0;
+            let lng = 0;
 
-          if (mosque.location) {
-            if (
-              typeof mosque.location.lat === "number" &&
-              typeof mosque.location.lng === "number"
-            ) {
-              lat = mosque.location.lat;
-              lng = mosque.location.lng;
-            } else if (
-              mosque.location.type === "Point" &&
-              Array.isArray(mosque.location.coordinates) &&
-              mosque.location.coordinates.length >= 2
-            ) {
-              lng = mosque.location.coordinates[0];
-              lat = mosque.location.coordinates[1];
+            if (mosque.location) {
+              if (
+                typeof mosque.location.lat === "number" &&
+                typeof mosque.location.lng === "number"
+              ) {
+                lat = mosque.location.lat;
+                lng = mosque.location.lng;
+              } else if (
+                mosque.location.type === "Point" &&
+                Array.isArray(mosque.location.coordinates) &&
+                mosque.location.coordinates.length >= 2
+              ) {
+                lng = mosque.location.coordinates[0];
+                lat = mosque.location.coordinates[1];
+              }
             }
-          }
 
-          return {
-            ...mosque,
-            id:
-              mosque._id ||
-              mosque.id ||
-              Math.random().toString(36).substr(2, 9),
-            location: { lat, lng },
-            hasFemaleArea:
-              mosque.facilities?.includes("Female Prayer Area") ||
-              mosque.femaleArea ||
-              false,
-            isAttached:
-              attachedMosqueIds.has(mosque._id) ||
-              attachedMosqueIds.has(mosque.id),
-          };
-        })
-        .filter(
-          (mosque) =>
-            mosque.location &&
-            typeof mosque.location.lat === "number" &&
-            typeof mosque.location.lng === "number"
-        );
+            return {
+              ...mosque,
+              // Ensure a unique ID for map keys and lookups
+              id:
+                mosque._id ||
+                mosque.id ||
+                Math.random().toString(36).substr(2, 9),
+              location: { lat, lng },
+              hasFemaleArea:
+                mosque.facilities?.includes("Female Prayer Area") ||
+                mosque.femaleArea || // Assuming 'femaleArea' might be a boolean flag
+                false,
+              isAttached:
+                attachedMosqueIds.has(mosque._id) ||
+                attachedMosqueIds.has(mosque.id),
+            };
+          })
+          // Filter out mosques with invalid or missing location data
+          .filter(
+            (mosque) =>
+              mosque.location &&
+              typeof mosque.location.lat === "number" &&
+              typeof mosque.location.lng === "number" &&
+              !isNaN(mosque.location.lat) && // Ensure coordinates are not NaN
+              !isNaN(mosque.location.lng)
+          )
+      );
     } catch (error) {
       console.error("Error processing mosque data:", error);
       return [];
@@ -179,22 +188,19 @@ export default function OptimizedMosqueMap({
     showAttachedMosques,
   ]);
 
-  // Apply distance filtering
+  // Apply distance filtering (only if not showing attached mosques)
   const mosquesToDisplay = useMemo(() => {
     if (
+      showAttachedMosques || // Don't apply distance filter when showing attached
       !mapCenter ||
       !isLoaded ||
       !window.google?.maps ||
-      !processedMosques.length
+      !processedMosques.length ||
+      distanceRadiusMeters <= 0
     ) {
       return processedMosques;
     }
 
-    if (distanceRadiusMeters <= 0) {
-      return processedMosques;
-    }
-
-    // Apply distance filtering
     const center = new window.google.maps.LatLng(mapCenter.lat, mapCenter.lng);
     return processedMosques.filter((mosque) => {
       const mosqueLocation = new window.google.maps.LatLng(
@@ -208,7 +214,13 @@ export default function OptimizedMosqueMap({
         );
       return distance <= distanceRadiusMeters;
     });
-  }, [processedMosques, mapCenter, distanceRadiusMeters, isLoaded]);
+  }, [
+    processedMosques,
+    mapCenter,
+    distanceRadiusMeters,
+    isLoaded,
+    showAttachedMosques,
+  ]);
 
   // Create marker icons
   const createMarkerIcon = useCallback((mosque, isHovered, isSelected) => {
@@ -282,22 +294,38 @@ export default function OptimizedMosqueMap({
           );
         });
 
-        map.fitBounds(bounds, 50); // 50px padding
-      } else if (mapCenter) {
-        // Fit to radius circle
+        // Avoid zooming to a single point if only one mosque is attached
+        if (processedMosques.length === 1) {
+          map.setCenter(
+            new window.google.maps.LatLng(
+              processedMosques[0].location.lat,
+              processedMosques[0].location.lng
+            )
+          );
+          map.setZoom(15); // A reasonable zoom level for a single marker
+        } else {
+          map.fitBounds(bounds, 50); // 50px padding
+        }
+      } else if (mapCenter && distanceRadiusMeters > 0) {
+        // Fit to radius circle around the map center
         const circle = new window.google.maps.Circle({
           center: mapCenter,
           radius: distanceRadiusMeters,
         });
 
         map.fitBounds(circle.getBounds(), 50);
+      } else if (mapCenter) {
+        // Just set center if no radius or attached mosques
+        map.setCenter(mapCenter);
+        map.setZoom(13); // Default zoom if no bounds to fit
       } else {
-        // Fallback
+        // Fallback to default center if no mapCenter
         map.setCenter(DEFAULT_CENTER);
         map.setZoom(13);
       }
     } catch (error) {
       console.error("Error fitting map to bounds:", error);
+      // Fallback in case of error
       map.setCenter(mapCenter || DEFAULT_CENTER);
       map.setZoom(13);
     }
@@ -314,7 +342,7 @@ export default function OptimizedMosqueMap({
   const handleInfoWindowClose = useCallback(() => {
     setSelectedMosque(null);
     setInfoWindowOpen(false);
-    setHoveredMosqueId(null);
+    setHoveredMosqueId(null); // Also clear hover state on close
   }, []);
 
   // Handle marker click
@@ -328,6 +356,7 @@ export default function OptimizedMosqueMap({
       setSelectedMosque(mosque);
       setInfoWindowOpen(true);
 
+      // Pan to the marker location
       if (map && mosque.location) {
         map.panTo({
           lat: mosque.location.lat,
@@ -338,6 +367,7 @@ export default function OptimizedMosqueMap({
     [map, selectedMosque, handleInfoWindowClose]
   );
 
+  // Handle mosque attachment/detachment
   // Handle mosque attachment/detachment
   const handleAttachToggle = useCallback(
     async (mosque) => {
@@ -350,14 +380,21 @@ export default function OptimizedMosqueMap({
         return;
       }
 
+      // Use the pre-calculated set for efficient lookup
       const isAlreadyAttached =
         attachedMosqueIds.has(mosque.id) || attachedMosqueIds.has(mosque._id);
+
       let updatedAttachedMosques;
 
       if (isAlreadyAttached) {
         // Detach the mosque
         updatedAttachedMosques = (currentUser.attachedMosques || []).filter(
-          (m) => m.id !== mosque.id && m._id !== mosque.id
+          // Filter using both id and _id to ensure removal regardless of how it was stored
+          (m) =>
+            m.id !== mosque.id &&
+            m.id !== mosque._id &&
+            m._id !== mosque.id &&
+            m._id !== mosque._id
         );
 
         setFeedbackMessage({
@@ -365,23 +402,48 @@ export default function OptimizedMosqueMap({
           message: "Detaching from mosque...",
         });
       } else {
-        // Attach the mosque
+        // ATTACH THE MOSQUE - ADD THE CHECK HERE
+        // Check again using the set (though the first check should cover this)
+        // This inner check is redundant if the first `isAlreadyAttached` is correct,
+        // but let's ensure the array construction logic itself doesn't add duplicates.
+        // A more direct fix is to prevent adding if isAlreadyAttached is true.
+
+        // If the mosque is NOT already attached, construct the new list including it
         const mosqueDataForAttachment = {
-          id: mosque.id,
+          // Prefer _id if available, otherwise use id
+          id: mosque._id || mosque.id,
+          _id: mosque._id || mosque.id, // Store both if possible, or pick one consistently
           name: mosque.name,
           address: mosque.address,
+          // Store location in GeoJSON format if possible
           location: mosque.location
             ? {
                 type: "Point",
                 coordinates: [mosque.location.lng, mosque.location.lat],
               }
             : null,
-          ...(mosque._id && { _id: mosque._id }),
+          // Include femaleArea if it exists
+          ...(typeof mosque.femaleArea !== "undefined" && {
+            femaleArea: mosque.femaleArea,
+          }),
+          // Include facilities if it exists
+          ...(Array.isArray(mosque.facilities) && {
+            facilities: mosque.facilities,
+          }),
         };
 
+        // Construct the new array by ensuring the current mosque isn't already in the list
+        // This is the key change to prevent duplicates
         updatedAttachedMosques = [
-          ...(currentUser.attachedMosques || []),
-          mosqueDataForAttachment,
+          ...(currentUser.attachedMosques || []).filter(
+            // Filter out the mosque if it somehow exists in the current list already
+            (m) =>
+              m.id !== mosqueDataForAttachment.id &&
+              m.id !== mosqueDataForAttachment._id &&
+              m._id !== mosqueDataForAttachment.id &&
+              m._id !== mosqueDataForAttachment._id
+          ),
+          mosqueDataForAttachment, // Add the mosque
         ];
 
         setFeedbackMessage({
@@ -391,36 +453,47 @@ export default function OptimizedMosqueMap({
       }
 
       try {
+        // Dispatch the update user profile action with the potentially updated list
         await dispatch(
           updateUserProfile({ attachedMosques: updatedAttachedMosques })
         ).unwrap();
 
         setFeedbackMessage({
           type: "success",
-          message: isAlreadyAttached
+          message: isAlreadyAttached // Use the initial check result for the message
             ? "Successfully detached from mosque!"
             : "Successfully attached to mosque!",
         });
 
+        // Re-fetch user profile to ensure attachedMosques are up-to-date in the state
+        // This is important to refresh the attachedMosqueIds memoized set
+        if (currentUser?._id || currentUser?.id) {
+          dispatch(fetchUserProfile(currentUser._id || currentUser.id));
+        }
+
         setTimeout(() => setFeedbackMessage(null), 3000);
-        handleInfoWindowClose();
+        handleInfoWindowClose(); // Close InfoWindow after action
       } catch (error) {
         console.error("Failed to update mosque attachment:", error);
 
         setFeedbackMessage({
           type: "error",
-          message: "Failed to update mosque attachment. Please try again.",
+          message:
+            error.message ||
+            "Failed to update mosque attachment. Please try again.",
         });
 
         setTimeout(() => setFeedbackMessage(null), 3000);
       }
     },
-    [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose]
+    [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose] // Include attachedMosqueIds in dependencies
   );
 
   // Render InfoWindow content
   const renderInfoWindowContent = useCallback(
     (mosque) => {
+      console.log({ mosque });
+
       const isAttached = mosque.isAttached;
 
       return (
@@ -440,6 +513,8 @@ export default function OptimizedMosqueMap({
                 Your Mosque
               </span>
             )}
+            {/* Add other facility badges here if needed */}
+            {/* Example: mosque.facilities?.includes("Parking") && (...) */}
           </div>
 
           {/* Attach/Detach Button */}
@@ -447,18 +522,19 @@ export default function OptimizedMosqueMap({
           {currentUser && (
             <button
               onClick={() => handleAttachToggle(mosque)}
-              className={`mt-2 text-sm text-white px-4 py-2 rounded-md w-full transition-colors duration-150 font-semibold focus:outline-none focus:ring-2 ${
+              // Apply appropriate classes based on attachment status
+              className={`mt-2 text-sm text-black  px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
                 isAttached
                   ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
                   : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
               }`}
             >
-              dsadas
               {isAttached ? "Detach from Mosque" : "Attach to Mosque"}
             </button>
           )}
 
           {/* View Details Button */}
+          {/* Replace with actual navigation or modal logic */}
           <button
             onClick={() => alert(`View details for ${mosque.name}`)}
             className="mt-2 text-sm text-blue-700 bg-blue-100 hover:bg-blue-200 px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -484,7 +560,7 @@ export default function OptimizedMosqueMap({
     setIsLoaded(false);
   }, []);
 
-  // Update map when data changes
+  // Update map when data changes or filters are applied
   useEffect(() => {
     if (isLoaded && map) {
       fitMapToBounds();
@@ -493,8 +569,10 @@ export default function OptimizedMosqueMap({
     isLoaded,
     map,
     fitMapToBounds,
-    mosquesToDisplay.length,
-    showAttachedMosques,
+    mosquesToDisplay.length, // Re-fit when the list of displayed mosques changes
+    showAttachedMosques, // Re-fit when toggling between all/attached
+    mapCenter, // Re-fit if map center changes
+    distanceRadiusMeters, // Re-fit if radius changes
   ]);
 
   // Cluster options
@@ -514,8 +592,47 @@ export default function OptimizedMosqueMap({
         `),
         height: 40,
         width: 40,
+        // Adjust text anchor for centering text
+        anchorText: [0, 5], // [x, y] offset in pixels
       },
     ],
+    // Ensure cluster markers are clickable and open InfoWindow/handle events
+    clickable: true,
+  };
+
+  // Custom render function for clusters to include count
+  const renderClusterMarker = (clusterer) => {
+    const count = clusterer.getCount();
+    const size = Math.min(60, 30 + count / 5); // Scale size based on count, with a max
+    const svgContent = `
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="${size / 2}" cy="${size / 2}" r="${
+      size / 2
+    }" fill="#2563EB" fillOpacity="0.8"/>
+          <text x="${size / 2}" y="${
+      size / 2
+    }" text-anchor="middle" dy=".3em" fill="white" font-size="${
+      size / 3
+    }" font-family="sans-serif">${count}</text>
+        </svg>
+      `;
+
+    return new window.google.maps.Marker({
+      position: clusterer.getPosition(),
+      icon: {
+        url: `data:image/svg+xml;utf-8,${encodeURIComponent(svgContent)}`,
+        scaledSize: new window.google.maps.Size(size, size),
+        anchor: new window.google.maps.Point(size / 2, size / 2),
+      },
+      label: {
+        text: "", // Text is inside the SVG
+        color: "white",
+        fontSize: `${size / 3}px`,
+        fontWeight: "bold",
+        className: "cluster-marker-label", // Optional: for custom CSS
+      },
+      zIndex: 100, // Keep clusters on top
+    });
   };
 
   return (
@@ -524,7 +641,7 @@ export default function OptimizedMosqueMap({
       <div style={{ width: "100%", height: "100%" }}>
         <LoadScript
           googleMapsApiKey={GOOGLE_API}
-          libraries={["geometry"]}
+          libraries={["geometry"]} // geometry library is needed for computeDistanceBetween
           loadingElement={
             <div className="h-full w-full flex items-center justify-center bg-gray-100">
               <div className="text-blue-600 font-semibold flex items-center">
@@ -554,12 +671,14 @@ export default function OptimizedMosqueMap({
         >
           <GoogleMap
             mapContainerStyle={MAP_CONTAINER_STYLE}
-            center={mapCenter || DEFAULT_CENTER}
+            center={mapCenter || DEFAULT_CENTER} // Use mapCenter if available, otherwise fallback
+            zoom={mapCenter ? 13 : 13} // Initial zoom level (will be adjusted by fitBounds)
             options={MAP_OPTIONS}
             onLoad={onLoad}
             onUnmount={onUnmount}
-            onClick={handleInfoWindowClose}
+            onClick={handleInfoWindowClose} // Close InfoWindow when clicking on the map
           >
+            {/* Render the Circle if not showing attached mosques and radius is set */}
             {isLoaded &&
               mapCenter &&
               !showAttachedMosques &&
@@ -571,8 +690,12 @@ export default function OptimizedMosqueMap({
                 />
               )}
 
+            {/* Render Markers with Clustering */}
             {isLoaded && (
-              <MarkerClustererF options={clusterOptions}>
+              <MarkerClustererF
+                options={clusterOptions}
+                render={renderClusterMarker}
+              >
                 {(clusterer) =>
                   mosquesToDisplay.map((mosque) => {
                     const isCurrentlySelected =
@@ -594,7 +717,7 @@ export default function OptimizedMosqueMap({
                           isCurrentlyHovered,
                           isCurrentlySelected
                         )}
-                        clusterer={clusterer}
+                        clusterer={clusterer} // Assign to the clusterer
                       />
                     );
                   })
@@ -611,7 +734,8 @@ export default function OptimizedMosqueMap({
                 }}
                 onCloseClick={handleInfoWindowClose}
                 options={{
-                  pixelOffset: new window.google.maps.Size(0, -30),
+                  // Adjust the pixelOffset if needed to position the InfoWindow correctly above the marker icon
+                  pixelOffset: new window.google.maps.Size(0, -45), // Adjust Y based on marker icon height
                 }}
               >
                 {renderInfoWindowContent(selectedMosque)}
@@ -624,7 +748,8 @@ export default function OptimizedMosqueMap({
       {/* Feedback Message */}
       {feedbackMessage && (
         <div
-          className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 p-3 rounded-md shadow-lg text-sm font-semibold ${
+          className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 p-3 rounded-md shadow-lg text-sm font-semibold z-20 ${
+            // Higher z-index to be on top
             feedbackMessage.type === "success"
               ? "bg-green-500 text-white"
               : feedbackMessage.type === "error"
@@ -640,16 +765,21 @@ export default function OptimizedMosqueMap({
 
       {/* Controls */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        <button
-          onClick={() => setShowAttachedMosques(!showAttachedMosques)}
-          className={`px-4 py-2 rounded-md shadow-md text-sm font-semibold transition-colors duration-150 ${
-            showAttachedMosques
-              ? "bg-amber-500 text-white hover:bg-amber-600"
-              : "bg-white text-blue-600 hover:bg-blue-100"
-          }`}
-        >
-          {showAttachedMosques ? "My Mosques" : "Show My Mosques"}
-        </button>
+        {/* Toggle My Mosques Button */}
+        {currentUser && ( // Only show button if user is logged in
+          <button
+            onClick={() => setShowAttachedMosques(!showAttachedMosques)}
+            className={`px-4 py-2 rounded-md shadow-md text-sm font-semibold transition-colors duration-150 ${
+              showAttachedMosques
+                ? "bg-amber-500 text-white hover:bg-amber-600"
+                : "bg-white text-blue-600 hover:bg-blue-100"
+            }`}
+          >
+            {showAttachedMosques ? "Show All Mosques" : "Show My Mosques"}
+          </button>
+        )}
+
+        {/* Add other controls here if needed */}
       </div>
 
       {/* Legend */}
@@ -659,13 +789,15 @@ export default function OptimizedMosqueMap({
           <div className="w-3 h-3 rounded-full bg-blue-600 mr-2"></div>
           <span className="text-xs">Standard Mosque</span>
         </div>
-        <div className="flex items-center mb-1">
-          <div className="w-3 h-3 rounded-full bg-purple-600 mr-2"></div>
-          <span className="text-xs">Female Prayer Area</span>
-        </div>
+
         <div className="flex items-center">
           <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
           <span className="text-xs">My Mosque</span>
+        </div>
+        {/* Add Selected/Hovered states to legend if desired */}
+        <div className="flex items-center mt-2">
+          <div className="w-3 h-3 rounded-full bg-green-600 mr-2"></div>
+          <span className="text-xs">Selected Mosque</span>
         </div>
       </div>
     </div>
