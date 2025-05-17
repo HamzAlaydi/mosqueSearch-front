@@ -9,8 +9,18 @@ import Image3 from "@/public/images/sliders/Inside-the-Grand-Mosque.jpg";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
+import { useState, useEffect } from "react";
+import {
+  ChevronRight,
+  Heart,
+  Users,
+  Building,
+  MessageCircle,
+  UserCheck,
+} from "lucide-react";
 export default function HomePage() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
   const sliderSettings = {
     dots: false,
     infinite: true,
@@ -56,33 +66,119 @@ export default function HomePage() {
       cta: "Learn More",
     },
   ];
+  useEffect(() => {
+    setIsVisible(true);
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [slides.length]);
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
+
+  const features = [
+    {
+      title: "Community Verified",
+      description: "All members are verified by local mosque leadership",
+      icon: <Users className="h-8 w-8 text-emerald-600" />,
+    },
+    {
+      title: "Wali Integration",
+      description:
+        "Include your guardian in the process for proper Islamic guidance",
+      icon: <UserCheck className="h-8 w-8 text-emerald-600" />,
+    },
+    {
+      title: "Privacy Focused",
+      description:
+        "Your information is only shared with potential matches you approve",
+      icon: <MessageCircle className="h-8 w-8 text-emerald-600" />,
+    },
+  ];
+
+  const testimonials = [
+    {
+      quote:
+        "MosqueMatch helped me find a spouse who shares my values and vision for the future. The community verification gave me confidence throughout the process.",
+      author: "Omar A.",
+      role: "Software Engineer",
+    },
+    {
+      quote:
+        "The Wali feature allowed my father to be involved appropriately, making the whole experience comfortable and aligned with our traditions.",
+      author: "Sara M.",
+      role: "Teacher",
+    },
+    {
+      quote:
+        "MosqueMatch connected me with someone from my local community who I might never have met otherwise. We're now happily married, alhamdulillah.",
+      author: "Ahmed K.",
+      role: "Medical Professional",
+    },
+  ];
   return (
     <>
-      <section className="hero-slider">
-        <Slider {...sliderSettings}>
-          {slides.map((slide, index) => (
-            <div key={index} className="slide">
-              <div className="image-wrapper">
-                <Image
-                  src={slide.image}
-                  alt={slide.alt}
-                  layout="fill"
-                  objectFit="cover"
-                  priority
-                />
-                <div className="overlay" />
-                <div className="slide-content">
-                  <h2>{slide.title}</h2>
-                  <p>{slide.description}</p>
-                  <Link href="/auth/signup" className="btn-primary">
-                    {slide.cta}
-                  </Link>
+      <div className="relative h-screen">
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              currentSlide === index
+                ? "opacity-100"
+                : "opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="relative h-full">
+              <Image
+                src={slide.image}
+                alt={slide.alt}
+                fill
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-50" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center max-w-4xl px-6">
+                  <h1
+                    className={`text-4xl md:text-6xl font-bold text-white mb-6 transition-all duration-700 ${
+                      isVisible
+                        ? "translate-y-0 opacity-100"
+                        : "translate-y-10 opacity-0"
+                    }`}
+                  >
+                    {slide.title}
+                  </h1>
+                  <p
+                    className={`text-xl md:text-2xl text-white mb-8 transition-all duration-700 delay-300 ${
+                      isVisible
+                        ? "translate-y-0 opacity-100"
+                        : "translate-y-10 opacity-0"
+                    }`}
+                  >
+                    {slide.description}
+                  </p>
                 </div>
               </div>
             </div>
+          </div>
+        ))}
+
+        {/* Slider Dots */}
+        <div className="absolute bottom-10 left-0 right-0 flex justify-center space-x-3">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                currentSlide === index ? "bg-white w-8" : "bg-white/50"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
           ))}
-        </Slider>
-      </section>
+        </div>
+      </div>
 
       <section className="how-it-works">
         <div className="container">

@@ -5,7 +5,7 @@ import * as Yup from "yup";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import "./login.css";
 const LoginSchema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Required"),
@@ -36,7 +36,8 @@ const Login = () => {
           validationSchema={LoginSchema}
           onSubmit={async (values, { setSubmitting, setErrors }) => {
             try {
-              await login(values).unwrap();
+              const data = await login(values).unwrap();
+              dispatch(setCredentials(data)); // Add this line
               router.push("/mosqueSearch");
             } catch (error) {
               setErrors({ email: " ", password: "Invalid credentials" });

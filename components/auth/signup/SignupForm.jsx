@@ -3,8 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { updateFormData, resetForm, setStep } from "@/redux/form/formSlice";
-import { useSignupMutation } from "@/redux/auth/authAPI";
+import {
+  setStep,
+  updateFormData,
+  resetForm,
+  submitRegistration,
+} from "@/redux/form/formSlice";
 import SignupStep1 from "./SignupStep1";
 import SignupStep2 from "./SignupStep2";
 import SignupStep3 from "./SignupStep3";
@@ -13,60 +17,26 @@ import SignupStep5 from "./SignupStep5";
 import SignupStep6 from "./SignupStep6";
 import SignupStep7 from "./SignupStep7";
 import SignupStep8 from "./SignupStep8";
-import SignupStep9 from "./SignupStep9"; // Add the new step
+import SignupStep9 from "./SignupStep9";
 import ProgressBar from "@/shared/ui/ProgressBar";
 import Link from "next/link";
 import { rootRoute } from "@/shared/constants/backendLink";
 
 const SignupForm = () => {
   const dispatch = useDispatch();
-  const { formData, currentStep } = useSelector((state) => state.form);
-  const [signup, { isLoading }] = useSignupMutation();
-  const [successMessage, setSuccessMessage] = useState("");
+  const { formData, currentStep, successMessage, error } = useSelector(
+    (state) => state.form
+  );
   const router = useRouter();
 
-  const totalSteps = 9; // Updated total steps
+  const totalSteps = 9;
 
   const nextStep = () => dispatch(setStep(currentStep + 1));
   const prevStep = () => dispatch(setStep(currentStep - 1));
 
-  const handleSubmit = async (values, { setSubmitting, setErrors }) => {
-    try {
-      const finalData = { ...formData, ...values };
-      const formDataToSend = new FormData();
-
-      Object.keys(finalData).forEach((key) => {
-        if (key === "profilePicture" && finalData[key]) {
-          formDataToSend.append(key, finalData[key]);
-        } else if (key === "attachedMosques" && finalData[key]) {
-          // Convert attached mosques array to JSON string before sending
-          formDataToSend.append(key, JSON.stringify(finalData[key]));
-        } else if (
-          typeof finalData[key] !== "undefined" &&
-          finalData[key] !== null
-        ) {
-          // Only append values that are defined
-          formDataToSend.append(key, finalData[key]);
-        }
-      });
-
-      const response = await signup({
-        url: `${rootRoute}/auth/signup`,
-        body: formDataToSend,
-      }).unwrap();
-
-      if (response.success) {
-        setSuccessMessage(response.message);
-        dispatch(resetForm());
-      }
-    } catch (error) {
-      setErrors({
-        email: " ",
-        password: error.data?.message || "Signup failed",
-      });
-    } finally {
-      setSubmitting(false);
-    }
+  const handleSubmit = async (values, { setSubmitting }) => {
+    dispatch(submitRegistration(values));
+    setSubmitting(false);
   };
 
   const handleStepSubmit = (values) => {
@@ -91,6 +61,19 @@ const SignupForm = () => {
             <button className="auth-button" onClick={() => router.push("/")}>
               Return Home
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="error-message">
+            <p>{error}</p>
+            <button onClick={() => dispatch(resetForm())}>Try Again</button>
           </div>
         </div>
       </div>
@@ -170,7 +153,6 @@ const SignupForm = () => {
           <SignupStep9
             onSubmit={handleSubmit}
             prevStep={prevStep}
-            isLoading={isLoading}
             formData={formData}
           />
         )}

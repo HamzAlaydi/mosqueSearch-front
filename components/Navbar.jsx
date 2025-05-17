@@ -18,10 +18,11 @@ export default function Navbar() {
   const isAuthOrHomePage =
     pathname === "/" ||
     pathname === "/auth/login" ||
-    pathname === "/auth/signup";
+    pathname === "/auth/signup" ||
+    pathname === "/auth/imam";
 
   return (
-    <nav className="navbar">
+    <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 w-full py-3">
       <div className="container navbar-container">
         <div className="navbar-logo">
           <Link href="/">
@@ -32,11 +33,27 @@ export default function Navbar() {
         {isAuthOrHomePage ? (
           <>
             <div className={`navbar-links ${isMenuOpen ? "active" : ""}`}>
-              <Link href="/auth/login" className="btn">
+              <Link
+                href="/auth/login"
+                className="text-sm px-1 py-1 rounded-md"
+                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
+              >
                 Login
               </Link>
-              <Link href="/auth/signup" className="btn">
+              <Link
+                href="/auth/signup"
+                className="text-sm px-3 py-1 rounded-md"
+                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
+              >
                 SignUp
+              </Link>
+
+              <Link
+                href="/auth/imam"
+                className="text-sm px-3 py-1 rounded-md"
+                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
+              >
+                SignUp Imam
               </Link>
             </div>
 
@@ -66,6 +83,12 @@ export default function Navbar() {
                       className="block px-4 py-2 hover:bg-gray-100"
                     >
                       Sign up
+                    </Link>
+                    <Link
+                      href="/auth/imam"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                    >
+                      Imam
                     </Link>
                     <Link
                       href="/auth/login"

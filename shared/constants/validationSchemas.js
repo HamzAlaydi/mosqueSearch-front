@@ -2,6 +2,8 @@
 import * as Yup from "yup";
 
 export const basicInfoSchema = Yup.object().shape({
+  firstName: Yup.string().required("First name is required"),
+  lastName: Yup.string().required("Last name is required"),
   gender: Yup.string().required("Gender selection is required"),
   email: Yup.string()
     .email("Please enter a valid email address")

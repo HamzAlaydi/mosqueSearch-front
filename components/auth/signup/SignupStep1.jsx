@@ -13,6 +13,8 @@ const SignupStep1 = ({ nextStep, formData }) => {
   return (
     <Formik
       initialValues={{
+        firstName: formData.firstName || "",
+        lastName: formData.lastName || "",
         gender: formData.gender || "",
         email: formData.email || "",
         waliEmail: formData.waliEmail || "",
@@ -20,6 +22,7 @@ const SignupStep1 = ({ nextStep, formData }) => {
         waliPhone: formData.waliPhone || "",
         password: formData.password || "",
         confirmPassword: formData.confirmPassword || "",
+        role: formData.role || "",
       }}
       validationSchema={basicInfoSchema}
       onSubmit={(values) => {
@@ -28,13 +31,50 @@ const SignupStep1 = ({ nextStep, formData }) => {
     >
       {({ setFieldValue, values, isSubmitting }) => (
         <Form className="auth-form">
+          {/* First Name and Last Name in the same row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-group">
+              <label htmlFor="firstName">First Name*</label>
+              <Field
+                type="text"
+                name="firstName"
+                id="firstName"
+                className="form-input"
+                placeholder="Enter your first name"
+              />
+              <ErrorMessage
+                name="firstName"
+                component="div"
+                className="error-message"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="lastName">Last Name*</label>
+              <Field
+                type="text"
+                name="lastName"
+                id="lastName"
+                className="form-input"
+                placeholder="Enter your last name"
+              />
+              <ErrorMessage
+                name="lastName"
+                component="div"
+                className="error-message"
+              />
+            </div>
+          </div>
+
           <div className="form-group">
             <label>Gender*</label>
             <Select
               instanceId={instanceId}
               options={genderOptions}
               value={genderOptions.find((opt) => opt.value === values.gender)}
-              onChange={(option) => setFieldValue("gender", option.value)}
+              onChange={(option) => {
+                setFieldValue("gender", option.value);
+                setFieldValue("role", option.value);
+              }}
               components={animatedComponents}
               placeholder="Select your gender"
               className="react-select-container"
@@ -66,7 +106,7 @@ const SignupStep1 = ({ nextStep, formData }) => {
           {values.gender === "female" && (
             <>
               <div className="form-group">
-                <label htmlFor="waliName">Wali Name</label> {/* Optional */}
+                <label htmlFor="waliName">Wali Name</label>
                 <Field
                   type="text"
                   name="waliName"
@@ -82,8 +122,7 @@ const SignupStep1 = ({ nextStep, formData }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="waliPhone">Wali Phone Number</label>{" "}
-                {/* Optional */}
+                <label htmlFor="waliPhone">Wali Phone Number</label>
                 <Field
                   type="tel"
                   name="waliPhone"
@@ -99,7 +138,7 @@ const SignupStep1 = ({ nextStep, formData }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="waliEmail">Wali Email*</label> {/* Required */}
+                <label htmlFor="waliEmail">Wali Email*</label>
                 <Field
                   type="email"
                   name="waliEmail"

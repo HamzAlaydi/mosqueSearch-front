@@ -4,11 +4,15 @@ import { setupListeners } from "@reduxjs/toolkit/query";
 import authReducer from "./auth/authSlice";
 import formReducer from "./form/formSlice";
 import { authAPI } from "./auth/authAPI";
+import matchReducer from "./match/matchSlice";
+import userReducer from "./user/userSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     form: formReducer,
+    user: userReducer,
+    matches: matchReducer,
     [authAPI.reducerPath]: authAPI.reducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -16,6 +20,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: ["form/updateFormData"],
         ignoredPaths: ["form.formData.profilePicture"],
+        ignoredPaths: ["items.dates"],
       },
     }).concat(authAPI.middleware),
 });

@@ -1,9 +1,11 @@
-// redux/auth/authSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
-  user: null,
+  user:
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("user"))
+      : null,
   isAuthenticated:
     typeof window !== "undefined" ? !!localStorage.getItem("token") : false,
   loading: false,
@@ -22,6 +24,7 @@ const authSlice = createSlice({
 
       if (typeof window !== "undefined") {
         localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user)); // Store user data in localStorage
       }
     },
     logoutUser: (state) => {
@@ -31,6 +34,7 @@ const authSlice = createSlice({
 
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
+        localStorage.removeItem("user"); // Remove user data from localStorage
       }
     },
     setUser: (state, action) => {

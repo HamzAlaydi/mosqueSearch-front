@@ -1,6 +1,7 @@
 import "./globals.css";
 import { ReduxProvider } from "@/redux/Provider";
 import ClientLayout from "@/components/ClientLayout"; // Adjust path if needed
+import { Toaster } from "react-hot-toast";
 
 export const metadata = {
   title: "MosqueMatch - Find Your Muslim Partner",
@@ -27,7 +28,10 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ReduxProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <ClientLayout>
+            {children}
+            <Toaster position="bottom-right" />
+          </ClientLayout>
         </ReduxProvider>
 
         {/* Scripts */}

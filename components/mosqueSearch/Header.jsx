@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -10,7 +10,9 @@ import {
   Sliders,
   Heart,
   MessageCircle,
+  Info,
 } from "lucide-react";
+import InterestsModal from "./InterestsModal";
 
 // Distance Range Slider Component
 const DistanceFilter = ({ value, onChange }) => {
@@ -46,10 +48,22 @@ export default function Header({
   activeFilters,
   handleFilterChange,
   showMap,
+  setMapCenter,
+  userLocation,
 }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [showDistanceInfo, setShowDistanceInfo] = useState(false);
+  const [isInterestsModalOpen, setIsInterestsModalOpen] = useState(false);
+
+  const handleOpenInterests = () => {
+    setIsInterestsModalOpen(true);
+  };
+
+  const handleCloseInterests = () => {
+    setIsInterestsModalOpen(false);
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -64,6 +78,13 @@ export default function Header({
     }
   };
 
+  // Update search query when user location changes
+  useEffect(() => {
+    if (userLocation?.address) {
+      setSearchQuery(userLocation.address);
+    }
+  }, [userLocation]);
+
   const popularLocations = [
     "London, UK",
     "Birmingham, UK",
@@ -72,8 +93,28 @@ export default function Header({
     "Leeds, UK",
   ];
 
+  // Handle location selection
+  const handleLocationSelect = (location) => {
+    setSearchQuery(location);
+    setLocationDropdownOpen(false);
+
+    // You would typically integrate with a geocoding service here
+    // For now, we'll simulate with mock coordinates
+    const mockCoordinates = {
+      "London, UK": { lat: 51.5074, lng: -0.1278 },
+      "Birmingham, UK": { lat: 52.4862, lng: -1.8904 },
+      "Manchester, UK": { lat: 53.4808, lng: -2.2426 },
+      "Glasgow, UK": { lat: 55.8642, lng: -4.2518 },
+      "Leeds, UK": { lat: 53.8008, lng: -1.5491 },
+    };
+
+    if (mockCoordinates[location] && setMapCenter) {
+      setMapCenter(mockCoordinates[location]);
+    }
+  };
+
   return (
-    <header className="border-b border-gray-200 bg-white fixed top-0 left-0 right-0 z-30">
+    <header className="class='border-b border-gray-200 bg-white sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center">
@@ -114,10 +155,7 @@ export default function Header({
                       <div
                         key={location}
                         className="px-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer flex items-center gap-2"
-                        onClick={() => {
-                          setSearchQuery(location);
-                          setLocationDropdownOpen(false);
-                        }}
+                        onClick={() => handleLocationSelect(location)}
                       >
                         <MapPin size={14} className="text-gray-400" />
                         <span className="text-sm">{location}</span>
@@ -136,11 +174,27 @@ export default function Header({
           </form>
 
           {/* Distance Range Filter */}
-          <div className="border border-gray-300 rounded-full px-3 py-2 flex items-center shadow-sm">
+          <div className="border border-gray-300 rounded-full px-3 py-2 flex items-center shadow-sm relative">
             <DistanceFilter
               value={activeFilters?.distance || 10}
               onChange={handleDistanceChange}
             />
+            <button
+              className="ml-2 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowDistanceInfo(!showDistanceInfo)}
+            >
+              <Info size={14} />
+            </button>
+
+            {/* Distance Info Tooltip */}
+            {showDistanceInfo && (
+              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 w-48">
+                <p className="text-xs text-gray-600">
+                  Adjust the distance to see mosques within your preferred
+                  radius. The map will show a circle representing this area.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Control Buttons */}
@@ -169,10 +223,19 @@ export default function Header({
             </button>
 
             {/* Interests Button */}
-            <button className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-sm">
+            <button
+              onClick={handleOpenInterests}
+              className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-sm"
+            >
               <Heart size={14} className="text-gray-600" />
               <span>Interests</span>
             </button>
+
+            {/* Modal */}
+            <InterestsModal
+              isOpen={isInterestsModalOpen}
+              onClose={handleCloseInterests}
+            />
           </div>
         </div>
 

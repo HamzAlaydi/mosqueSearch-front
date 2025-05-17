@@ -16,18 +16,20 @@ export const authAPI = createApi({
     },
   }),
   endpoints: (builder) => ({
+    // In authAPI.js
     login: builder.mutation({
       query: (credentials) => ({
         url: "/auth/login",
         method: "POST",
         body: credentials,
       }),
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          dispatch(setCredentials(data));
-        } catch (error) {
-          // Handle error if needed
+          dispatch(setCredentials(data)); // Dispatch credentials automatically
+        } catch (err) {
+          // Handle error
+          console.error("Login failed:", err);
         }
       },
     }),
