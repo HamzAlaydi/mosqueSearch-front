@@ -4,19 +4,22 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import "./login.css";
+import { setCredentials } from "@/redux/auth/authSlice";
 const LoginSchema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Required"),
   password: Yup.string().required("Required"),
 });
 
 const Login = () => {
+  const [showVerifyLink, setShowVerifyLink] = useState(false);
+
   const [login, { isLoading }] = useLoginMutation();
   const router = useRouter();
   const { token } = useSelector((state) => state.auth);
-
+  const dispatch = useDispatch();
   useEffect(() => {
     if (token) {
       router.push("/mosqueSearch");
@@ -37,10 +40,21 @@ const Login = () => {
           onSubmit={async (values, { setSubmitting, setErrors }) => {
             try {
               const data = await login(values).unwrap();
-              dispatch(setCredentials(data)); // Add this line
+              dispatch(setCredentials(data));
+              document.cookie = `token=${data.token}; path=/;`;
               router.push("/mosqueSearch");
             } catch (error) {
-              setErrors({ email: " ", password: "Invalid credentials" });
+              const errorMessage =
+                error?.data?.message || "Invalid credentials";
+
+              setErrors({
+                email: "",
+                password: errorMessage,
+              });
+
+              if (errorMessage.toLowerCase().includes("verify")) {
+                setShowVerifyLink(true);
+              }
             } finally {
               setSubmitting(false);
             }
@@ -80,12 +94,23 @@ const Login = () => {
                 />
               </div>
 
+              {showVerifyLink && (
+                <div className="verify-link-wrapper">
+                  <Link
+                    href="/auth/resend-verification"
+                    className="forgot-password"
+                  >
+                    Please verify your email — Click here
+                  </Link>
+                </div>
+              )}
+
               <div className="form-options">
                 <div className="remember-me">
                   <Field type="checkbox" id="remember" name="remember" />
                   <label htmlFor="remember">Remember me</label>
                 </div>
-                <Link href="/forgot-password" className="forgot-password">
+                <Link href="/auth/forgot-password" className="forgot-password">
                   Forgot password?
                 </Link>
               </div>

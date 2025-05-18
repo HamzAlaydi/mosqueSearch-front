@@ -1,4 +1,4 @@
-// redux/auth/authAPI.js
+// Updated redux/auth/authAPI.js with verification endpoints
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { setCredentials, logoutUser } from "./authSlice";
 import { rootRoute } from "@/shared/constants/backendLink";
@@ -16,7 +16,6 @@ export const authAPI = createApi({
     },
   }),
   endpoints: (builder) => ({
-    // In authAPI.js
     login: builder.mutation({
       query: (credentials) => ({
         url: "/auth/login",
@@ -72,6 +71,24 @@ export const authAPI = createApi({
         body: { token, password },
       }),
     }),
+    // New endpoints for email verification
+    verifyEmail: builder.mutation({
+      query: (data) => ({
+        url: "/auth/verify-email",
+        method: "POST",
+        body: JSON.stringify(data), // Send the entire data object as JSON
+        headers: {
+          "Content-Type": "application/json", // Specify JSON content type
+        },
+      }),
+    }),
+    resendVerification: builder.mutation({
+      query: (email) => ({
+        url: "/auth/resend-verification",
+        method: "POST",
+        body: { email },
+      }),
+    }),
   }),
 });
 
@@ -82,4 +99,6 @@ export const {
   useGetUserProfileQuery,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useVerifyEmailMutation,
+  useResendVerificationMutation,
 } = authAPI;

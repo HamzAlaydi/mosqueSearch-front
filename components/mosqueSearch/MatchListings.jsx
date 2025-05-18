@@ -17,7 +17,11 @@ import Image from "next/image";
 import femaleAvatar from "../../public/images/matches/femaleAvatar.jpg";
 import maleAvatar from "../../public/images/matches/maleAvatar.jpg";
 import { toast } from "react-hot-toast";
-import { getAvatar, calculateAge } from "@/shared/helper/defaultData";
+import {
+  getAvatar,
+  calculateAge,
+  fetchFlagUrl,
+} from "@/shared/helper/defaultData";
 import Link from "next/link";
 
 const formatUserResponse = (user) => {
@@ -67,36 +71,16 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
 
   useEffect(() => {
-    const fetchFlag = async (country, setFlag) => {
-      if (!country) {
-        setFlag(null);
-        return;
-      }
-      const apiKey = "xi13wHV/r789FLVgaTROaQ==ErfchmfqYA2YDF8i";
-      const apiUrl = `https://api.api-ninjas.com/v1/countryflag?country=${country}`;
-
-      try {
-        const response = await fetch(apiUrl, {
-          headers: {
-            "X-Api-Key": apiKey,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setFlag(data.square_image_url);
-        } else {
-          console.error("Failed to fetch flag:", response.statusText);
-          setFlag(null);
-        }
-      } catch (error) {
-        console.error("Error fetching flag:", error);
-        setFlag(null);
-      }
+    const loadFlags = async () => {
+      const [citizenshipFlag, originFlag] = await Promise.all([
+        fetchFlagUrl(match.citizenship),
+        fetchFlagUrl(match.originCountry),
+      ]);
+      setFlagUrl(citizenshipFlag);
+      setOriginFlagUrl(originFlag);
     };
 
-    fetchFlag(match.citizenship, setFlagUrl);
-    fetchFlag(match.originCountry, setOriginFlagUrl);
+    loadFlags();
   }, [match.citizenship, match.originCountry]);
 
   const handleInterestClick = async (e) => {

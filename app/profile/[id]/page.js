@@ -3,51 +3,42 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-// Update the import statement at the top of the file
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import {
   MapPin,
   Calendar,
   Book,
   Briefcase,
-  Languages,
   Heart,
   Mail,
   Phone,
   MessageCircle,
   UserCheck,
-  Share2,
-  FileText,
-  Star,
-  Flag,
-  Lock,
-  Building,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
   Info,
   AlertCircle,
   User,
-  Loader, // Add this import
+  Loader,
+  Star,
+  Flag,
+  Lock,
+  Building,
+  ExternalLink,
+  FileText,
+  Search,
 } from "lucide-react";
 import { calculateAge, getAvatar } from "@/shared/helper/defaultData";
-import { useDispatch, useSelector } from "react-redux";
-import { addInterest, removeInterest } from "@/redux/match/matchSlice";
-
-// Assume these helper functions are defined elsewhere, e.g., in '@/shared/helper/defaultData'
-// For re-implementation purposes, I'll define simple versions here.
-// NOTE: Ensure your actual helper functions at '@/shared/helper/defaultData'
-// are correctly implemented and do not have any external dependencies named 'User'.
-
-const AttributeCard = ({ icon, label, value }) => (
-  <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-    <div className="text-primary mb-2">{icon}</div>
-    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-      {label}
-    </div>
-    <div className="font-semibold text-gray-800">{formatValue(value)}</div>
-  </div>
-);
+import {
+  addInterest,
+  removeInterest,
+  fetchUserInterests,
+} from "@/redux/match/matchSlice";
+import { fetchUserProfile, clearViewingUser } from "@/redux/user/userSlice";
+import { useParams, useRouter } from "next/navigation";
+import coverImage from "@/public/images/matches/background.jpg";
+import useCountryFlag from "@/shared/helper/useCountryFlag";
+import toast from "react-hot-toast";
 
 const ProfileSection = ({
   title,
@@ -70,15 +61,9 @@ const ProfileSection = ({
           <h3 className="font-semibold text-lg text-gray-800">{title}</h3>
         </div>
         {isExpanded ? (
-          <ChevronUp
-            size={20}
-            className="text-gray-400 group-hover:text-gray-600 transition"
-          />
+          <ChevronUp size={20} className="text-gray-400" />
         ) : (
-          <ChevronDown
-            size={20}
-            className="text-gray-400 group-hover:text-gray-600 transition"
-          />
+          <ChevronDown size={20} className="text-gray-400" />
         )}
       </div>
       {isExpanded && (
@@ -88,11 +73,23 @@ const ProfileSection = ({
   );
 };
 
-const ProfileTag = ({ icon, label, value }) => (
+const ProfileTag = ({ icon, label, value, flagUrl }) => (
   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-primary">
-      {icon}
-    </div>
+    {flagUrl ? (
+      <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shadow-sm">
+        <Image
+          src={flagUrl}
+          alt={`${label} flag`}
+          width={40}
+          height={40}
+          className="object-cover"
+        />
+      </div>
+    ) : (
+      <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-primary">
+        {icon}
+      </div>
+    )}
     <div>
       <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">
         {label}
@@ -104,414 +101,210 @@ const ProfileTag = ({ icon, label, value }) => (
   </div>
 );
 
-const ProgressBar = ({ value, max = 100, label }) => {
-  const clampedValue = Math.max(0, Math.min(max, value));
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <span className="text-sm font-medium text-primary">
-          {clampedValue}%
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
-        <div
-          className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-in-out"
-          style={{ width: `${clampedValue}%` }}
-        ></div>
-      </div>
-    </div>
-  );
+const formatValue = (str) => {
+  if (!str) return "Not specified";
+  const mappings = {
+    very_religious: "Very Religious",
+    religious: "Religious",
+    not_religious: "Not Religious",
+    always: "Always",
+    most_of_the_time: "Most of the time",
+    sometimes: "Sometimes",
+    never: "Never",
+    daily: "Daily",
+    weekly: "Weekly",
+    monthly: "Monthly",
+    rarely: "Rarely",
+    yes: "Yes",
+    no: "No",
+    single: "Single",
+    married: "Married",
+    divorced: "Divorced",
+    widowed: "Widowed",
+    "20k_50k": "$20K - $50K",
+    slim: "Slim",
+    arab: "Arab",
+    healthcare: "Healthcare",
+    master: "Master's Degree",
+    alone: "Living Alone",
+    any_time: "Any Time",
+    sunni: "Sunni",
+    arabic: "Arabic",
+    english: "English",
+  };
+
+  if (mappings[str]) return mappings[str];
+  if (str.includes("_")) {
+    return str
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export default function UserProfile({ userId }) {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("about");
+export default function UserProfile() {
   const dispatch = useDispatch();
-  const { userInterests } = useSelector((state) => state.matches);
-  const [isInterested, setIsInterested] = useState(false);
-  const [interestLoading, setInterestLoading] = useState(false);
+  const router = useRouter();
+  const params = useParams();
+  const userId = params?.id;
 
+  const { currentUser, loading, error } = useSelector(
+    (state) => ({
+      currentUser: state.user.currentUser,
+    }),
+    shallowEqual
+  );
+
+  const { userInterests, loading: interestsLoading } = useSelector(
+    (state) => state.matches
+  );
+  const [activeTab, setActiveTab] = useState("about");
+  const [interestLoading, setInterestLoading] = useState(false);
+  const [isInterested, setIsInterested] = useState(false);
+
+  // Fetch profile data and user interests
   useEffect(() => {
-    const currentUserId = user?._id;
-    setIsInterested(
-      currentUserId
-        ? userInterests.some((interest) => interest.user?._id === currentUserId)
-        : false
-    );
-  }, [userInterests, user]);
+    if (userId) {
+      dispatch(fetchUserProfile(userId));
+      dispatch(fetchUserInterests());
+    }
+    return () => dispatch(clearViewingUser());
+  }, [dispatch, userId]);
+
+  // Check interest status whenever userInterests or currentUser changes
+  useEffect(() => {
+    if (currentUser?._id && userInterests) {
+      const interested = userInterests.some(
+        (user) => user._id === currentUser._id
+      );
+      setIsInterested(interested);
+    } else {
+      setIsInterested(false);
+    }
+  }, [userInterests, currentUser]);
+
+  // Flag hooks
+  const citizenshipFlag = useCountryFlag(currentUser?.citizenship);
+  const originCountryFlag = useCountryFlag(currentUser?.originCountry);
 
   const handleInterestToggle = async () => {
-    if (!user?._id) return;
+    if (!currentUser?._id || interestLoading) return;
+
+    const previousState = isInterested;
+    setIsInterested(!previousState); // Optimistic update
     setInterestLoading(true);
+
     try {
-      if (isInterested) {
-        // Optimistically update local state and dispatch local action
-        setIsInterested(false);
-        dispatch(removeInterestLocal(user._id));
-        await dispatch(removeInterest(user._id)).unwrap();
+      if (previousState) {
+        await dispatch(removeInterest(currentUser._id)).unwrap();
+        toast.success("Removed from your interests");
       } else {
-        // Optimistically update local state and dispatch local action
-        setIsInterested(true);
-        dispatch(addInterestLocal(user));
-        await dispatch(addInterest(user._id)).unwrap();
+        await dispatch(addInterest(currentUser._id)).unwrap();
+        toast.success("Added to your interests");
       }
+      // Refresh interests list after successful operation
+      dispatch(fetchUserInterests());
     } catch (error) {
-      console.error("Interest toggle failed:", error);
-      // Revert optimistic update on error
-      setIsInterested(!isInterested);
-      if (isInterested) {
-        dispatch(addInterestLocal(user));
-      } else {
-        dispatch(removeInterestLocal(user._id));
-      }
-    } finally {
-      setInterestLoading(false);
-    }
-  };
-  // Fetch user data
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      setLoading(true); // Set loading at the beginning of the fetch attempt
-      try {
-        // For demo purposes, using mock data
-        // In production, replace with API call
-        const mockUsers = [
-          {
-            _id: "6827c45d625af4c59eaecc77",
-            firstName: "Rawan",
-            lastName: "Alaydi",
-            email: "r@r.com",
-            gender: "female",
-            role: "female",
-            tagLine:
-              "Software engineer passionate about technology and travel.",
-            about:
-              "I am a dedicated software engineer with a strong interest in developing innovative solutions. Outside of work, I love exploring new places, reading historical fiction, and spending quality time with my family. I am seeking a partner who shares my values and enjoys intellectual conversations.",
-            lookingFor:
-              "Seeking a compassionate, kind, and practicing Muslim partner who is serious about marriage. Someone who has a strong sense of purpose and is keen on building a life together based on mutual respect and Islamic principles. A good sense of humor is a definite plus!",
-            birthDate: "1994-05-11T21:00:00.000Z",
-            height: "170",
-            build: "slim",
-            ethnicity: "arab",
-            disability: false,
-            currentLocation: "`Asa Ara`, Djibouti",
-            countryOfBirth: "CX",
-            citizenship: "MV",
-            originCountry: "TL",
-            willingToRelocate: true,
-            educationLevel: "university",
-            profession: "technology",
-            jobTitle: "Senior Software Engineer",
-            income: "50k_100k",
-            languages: ["arabic", "english", "french"],
-            firstLanguage: "arabic",
-            secondLanguage: "english",
-            maritalStatus: "single",
-            childrenDesire: "yes",
-            hasChildren: "no",
-            livingArrangement: "with_family",
-            marriageWithin: "1_year",
-            religiousness: "religious",
-            sector: "sunni",
-            isRevert: true,
-            keepsHalal: true,
-            prayerFrequency: "always",
-            quranReading: "weekly",
-            smokes: false,
-            drinks: false,
-            phoneUsage: "3h",
-            profilePicture: null,
-            isVerified: true,
-            attachedMosques: [
-              {
-                id: "ChIJ_WTueZYDdkgR_iOiXaZYkCI",
-                name: "Dulwich Islamic Centre & Mosque",
-                address: "23 N Cross Rd, London",
-                location: {
-                  type: "Point",
-                  coordinates: [-0.0726108, 51.4574256],
-                },
-              },
-              {
-                id: "ChIJVQCea4oEdkgRyufLt8_Ql0I",
-                name: "North Brixton Islamic Cultural Centre",
-                address: "182 Brixton Rd, London",
-                location: {
-                  type: "Point",
-                  coordinates: [-0.1129536, 51.4740255],
-                },
-              },
-            ],
-            wali: {
-              name: "Mr. Abdullah Alaydi",
-              email: "wali.rawan@example.com",
-              phone: "+1234567890",
-              relationship: "Father",
-            },
-          },
-          {
-            _id: "682759d25f85f3a874234b3c",
-            firstName: "Esraa",
-            lastName: "Ahmad",
-            email: "esraa@e.com",
-            gender: "female",
-            role: "female",
-            tagLine:
-              "Dedicated healthcare professional seeking meaningful connection.",
-            about:
-              "Passionate about making a difference in people's lives through healthcare. I enjoy reading, hiking, and spending time with family.",
-            lookingFor:
-              "Looking for a partner who values family, has strong faith, and is committed to personal growth.",
-            birthDate: "2000-05-05T21:00:00.000Z",
-            height: "180",
-            build: "slim",
-            ethnicity: "arab",
-            disability: false,
-            currentLocation:
-              "Gaza, Gaza Governorate, Gaza Strip, Palestinian Territory",
-            countryOfBirth: "PS",
-            citizenship: "TO",
-            originCountry: "GR",
-            willingToRelocate: true,
-            educationLevel: "master",
-            profession: "healthcare",
-            jobTitle: "Nurse",
-            income: "20k_50k",
-            languages: ["arabic", "english"],
-            firstLanguage: "arabic",
-            secondLanguage: "english",
-            maritalStatus: "single",
-            childrenDesire: "yes",
-            hasChildren: "yes",
-            livingArrangement: "alone",
-            marriageWithin: "any_time",
-            religiousness: "very_religious",
-            sector: "sunni",
-            isRevert: false,
-            keepsHalal: true,
-            prayerFrequency: "always",
-            quranReading: "daily",
-            smokes: false,
-            drinks: false,
-            phoneUsage: "2h",
-            profilePicture:
-              "https://placehold.co/128x128/d6b3e2/300?text=Esraa",
-            isVerified: false,
-          },
-        ];
-
-        const foundUser = userId
-          ? mockUsers.find((u) => u._id === userId)
-          : mockUsers[0]; // Default to the first user if no userId
-
-        setUser(foundUser);
-        // REMOVED: No longer setting isInterested directly here.
-        // The other useEffect (the one depending on [userInterests, user]) will handle it when `user` state updates.
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        setUser(null); // Ensure user is null on error
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [userId]); // Dependency array now only contains userId.
-
-  const newHandleInterestToggle = async () => {
-    if (!user?._id) return;
-    setInterestLoading(true);
-    try {
-      if (isInterested) {
-        await dispatch(removeInterest(user._id)).unwrap();
-        setIsInterested(false); // Optimistic update
-      } else {
-        await dispatch(addInterest(user)).unwrap();
-        setIsInterested(true); // Optimistic update
-      }
-    } catch (error) {
-      console.error("Interest toggle failed:", error);
-      // toast.error("Failed to update interest. Please try again.");
-      // If an error occurs, the `isInterested` state might be incorrect if set optimistically.
-      // The useEffect listening to `userInterests` will eventually correct it.
+      setIsInterested(previousState); // Revert on error
+      toast.error(error.payload || "Operation failed");
     } finally {
       setInterestLoading(false);
     }
   };
 
   const handleSendMessage = () => {
-    if (user?._id) {
-      router.push(`/messages/${user._id}`);
-    } else {
-      console.warn("Cannot send message, user ID is missing.");
-      alert("User profile not fully loaded. Please try again.");
+    if (currentUser?._id) {
+      router.push(`/messages/${currentUser._id}`);
     }
   };
 
-  const formatValue = (str) => {
-    if (!str) return "Not specified";
-    if (str === "very_religious") return "Very Religious";
-    if (str === "religious") return "Religious";
-    if (str === "not_religious") return "Not Religious";
-    if (str === "always") return "Always";
-    if (str === "most_of_the_time") return "Most of the time";
-    if (str === "sometimes") return "Sometimes";
-    if (str === "never") return "Never";
-    if (str === "daily") return "Daily";
-    if (str === "weekly") return "Weekly";
-    if (str === "monthly") return "Monthly";
-    if (str === "rarely") return "Rarely";
-    if (str === "yes") return "Yes";
-    if (str === "no") return "No";
-    if (str === "single") return "Single";
-    if (str === "married") return "Married";
-    if (str === "divorced") return "Divorced";
-    if (str === "widowed") return "Widowed";
-    if (str.includes("_")) {
-      return str
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-    }
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-
-  const profileCompleteness = () => {
-    if (!user) return 0;
-
-    const totalFields = 35; // Estimated max score based on fields below
-
-    let filledCount = 0;
-
-    // Fields directly on the user object
-    const userFields = [
-      "firstName",
-      "lastName",
-      "gender",
-      "tagLine",
-      "about",
-      "lookingFor",
-      "birthDate",
-      "height",
-      "build",
-      "ethnicity",
-      "currentLocation",
-      "countryOfBirth",
-      "citizenship",
-      "originCountry",
-      "willingToRelocate",
-      "educationLevel",
-      "profession",
-      "jobTitle",
-      "income",
-      "firstLanguage",
-      "secondLanguage",
-      "maritalStatus",
-      "childrenDesire",
-      "hasChildren",
-      "livingArrangement",
-      "marriageWithin",
-      "religiousness",
-      "sector",
-      "isRevert",
-      "keepsHalal",
-      "prayerFrequency",
-      "quranReading",
-      "smokes",
-      "drinks",
-      "phoneUsage",
-      "profilePicture",
-    ];
-
-    userFields.forEach((field) => {
-      const value = user[field];
-      if (
-        value !== undefined &&
-        value !== null &&
-        value !== "" &&
-        !(Array.isArray(value) && value.length === 0)
-      ) {
-        filledCount++;
-      }
-    });
-
-    // Bonus points for specific sections/data completeness
-    if (user.attachedMosques && user.attachedMosques.length > 0) {
-      filledCount += 2;
-    }
-    if (user.wali && (user.wali.name || user.wali.email || user.wali.phone)) {
-      filledCount += 2;
-    }
-    if (user.languages && user.languages.length > 2) {
-      filledCount += 1;
-    }
-    // Add more conditions for other sections like photos, references if applicable
-
-    const percentage = (filledCount / totalFields) * 100;
-
-    return Math.round(Math.min(percentage, 100));
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="text-center py-20 px-4 max-w-md mx-auto bg-white rounded-xl shadow-lg border border-gray-100 mt-10">
-        <AlertCircle size={60} className="mx-auto text-red-400 mb-5" />
-        <div className="text-2xl font-bold text-gray-800 mb-3">
-          Profile Not Found
+  if (loading || interestsLoading || !currentUser) {
+    if (loading || interestsLoading) {
+      return (
+        <div className="flex justify-center items-center h-screen bg-gray-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
         </div>
-        <p className="text-gray-600 mb-8">
-          The user profile you're looking for doesn't exist or has been removed.
-        </p>
-        <Link
-          href="/mosque-search"
-          className="bg-primary text-white px-8 py-3 rounded-full font-semibold hover:bg-primary-dark transition duration-300 inline-flex items-center justify-center shadow-md"
-        >
-          <MapPin size={18} className="mr-2" /> Browse Matches
-        </Link>
+      );
+    }
+  }
+
+  if (error || !currentUser?._id) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 px-6">
+        <div className="flex flex-col items-center justify-center max-w-lg mx-auto bg-white rounded-lg shadow-md border border-gray-200 p-8">
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-6">
+            <AlertCircle size={30} className="text-red-500" />
+          </div>
+
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            {error?.message || "Profile Not Found"}
+          </h2>
+
+          <p className="text-gray-600 text-center mb-6">
+            We couldn't retrieve the requested profile information. Please try
+            again later.
+          </p>
+
+          <div className="flex gap-4">
+            <button
+              onClick={() => window.history.back()}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium text-sm"
+            >
+              Go Back
+            </button>
+
+            <Link
+              href="/mosqueSearch"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors font-medium text-sm flex items-center"
+            >
+              <Search size={16} className="mr-2" />
+              Browse Matches
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const age = calculateAge(user.birthDate);
+  const age = calculateAge(currentUser.birthDate);
 
   return (
     <div className="bg-gray-100 min-h-screen pb-12">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary-dark to-primary h-48 relative">
-        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+      {/* Hero Background */}
+      <div className="h-48 relative w-full">
+        <Image
+          src={coverImage}
+          alt="Cover Image"
+          fill
+          className="object-cover"
+          priority
+        />
       </div>
 
       <div className="container mx-auto px-4 -mt-24 pb-8">
-        {/* Profile Card */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
           <div className="p-6 sm:p-8 relative">
             <div className="flex flex-col md:flex-row md:items-center">
-              {/* Profile Photo */}
+              {/* Avatar */}
               <div className="mb-6 md:mb-0 md:mr-8 flex-shrink-0">
                 <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl mx-auto md:mx-0 relative">
                   <Image
-                    src={user.profilePicture || getAvatar(user.gender)}
-                    alt={`${user.firstName}'s profile`}
+                    src={
+                      currentUser.profilePicture?.startsWith("http")
+                        ? currentUser.profilePicture
+                        : getAvatar(currentUser.gender)
+                    }
+                    alt={`${currentUser?.firstName || "User"}'s profile`}
                     width={128}
                     height={128}
                     className="h-full w-full object-cover"
                     onError={(e) => {
-                      e.target.src = getAvatar(user.gender);
-                      e.target.onerror = null;
+                      e.target.src = getAvatar(currentUser.gender);
                     }}
                   />
-                  {user.isVerified && (
+
+                  {currentUser.isVerified && (
                     <div className="absolute bottom-0 right-0 transform translate-x-1 translate-y-1 bg-green-500 text-white border-2 border-white rounded-full p-1 shadow-md">
                       <UserCheck size={16} />
                     </div>
@@ -519,27 +312,27 @@ export default function UserProfile({ userId }) {
                 </div>
               </div>
 
-              {/* Profile Info */}
+              {/* User Info and Actions */}
               <div className="flex-grow pt-4 md:pt-0">
                 <div className="flex flex-col md:flex-row md:items-center justify-between">
                   <div className="text-center md:text-left mb-6 md:mb-0">
                     <h1 className="text-3xl font-bold text-gray-900">
-                      {`${user.firstName} ${user.lastName}`}
-                      {age !== null && (
+                      {currentUser.firstName} {currentUser.lastName}
+                      {age !== "Not specified" && (
                         <span className="ml-3 text-xl font-normal text-gray-500">
                           {age}
                         </span>
                       )}
                     </h1>
-                    {user.currentLocation && (
+                    {currentUser.currentLocation && (
                       <p className="text-gray-600 mt-2 flex items-center justify-center md:justify-start">
                         <MapPin size={18} className="mr-2 text-gray-400" />
-                        {user.currentLocation}
+                        {currentUser.currentLocation}
                       </p>
                     )}
-                    {user.tagLine && (
+                    {currentUser.tagLine && (
                       <p className="text-primary-dark font-medium mt-3 text-lg italic">
-                        "{user.tagLine}"
+                        "{currentUser.tagLine}"
                       </p>
                     )}
                   </div>
@@ -547,8 +340,8 @@ export default function UserProfile({ userId }) {
                   {/* Action Buttons */}
                   <div className="flex gap-4 justify-center md:justify-end w-full md:w-auto">
                     <button
-                      onClick={newHandleInterestToggle} // Using the version with optimistic updates
-                      disabled={interestLoading || !user?._id}
+                      onClick={handleInterestToggle}
+                      disabled={interestLoading}
                       className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 font-semibold text-sm transition duration-300 shadow-sm ${
                         isInterested
                           ? "bg-red-50 text-red-600 border-red-300 hover:bg-red-100"
@@ -561,10 +354,9 @@ export default function UserProfile({ userId }) {
                         <>
                           <Heart
                             size={20}
+                            fill={isInterested ? "#ef4444" : "transparent"}
                             className={
-                              isInterested
-                                ? "fill-red-500 text-red-500"
-                                : "text-gray-500"
+                              isInterested ? "text-red-500" : "text-gray-500"
                             }
                           />
                           <span>
@@ -575,7 +367,8 @@ export default function UserProfile({ userId }) {
                     </button>
                     <button
                       onClick={handleSendMessage}
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition duration-300 shadow-sm"
+                      disabled={!currentUser?._id}
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <MessageCircle size={20} />
                       <span>Message</span>
@@ -585,112 +378,51 @@ export default function UserProfile({ userId }) {
               </div>
             </div>
 
-            {/* Key Attributes */}
+            {/* Quick Info Tags */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8 border-t border-gray-100 pt-6">
-              {user.religiousness && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <Building size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Religion
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {formatValue(user.religiousness)}
-                  </div>
-                </div>
+              {currentUser.religiousness && (
+                <ProfileTag
+                  icon={<Book size={24} />}
+                  label="Religion"
+                  value={formatValue(currentUser.religiousness)}
+                />
               )}
-              {user.maritalStatus && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <Heart size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Status
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {formatValue(user.maritalStatus)}
-                  </div>
-                </div>
+              {currentUser.maritalStatus && (
+                <ProfileTag
+                  icon={<Heart size={24} />}
+                  label="Status"
+                  value={formatValue(currentUser.maritalStatus)}
+                />
               )}
-              {user.educationLevel && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <Book size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Education
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {formatValue(user.educationLevel)}
-                  </div>
-                </div>
+              {currentUser.educationLevel && (
+                <ProfileTag
+                  icon={<Book size={24} />}
+                  label="Education"
+                  value={formatValue(currentUser.educationLevel)}
+                />
               )}
-              {user.profession && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <Briefcase size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Profession
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {formatValue(user.profession)}
-                  </div>
-                </div>
-              )}
-              {user.height && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <User size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Height
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {user.height} cm
-                  </div>
-                </div>
-              )}
-              {user.build && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <User size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Build
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {formatValue(user.build)}
-                  </div>
-                </div>
-              )}
-              {user.ethnicity && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <Star size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Ethnicity
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {formatValue(user.ethnicity)}
-                  </div>
-                </div>
-              )}
-              {user.willingToRelocate !== undefined && (
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4 text-center">
-                  <MapPin size={24} className="text-primary mb-2" />
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
-                    Relocate
-                  </div>
-                  <div className="font-semibold text-gray-800">
-                    {user.willingToRelocate ? "Yes" : "No"}
-                  </div>
-                </div>
+              {currentUser.profession && (
+                <ProfileTag
+                  icon={<Briefcase size={24} />}
+                  label="Profession"
+                  value={formatValue(currentUser.profession)}
+                />
               )}
             </div>
           </div>
 
-          {/* Tab Navigation */}
+          {/* Tabs */}
           <div className="border-t border-gray-200 px-2 sm:px-6">
             <div className="flex overflow-x-auto scrollbar-hide -mb-px">
               {["about", "mosques", "photos", "references"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-3 sm:px-5 py-4 font-semibold text-sm sm:text-base whitespace-nowrap focus:outline-none transition-colors
-          ${
-            activeTab === tab
-              ? "text-primary border-b-2 border-primary"
-              : "text-gray-600 hover:text-primary hover:border-b-2 hover:border-primary"
-          }`}
+                  className={`px-3 sm:px-5 py-4 font-semibold text-sm sm:text-base whitespace-nowrap focus:outline-none transition-colors ${
+                    activeTab === tab
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-gray-600 hover:text-primary"
+                  }`}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -699,24 +431,23 @@ export default function UserProfile({ userId }) {
           </div>
         </div>
 
-        {/* Main Content Area with Two Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Profile Details */}
+        {/* Main Content Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          {/* Left Column (Tab Content) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* About Tab Content */}
             {activeTab === "about" && (
               <>
-                {/* Bio Section */}
+                {/* About Me */}
                 <ProfileSection title="About Me" icon={<User size={20} />}>
                   <div className="text-gray-700 leading-relaxed">
-                    <p>{user.about || "No information provided yet."}</p>
+                    {currentUser.about || "No information provided yet."}
                   </div>
                 </ProfileSection>
 
-                {/* Looking For Section */}
+                {/* Looking For */}
                 <ProfileSection title="Looking For" icon={<Heart size={20} />}>
                   <div className="text-gray-700 leading-relaxed">
-                    <p>{user.lookingFor || "No preferences specified yet."}</p>
+                    {currentUser.lookingFor || "No preferences specified yet."}
                   </div>
                 </ProfileSection>
 
@@ -724,157 +455,193 @@ export default function UserProfile({ userId }) {
                 <ProfileSection
                   title="Personal Information"
                   icon={<Info size={20} />}
+                  initiallyExpanded={false}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ProfileTag
                       icon={<Calendar size={18} />}
                       label="Age"
-                      value={age !== null ? `${age} years` : "Not specified"}
+                      value={age ? `${age} years` : "Not specified"}
                     />
                     <ProfileTag
                       icon={<MapPin size={18} />}
                       label="Current Location"
-                      value={user.currentLocation}
+                      value={currentUser.currentLocation}
                     />
                     <ProfileTag
                       icon={<Flag size={18} />}
                       label="Citizenship"
-                      value={user.citizenship || "Not specified"}
+                      value={formatValue(currentUser.citizenship)}
+                      flagUrl={citizenshipFlag}
                     />
                     <ProfileTag
                       icon={<Flag size={18} />}
                       label="Origin Country"
-                      value={user.originCountry || "Not specified"}
+                      value={formatValue(currentUser.originCountry)}
+                      flagUrl={originCountryFlag}
                     />
                     <ProfileTag
-                      icon={<Languages size={18} />}
-                      label="Languages Spoken"
-                      value={
-                        user.languages && user.languages.length > 0
-                          ? user.languages
-                              .map((lang) => formatValue(lang))
-                              .join(", ")
-                          : user.firstLanguage || user.secondLanguage
-                          ? `${formatValue(user.firstLanguage)}${
-                              user.firstLanguage && user.secondLanguage
-                                ? ", "
-                                : ""
-                            }${formatValue(user.secondLanguage)}`
-                          : null
-                      }
+                      icon={<Book size={18} />}
+                      label="Languages"
+                      value={[
+                        currentUser.firstLanguage,
+                        currentUser.secondLanguage,
+                        ...(currentUser.languages || []),
+                      ]
+                        .filter(Boolean)
+                        .map(formatValue)
+                        .join(", ")}
                     />
-                    <ProfileTag
-                      icon={<Heart size={18} />}
-                      label="Marital Status"
-                      value={formatValue(user.maritalStatus)}
-                    />
-                    <ProfileTag
-                      icon={<UserCheck size={18} />}
-                      label="Has Children"
-                      value={formatValue(user.hasChildren)}
-                    />
-                    <ProfileTag
-                      icon={<Heart size={18} />}
-                      label="Children Desire"
-                      value={formatValue(user.childrenDesire)}
-                    />
-                    <ProfileTag
-                      icon={<User size={18} />}
-                      label="Living Arrangement"
-                      value={formatValue(user.livingArrangement)}
-                    />
-                    <ProfileTag
-                      icon={<Calendar size={18} />}
-                      label="Marriage Within"
-                      value={formatValue(user.marriageWithin)}
-                    />
-                    <ProfileTag
-                      icon={<Briefcase size={18} />}
-                      label="Income Range"
-                      value={formatValue(user.income)}
-                    />
-                    <ProfileTag
-                      icon={<Info size={18} />}
-                      label="Disability"
-                      value={user.disability ? "Yes" : "No"}
-                    />
+                    {currentUser.maritalStatus && (
+                      <ProfileTag
+                        icon={<Heart size={18} />}
+                        label="Marital Status"
+                        value={formatValue(currentUser.maritalStatus)}
+                      />
+                    )}
+                    {currentUser.hasChildren !== undefined && (
+                      <ProfileTag
+                        icon={<UserCheck size={18} />}
+                        label="Has Children"
+                        value={currentUser.hasChildren ? "Yes" : "No"}
+                      />
+                    )}
+                    {currentUser.childrenDesire && (
+                      <ProfileTag
+                        icon={<Heart size={18} />}
+                        label="Children Desire"
+                        value={formatValue(currentUser.childrenDesire)}
+                      />
+                    )}
+                    {currentUser.livingArrangement && (
+                      <ProfileTag
+                        icon={<User size={18} />}
+                        label="Living Arrangement"
+                        value={formatValue(currentUser.livingArrangement)}
+                      />
+                    )}
+                    {currentUser.marriageWithin && (
+                      <ProfileTag
+                        icon={<Calendar size={18} />}
+                        label="Marriage Timeline"
+                        value={formatValue(currentUser.marriageWithin)}
+                      />
+                    )}
+                    {currentUser.income && (
+                      <ProfileTag
+                        icon={<Briefcase size={18} />}
+                        label="Income Range"
+                        value={formatValue(currentUser.income)}
+                      />
+                    )}
+                    {currentUser.willingToRelocate !== undefined && (
+                      <ProfileTag
+                        icon={<Info size={18} />}
+                        label="Willing to Relocate"
+                        value={currentUser.willingToRelocate ? "Yes" : "No"}
+                      />
+                    )}
                   </div>
                 </ProfileSection>
 
                 {/* Religious Background */}
                 <ProfileSection
                   title="Religious Background"
-                  icon={<Building size={20} />}
+                  icon={<Book size={20} />}
+                  initiallyExpanded={false}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ProfileTag
-                      icon={<Book size={18} />}
-                      label="Religiousness Level"
-                      value={formatValue(user.religiousness)}
-                    />
-                    <ProfileTag
-                      icon={<Book size={18} />}
-                      label="Islamic Sector"
-                      value={formatValue(user.sector)}
-                    />
-                    <ProfileTag
-                      icon={<Building size={18} />}
-                      label="Prayer Frequency"
-                      value={formatValue(user.prayerFrequency)}
-                    />
-                    <ProfileTag
-                      icon={<Book size={18} />}
-                      label="Quran Reading Frequency"
-                      value={formatValue(user.quranReading)}
-                    />
-                    <ProfileTag
-                      icon={<Info size={18} />}
-                      label="Keeps Halal"
-                      value={user.keepsHalal ? "Yes" : "No"}
-                    />
-                    <ProfileTag
-                      icon={<User size={18} />}
-                      label="Revert"
-                      value={user.isRevert ? "Yes" : "No"}
-                    />
-                    <ProfileTag
-                      icon={<Info size={18} />}
-                      label="Smokes"
-                      value={user.smokes ? "Yes" : "No"}
-                    />
-                    <ProfileTag
-                      icon={<Info size={18} />}
-                      label="Drinks Alcohol"
-                      value={user.drinks ? "Yes" : "No"}
-                    />
-                    <ProfileTag
-                      icon={<Phone size={18} />}
-                      label="Phone Usage"
-                      value={
-                        user.phoneUsage
-                          ? `${formatValue(user.phoneUsage)} / day`
-                          : "Not specified"
-                      }
-                    />
+                    {currentUser.religiousness && (
+                      <ProfileTag
+                        icon={<Book size={18} />}
+                        label="Religiousness"
+                        value={formatValue(currentUser.religiousness)}
+                      />
+                    )}
+                    {currentUser.sector && (
+                      <ProfileTag
+                        icon={<Book size={18} />}
+                        label="Islamic Sector"
+                        value={formatValue(currentUser.sector)}
+                      />
+                    )}
+                    {currentUser.prayerFrequency && (
+                      <ProfileTag
+                        icon={<Book size={18} />}
+                        label="Prayer Frequency"
+                        value={formatValue(currentUser.prayerFrequency)}
+                      />
+                    )}
+                    {currentUser.quranReading && (
+                      <ProfileTag
+                        icon={<Book size={18} />}
+                        label="Quran Reading"
+                        value={formatValue(currentUser.quranReading)}
+                      />
+                    )}
+                    {currentUser.keepsHalal !== undefined && (
+                      <ProfileTag
+                        icon={<Info size={18} />}
+                        label="Keeps Halal"
+                        value={currentUser.keepsHalal ? "Yes" : "No"}
+                      />
+                    )}
+                    {currentUser.isRevert !== undefined && (
+                      <ProfileTag
+                        icon={<User size={18} />}
+                        label="Revert"
+                        value={currentUser.isRevert ? "Yes" : "No"}
+                      />
+                    )}
+                    {currentUser.wearsHijab !== undefined && (
+                      <ProfileTag
+                        icon={<Info size={18} />}
+                        label="Wears Hijab"
+                        value={currentUser.wearsHijab ? "Yes" : "No"}
+                      />
+                    )}
+                    {currentUser.smokes !== undefined && (
+                      <ProfileTag
+                        icon={<Info size={18} />}
+                        label="Smokes"
+                        value={currentUser.smokes ? "Yes" : "No"}
+                      />
+                    )}
+                    {currentUser.drinks !== undefined && (
+                      <ProfileTag
+                        icon={<Info size={18} />}
+                        label="Drinks Alcohol"
+                        value={currentUser.drinks ? "Yes" : "No"}
+                      />
+                    )}
+                    {currentUser.phoneUsage && (
+                      <ProfileTag
+                        icon={<Phone size={18} />}
+                        label="Phone Usage"
+                        value={
+                          currentUser.phoneUsage
+                            ? `${formatValue(currentUser.phoneUsage)}/day`
+                            : "Not specified"
+                        }
+                      />
+                    )}
                   </div>
                 </ProfileSection>
               </>
             )}
 
-            {/* Mosques Tab Content */}
             {activeTab === "mosques" && (
               <ProfileSection
                 title={`Connected Mosques (${
-                  user.attachedMosques?.length || 0
+                  currentUser.attachedMosques?.length || 0
                 })`}
                 icon={<Building size={20} />}
-                initiallyExpanded={true}
               >
-                {user.attachedMosques && user.attachedMosques.length > 0 ? (
+                {currentUser.attachedMosques?.length > 0 ? (
                   <div className="space-y-4">
-                    {user.attachedMosques.map((mosque, index) => (
+                    {currentUser.attachedMosques.map((mosque) => (
                       <div
-                        key={index}
+                        key={mosque._id}
                         className="border border-gray-200 rounded-lg p-4 hover:border-primary transition duration-200 flex items-center justify-between"
                       >
                         <div>
@@ -887,7 +654,7 @@ export default function UserProfile({ userId }) {
                           </p>
                         </div>
                         <Link
-                          href={`/mosque/${mosque.id}`}
+                          href={`/mosques/${mosque.id}`}
                           className="text-primary hover:text-primary-dark transition duration-200 flex items-center text-sm font-medium ml-4 flex-shrink-0"
                         >
                           <span>View Mosque</span>
@@ -902,54 +669,65 @@ export default function UserProfile({ userId }) {
                       size={48}
                       className="mx-auto text-gray-300 mb-3"
                     />
-                    <p>No connected mosques found for this user.</p>
+                    <p>No connected mosques found.</p>
                   </div>
                 )}
               </ProfileSection>
             )}
 
-            {/* Photos Tab Content */}
             {activeTab === "photos" && (
-              <ProfileSection
-                title="Photos"
-                icon={<FileText size={20} />}
-                initiallyExpanded={true}
-              >
+              <ProfileSection title="Photos" icon={<User size={20} />}>
                 <div className="flex flex-col items-center text-center py-10 px-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <Lock size={48} className="text-gray-300 mb-4" />
                   <p className="text-gray-600 mb-6 max-w-md">
                     Photos are private and hidden until a mutual interest is
                     established.
                   </p>
-                  <button className="bg-white border border-gray-300 px-6 py-3 rounded-lg text-gray-700 font-medium hover:border-primary hover:text-primary hover:bg-gray-100 transition duration-200 flex items-center justify-center gap-2 shadow">
-                    <Heart size={18} />
-                    Show Interest to View Photos
+                  <button
+                    onClick={handleInterestToggle}
+                    disabled={interestLoading}
+                    className="bg-white border border-gray-300 px-6 py-3 rounded-lg text-gray-700 font-medium hover:border-primary hover:text-primary hover:bg-gray-100 transition duration-200 flex items-center justify-center gap-2 shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {interestLoading ? (
+                      <Loader size={18} className="animate-spin" />
+                    ) : (
+                      <Heart
+                        size={18}
+                        fill={isInterested ? "#ef4444" : "transparent"}
+                        className={
+                          isInterested ? "text-red-500" : "text-gray-500"
+                        }
+                      />
+                    )}
+                    {isInterested
+                      ? "You are interested"
+                      : "Show Interest to View Photos"}
                   </button>
+                  {isInterested && (
+                    <p className="text-sm text-green-600 mt-3">
+                      Mutual interest may reveal photos if the other user is
+                      also interested.
+                    </p>
+                  )}
                 </div>
               </ProfileSection>
             )}
 
             {activeTab === "references" && (
-              <ProfileSection
-                title="Community References (0)"
-                icon={<UserCheck size={20} />}
-                initiallyExpanded={true}
-              >
+              <ProfileSection title="References" icon={<UserCheck size={20} />}>
                 <div className="flex flex-col items-center text-center py-10 px-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <FileText size={48} className="text-gray-300 mb-4" />
                   <p className="text-gray-600 max-w-md">
-                    No community references available yet for this user.
+                    No references available yet for this user.
                   </p>
                 </div>
               </ProfileSection>
             )}
           </div>
 
-          {/* Right Column - Sidebar Information */}
+          {/* Right Column (Wali Contact) */}
           <div className="space-y-6">
-            {/* Wali Contact Information */}
-            {user.wali &&
-            (user.wali.name || user.wali.email || user.wali.phone) ? (
+            {currentUser.wali && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
                   <h3 className="font-semibold text-lg text-gray-800">
@@ -958,7 +736,7 @@ export default function UserProfile({ userId }) {
                 </div>
                 <div className="p-6">
                   <div className="space-y-4">
-                    {user.wali.name && (
+                    {currentUser.wali.name && (
                       <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <UserCheck size={20} className="text-primary mt-1" />
                         <div>
@@ -966,17 +744,12 @@ export default function UserProfile({ userId }) {
                             Name
                           </div>
                           <div className="font-medium text-gray-800">
-                            {user.wali.name}
+                            {currentUser.wali.name}
                           </div>
-                          {user.wali.relationship && (
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              ({user.wali.relationship})
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
-                    {user.wali.email && (
+                    {currentUser.wali.email && (
                       <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <Mail size={20} className="text-primary mt-1" />
                         <div>
@@ -984,12 +757,12 @@ export default function UserProfile({ userId }) {
                             Email
                           </div>
                           <div className="font-medium text-gray-800">
-                            {user.wali.email}
+                            {currentUser.wali.email}
                           </div>
                         </div>
                       </div>
                     )}
-                    {user.wali.phone && (
+                    {currentUser.wali.phone && (
                       <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <Phone size={20} className="text-primary mt-1" />
                         <div>
@@ -997,7 +770,7 @@ export default function UserProfile({ userId }) {
                             Phone
                           </div>
                           <div className="font-medium text-gray-800">
-                            {user.wali.phone}
+                            {currentUser.wali.phone}
                           </div>
                         </div>
                       </div>
@@ -1008,21 +781,9 @@ export default function UserProfile({ userId }) {
                     <p>
                       Wali contact details are provided to facilitate formal
                       steps towards marriage after mutual interest. Please use
-                      this information respectfully and appropriately according
-                      to Islamic guidelines.
+                      this information respectfully.
                     </p>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="font-semibold text-lg text-gray-800">
-                    Wali Contact
-                  </h3>
-                </div>
-                <div className="p-6 text-center text-gray-500">
-                  No Wali contact information provided yet for this user.
                 </div>
               </div>
             )}

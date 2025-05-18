@@ -13,11 +13,13 @@ import {
   Info,
 } from "lucide-react";
 import InterestsModal from "./InterestsModal";
+import { useDispatch } from "react-redux";
+import { logoutUser } from "@/redux/auth/authSlice"; // adjust the path based on your folder structure
+import { useRouter } from "next/navigation";
 
 // Distance Range Slider Component
 const DistanceFilter = ({ value, onChange }) => {
   const [distance, setDistance] = useState(value || 6); // Default to 6 miles
-
   const handleChange = (e) => {
     const newValue = parseInt(e.target.value);
     setDistance(newValue);
@@ -51,6 +53,9 @@ export default function Header({
   setMapCenter,
   userLocation,
 }) {
+  const dispatch = useDispatch();
+  const router = useRouter();
+
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
@@ -76,6 +81,11 @@ export default function Header({
     if (handleFilterChange) {
       handleFilterChange("distance", value);
     }
+  };
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    router.push("/auth/login"); // redirect to login or home after logout
   };
 
   // Update search query when user location changes
@@ -259,25 +269,18 @@ export default function Header({
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-40">
                 <div className="py-2">
-                  <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                    Sign up
+                  <a
+                    href="/profile"
+                    className="block px-4 py-2 hover:bg-gray-100"
+                  >
+                    Profile
                   </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                    Log in
-                  </a>
-                  <div className="border-t border-gray-200 my-1"></div>
-                  <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                    Mosque dashboard
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                    Community events
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                    Settings
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                    Help
-                  </a>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                  >
+                    Log Out
+                  </button>
                 </div>
               </div>
             )}

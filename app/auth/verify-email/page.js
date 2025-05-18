@@ -20,11 +20,12 @@ const VerifyEmail = () => {
 
   useEffect(() => {
     if (token) {
-      verifyEmail({ token })
+      // Ensure token is a string and not an object
+      verifyEmail({ token }) // Pass an object with a token property
         .unwrap()
         .then(() => {
           setMessage("Your email has been verified successfully!");
-          setTimeout(() => router.push("/login"), 3000);
+          setTimeout(() => router.push("/auth/login"), 3000);
         })
         .catch((err) => {
           setError(
@@ -33,7 +34,7 @@ const VerifyEmail = () => {
           );
         });
     }
-  }, [token, router, verifyEmail]);
+  }, [token, verifyEmail, router]);
 
   const handleResend = async () => {
     if (!email) return;

@@ -4,16 +4,24 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { logoutUser } from "@/redux/auth/authSlice"; // adjust the path based on your folder structure
+import { useDispatch } from "react-redux";
 
 export default function Navbar() {
+  const dispatch = useDispatch();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const pathname = usePathname();
-
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    router.push("/auth/login"); // redirect to login or home after logout
+  };
   // Check if we're on one of the auth pages or home page
   const isAuthOrHomePage =
     pathname === "/" ||
@@ -25,7 +33,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 w-full py-3">
       <div className="container navbar-container">
         <div className="navbar-logo">
-          <Link href="/">
+          <Link href="/mosqueSearch">
             <h1>MosqueMatch</h1>
           </Link>
         </div>
@@ -78,46 +86,18 @@ export default function Navbar() {
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-40">
                   <div className="py-2">
-                    <Link
-                      href="/auth/signup"
+                    <a
+                      href="/profile"
                       className="block px-4 py-2 hover:bg-gray-100"
                     >
-                      Sign up
-                    </Link>
-                    <Link
-                      href="/auth/imam"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                    >
-                      Imam
-                    </Link>
-                    <Link
-                      href="/auth/login"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                    >
-                      Log in
-                    </Link>
-                    <div className="border-t border-gray-200 my-1"></div>
-                    <Link
-                      href="/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                    >
-                      Mosque dashboard
-                    </Link>
-                    <Link
-                      href="#"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                    >
-                      Community events
-                    </Link>
-                    <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                      Settings
+                      Profile
                     </a>
-                    <Link
-                      href="#"
-                      className="block px-4 py-2 hover:bg-gray-100"
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
                     >
-                      Help
-                    </Link>
+                      Log Out
+                    </button>
                   </div>
                 </div>
               )}

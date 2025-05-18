@@ -65,7 +65,6 @@ export default function OptimizedMosqueMap({
     shallowEqual
   );
 
-  console.log(currentUser);
 
   // States
   const [selectedMosque, setSelectedMosque] = useState(null);

@@ -1,5 +1,7 @@
-// components/auth/signup/SignupForm.jsx
+// Updated SignupForm.jsx to include redirect after success
+
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,6 +10,7 @@ import {
   updateFormData,
   resetForm,
   submitRegistration,
+  selectSuccessMessage,
 } from "@/redux/form/formSlice";
 import SignupStep1 from "./SignupStep1";
 import SignupStep2 from "./SignupStep2";
@@ -24,9 +27,8 @@ import { rootRoute } from "@/shared/constants/backendLink";
 
 const SignupForm = () => {
   const dispatch = useDispatch();
-  const { formData, currentStep, successMessage, error } = useSelector(
-    (state) => state.form
-  );
+  const { formData, currentStep, error } = useSelector((state) => state.form);
+  const successMessage = useSelector(selectSuccessMessage);
   const router = useRouter();
 
   const totalSteps = 9;
@@ -35,7 +37,7 @@ const SignupForm = () => {
   const prevStep = () => dispatch(setStep(currentStep - 1));
 
   const handleSubmit = async (values, { setSubmitting }) => {
-    dispatch(submitRegistration(values));
+    await dispatch(submitRegistration(values));
     setSubmitting(false);
   };
 
@@ -48,24 +50,13 @@ const SignupForm = () => {
     return () => dispatch(resetForm());
   }, [dispatch]);
 
-  if (successMessage) {
-    return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <div className="success-message">
-            <div className="success-icon">
-              <i className="fas fa-envelope"></i>
-            </div>
-            <h3>Verify Your Email</h3>
-            <p>{successMessage}</p>
-            <button className="auth-button" onClick={() => router.push("/")}>
-              Return Home
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Add effect to handle success message and redirect
+  useEffect(() => {
+    if (successMessage) {
+      // Redirect to verification page
+      router.push("/auth/after-signup-handler");
+    }
+  }, [successMessage, router]);
 
   if (error) {
     return (
