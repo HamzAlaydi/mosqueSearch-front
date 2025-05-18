@@ -8,7 +8,7 @@ import {
   requestUnblurPicture,
   clearSuccess,
   clearError,
-  fetchUserProfile,
+  fetchMyProfile,
 } from "@/redux/user/userSlice";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -399,7 +399,7 @@ export default function EditProfile() {
         const user = JSON.parse(userString);
         const userId = user.id; // or user._id based on your backend
         if (userId) {
-          dispatch(fetchUserProfile(userId));
+          dispatch(fetchMyProfile(userId));
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);

@@ -22,6 +22,24 @@ export const fetchUserProfile = createAsyncThunk(
     }
   }
 );
+export const fetchMyProfile = createAsyncThunk(
+  "users/fetchUserProfile",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${rootRoute}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch user profile"
+      );
+    }
+  }
+);
 
 export const updateUserProfile = createAsyncThunk(
   "users/updateUserProfile",
