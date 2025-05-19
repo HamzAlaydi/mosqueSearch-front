@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import LocationSearch from "../signup/step9Components/LocationSearch";
-import DistanceSlider from "../signup/step9Components/DistanceSlider";
+import DistanceSlider from "../signup/step9Components/OptimizedDistanceSlider";
 import MapContainer from "../signup/step9Components/MapContainer";
 import SelectedMosquesList from "../signup/step9Components/SelectedMosquesList";
 

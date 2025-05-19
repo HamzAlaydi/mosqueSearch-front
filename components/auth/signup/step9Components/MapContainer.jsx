@@ -24,13 +24,17 @@ const MAP_CONTAINER_STYLE_DEFAULT = {
   width: "100%",
   height: "400px",
   borderRadius: "8px",
+  overflow: "hidden", // Ensures child elements like InfoWindow don't spill
+  position: "relative", // Helps anchor elements properly
   transition: "height 0.3s ease-in-out",
 };
 
 const MAP_CONTAINER_STYLE_FULLSCREEN = {
   width: "100%",
-  height: "85vh", // Adjust as needed for fullscreen header/footer
+  height: "calc(100vh - 80px)", // Adjust depending on header/footer height
   borderRadius: "0",
+  overflow: "hidden",
+  position: "relative",
   transition: "height 0.3s ease-in-out",
 };
 
@@ -399,31 +403,88 @@ const MapContainer = ({
 
   // Fullscreen toggle logic
   const toggleFullScreen = useCallback(() => {
-    const mapElement = document.getElementById("google-map-container"); // Get the map container div
+    const mapElement = document.getElementById("google-map-container");
     if (!mapElement) return;
 
     if (!isFullScreen) {
-      // Go fullscreen: move map element to portal root
+      // Go to fullscreen mode
       document.body.style.overflow = "hidden"; // Prevent body scroll
-      if (mapContainerRef.current) {
-        mapContainerRef.current.appendChild(mapElement);
+
+      // Create fullscreen container if it doesn't exist
+      let fsContainer = document.getElementById("map-fullscreen-container");
+      if (!fsContainer) {
+        fsContainer = document.createElement("div");
+        fsContainer.id = "map-fullscreen-container";
+        fsContainer.className = "fixed inset-0 z-50 bg-white flex flex-col";
+        document.body.appendChild(fsContainer);
+
+        // Create header
+        const header = document.createElement("div");
+        header.className =
+          "p-4 border-b flex justify-between items-center bg-white shadow-sm";
+        header.innerHTML = `
+        <button id="exit-fs-button" class="flex items-center text-gray-700 hover:text-gray-900 text-sm font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="m15 19-7-7 7-7"></path></svg>
+          <span>Back</span>
+        </button>
+        <div class="text-center flex-grow">
+          <h2 class="font-semibold text-lg">Select Mosques</h2>
+          <p class="text-sm text-gray-600">
+            Found ${filteredMosques.length} mosques within ${distance} miles
+          </p>
+        </div>
+        <div class="w-20"></div>
+      `;
+        fsContainer.appendChild(header);
+
+        // Create content container
+        const content = document.createElement("div");
+        content.className = "flex-grow relative";
+        content.id = "map-fs-content";
+        fsContainer.appendChild(content);
+
+        // Add event listener to exit button
+        document
+          .getElementById("exit-fs-button")
+          .addEventListener("click", () => {
+            toggleFullScreen();
+          });
       }
+
+      // Move map into fullscreen container
+      document.getElementById("map-fs-content").appendChild(mapElement);
     } else {
-      // Exit fullscreen: move map element back to its original place
+      // Exit fullscreen mode
       document.body.style.overflow = ""; // Restore body scroll
-      // Assuming the map's original parent is the div containing the LoadScript
-      const originalParent = document.querySelector(
-        ".mb-4.relative > div:not(.fixed)"
-      ); // Adjust selector based on your structure
-      if (originalParent) {
-        originalParent.appendChild(mapElement);
+
+      // Move map back to original container
+      const originalContainer = document.querySelector(".mb-4.relative > div");
+      if (originalContainer) {
+        originalContainer.appendChild(mapElement);
       }
-      // Also, fit the map back to bounds after exiting fullscreen
-      // A slight delay might be needed for the map container to resize first
-      setTimeout(() => fitMapToBounds(), 100);
+
+      // Remove fullscreen container
+      const fsContainer = document.getElementById("map-fullscreen-container");
+      if (fsContainer) {
+        document.body.removeChild(fsContainer);
+      }
+
+      // Refit map bounds after a delay to let it resize
+      setTimeout(() => {
+        fitMapToBounds();
+      }, 100);
     }
-    setIsFullScreen((prev) => !prev);
-  }, [isFullScreen, fitMapToBounds]);
+
+    // Toggle fullscreen state
+    setIsFullScreen(!isFullScreen);
+
+    // Ensure Google Map resizes to fit container
+    setTimeout(() => {
+      if (window.google && mapInstanceRef.current) {
+        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+      }
+    }, 200);
+  }, [isFullScreen, filteredMosques.length, distance, fitMapToBounds]);
 
   // Render the full-screen modal portal
   const renderFullScreenModal = () => {
@@ -588,7 +649,10 @@ const MapContainer = ({
                 Wrap InfoWindow content in a div with a solid background.
                 Add max-height (increased) and overflow-y-auto to make content scrollable.
               */}
-              <div className="bg-white p-4 rounded-lg shadow-md max-w-xs text-gray-800 font-sans flex flex-col items-start max-h-80 overflow-y-auto">
+              <div
+                className="bg-white p-4 rounded-lg shadow-md max-w-xs w-full text-gray-800 font-sans flex flex-col items-start max-h-80 overflow-y-auto relative"
+                style={{ boxSizing: "border-box", width: "100%" }}
+              >
                 {" "}
                 {/* Increased max-h to max-h-80 (320px) */}
                 <h3 className="font-bold text-lg mb-1 leading-tight">

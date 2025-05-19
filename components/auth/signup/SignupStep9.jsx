@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
-import MapContainer from "./step9Components/MapContainer";
 import LocationSearch from "./step9Components/LocationSearch";
-import DistanceSlider from "./step9Components/DistanceSlider";
+import OptimizedDistanceSlider from "./step9Components/OptimizedDistanceSlider";
+import OptimizedMapContainer from "./step9Components/OptimizedMapContainer";
 import SelectedMosquesList from "./step9Components/SelectedMosquesList";
 import FormNavigation from "./step9Components/FormNavigation";
 import { GOOGLE_API } from "@/shared/constants/backendLink";
@@ -44,7 +44,7 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
     }
   }, []);
 
-  // Toggle mosque attachment
+  // Toggle mosque attachment - memoized to prevent recreation
   const toggleMosqueAttachment = useCallback((mosque) => {
     setAttachedMosques((prev) => {
       const isAttached = prev.some((m) => m.id === mosque.id);
@@ -70,6 +70,7 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
       }}
     >
       {({ setFieldValue, values, isSubmitting, errors, touched }) => {
+        // Keep form values in sync with attached mosques
         useEffect(() => {
           setFieldValue("attachedMosques", attachedMosques);
         }, [attachedMosques, setFieldValue]);
@@ -95,14 +96,16 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
                 setError={setError}
               />
 
-              <DistanceSlider
+              {/* Using the optimized slider component */}
+              <OptimizedDistanceSlider
                 values={values}
                 errors={errors}
                 touched={touched}
                 setFieldValue={setFieldValue}
               />
 
-              <MapContainer
+              {/* Using the optimized map container */}
+              <OptimizedMapContainer
                 userLocation={userLocation}
                 distance={values.distance}
                 attachedMosques={attachedMosques}
