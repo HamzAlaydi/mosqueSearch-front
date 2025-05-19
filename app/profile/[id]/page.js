@@ -149,12 +149,16 @@ export default function UserProfile() {
   const params = useParams();
   const userId = params?.id;
 
-  const { currentUser, loading, error } = useSelector(
-    (state) => ({
-      currentUser: state.user.currentUser,
-    }),
-    shallowEqual
-  );
+  const {
+    currentUser = {},
+    loading,
+    error,
+  } = useSelector((state) => ({
+    currentUser: state.user.currentUser,
+    loading: state.user.loading,
+    error: state.user.error,
+  }));
+  console.log({ loading });
 
   const { userInterests, loading: interestsLoading } = useSelector(
     (state) => state.matches
@@ -219,17 +223,15 @@ export default function UserProfile() {
     }
   };
 
-  if (loading || interestsLoading || !currentUser) {
-    if (loading || interestsLoading) {
-      return (
-        <div className="flex justify-center items-center h-screen bg-gray-50">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
-        </div>
-      );
-    }
+  if (loading || interestsLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+      </div>
+    );
   }
 
-  if (error || !currentUser?._id) {
+  if (!loading && (error || !currentUser?._id)) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 px-6">
         <div className="flex flex-col items-center justify-center max-w-lg mx-auto bg-white rounded-lg shadow-md border border-gray-200 p-8">
@@ -238,7 +240,9 @@ export default function UserProfile() {
           </div>
 
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            {error?.message || "Profile Not Found"}
+            {error
+              ? error.message || "Error Loading Profile"
+              : "Profile Not Found"}
           </h2>
 
           <p className="text-gray-600 text-center mb-6">

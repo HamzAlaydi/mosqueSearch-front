@@ -1,20 +1,27 @@
 "use client";
 
 import { X, Star } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function FilterModal({
   toggleFilter = () => {},
-  activeFilters = {
-    prayer: [],
-    facilities: [],
-    rating: null,
-    distance: null,
-  },
+  activeFilters = {},
   handleFilterChange = () => {},
   clearAllFilters = () => {},
-  filteredMosques = [],
+  filteredMatches = [],
 } = {}) {
+  const safeFilters = {
+    religiousness: [],
+    maritalStatus: [],
+    ageRange: { min: 18, max: 65 },
+    hasChildren: [],
+    childrenDesire: [],
+    educationLevel: [],
+    profession: [],
+    willingToRelocate: null,
+    distance: 20,
+    ...activeFilters,
+  };
   return (
     <div className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] flex items-center justify-center">
       <div className="bg-white rounded-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
@@ -29,113 +36,248 @@ export default function FilterModal({
         </div>
 
         <div className="space-y-8">
-          {/* Prayer Types */}
+          {/* Age Range */}
           <div>
-            <h3 className="font-semibold mb-4">Prayer Types</h3>
+            <h3 className="font-semibold mb-4">Age Range</h3>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-sm text-gray-600 mb-1">
+                  Min Age
+                </label>
+                <input
+                  type="range"
+                  min="18"
+                  max="65"
+                  value={activeFilters.ageRange?.min || 18}
+                  onChange={(e) =>
+                    handleFilterChange("ageRange", {
+                      ...activeFilters.ageRange,
+                      min: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full"
+                />
+                <span className="text-sm font-medium">
+                  {activeFilters.ageRange?.min || 18} years
+                </span>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm text-gray-600 mb-1">
+                  Max Age
+                </label>
+                <input
+                  type="range"
+                  min="18"
+                  max="65"
+                  value={activeFilters.ageRange?.max || 65}
+                  onChange={(e) =>
+                    handleFilterChange("ageRange", {
+                      ...activeFilters.ageRange,
+                      max: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full"
+                />
+                <span className="text-sm font-medium">
+                  {activeFilters.ageRange?.max || 65} years
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Religiousness */}
+          <div>
+            <h3 className="font-semibold mb-4">Religiousness</h3>
             <div className="flex flex-wrap gap-3">
-              {["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha", "Jummah"].map(
-                (prayer) => (
+              {[
+                "very_religious",
+                "religious",
+                "moderately_religious",
+                "somewhat_religious",
+                "not_religious",
+              ].map((level) => {
+                // Convert API value to display text
+                const displayText = level
+                  .split("_")
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(" ");
+
+                return (
                   <button
-                    key={prayer}
+                    key={level}
                     className={`px-4 py-2 rounded-full border ${
-                      activeFilters?.prayer?.includes(prayer)
-                        ? "border-primary bg-primary bg-opacity-10 text-white"
+                      activeFilters?.religiousness?.includes(level)
+                        ? "border-primary bg-primary bg-opacity-10 text-primary"
                         : "border-gray-300 hover:border-gray-400"
                     }`}
-                    onClick={() => handleFilterChange("prayer", prayer)}
+                    onClick={() => handleFilterChange("religiousness", level)}
                   >
-                    {prayer}
+                    {displayText}
                   </button>
-                )
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Marital Status */}
+          <div>
+            <h3 className="font-semibold mb-4">Marital Status</h3>
+            <div className="flex flex-wrap gap-3">
+              {["single", "divorced", "widowed"].map((status) => {
+                const displayText =
+                  status.charAt(0).toUpperCase() + status.slice(1);
+
+                return (
+                  <button
+                    key={status}
+                    className={`px-4 py-2 rounded-full border ${
+                      activeFilters?.maritalStatus?.includes(status)
+                        ? "border-primary bg-primary bg-opacity-10 text-primary"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    onClick={() => handleFilterChange("maritalStatus", status)}
+                  >
+                    {displayText}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Children Status */}
+          <div>
+            <h3 className="font-semibold mb-4">Has Children</h3>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No" },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  className={`px-4 py-2 rounded-full border ${
+                    activeFilters?.hasChildren?.includes(value)
+                      ? "border-primary bg-primary bg-opacity-10 text-primary"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  onClick={() => handleFilterChange("hasChildren", value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Children Desire */}
+          <div>
+            <h3 className="font-semibold mb-4">Wants Children</h3>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No" },
+                { value: "open", label: "Open to it" },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  className={`px-4 py-2 rounded-full border ${
+                    activeFilters?.childrenDesire?.includes(value)
+                      ? "border-primary bg-primary bg-opacity-10 text-primary"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  onClick={() => handleFilterChange("childrenDesire", value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Education Level */}
+          <div>
+            <h3 className="font-semibold mb-4">Education Level</h3>
+            <div className="flex flex-wrap gap-3">
+              {["high_school", "bachelor", "master", "phd", "other"].map(
+                (level) => {
+                  // Convert API value to display text
+                  const displayText =
+                    level === "high_school"
+                      ? "High School"
+                      : level.charAt(0).toUpperCase() + level.slice(1);
+
+                  return (
+                    <button
+                      key={level}
+                      className={`px-4 py-2 rounded-full border ${
+                        activeFilters?.educationLevel?.includes(level)
+                          ? "border-primary bg-primary bg-opacity-10 text-primary"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                      onClick={() =>
+                        handleFilterChange("educationLevel", level)
+                      }
+                    >
+                      {displayText}
+                    </button>
+                  );
+                }
               )}
             </div>
           </div>
 
-          {/* Facilities */}
+          {/* Profession */}
           <div>
-            <h3 className="font-semibold mb-4">Facilities</h3>
+            <h3 className="font-semibold mb-4">Profession</h3>
             <div className="flex flex-wrap gap-3">
               {[
-                "Wudu Area",
-                "Women's Section",
-                "Classes",
-                "Library",
-                "Community Events",
-                "Parking",
-                "Wheelchair Access",
-              ].map((facility) => (
+                "healthcare",
+                "education",
+                "engineering",
+                "business",
+                "technology",
+                "arts",
+                "law",
+                "student",
+                "other",
+              ].map((profession) => {
+                const displayText =
+                  profession.charAt(0).toUpperCase() + profession.slice(1);
+
+                return (
+                  <button
+                    key={profession}
+                    className={`px-4 py-2 rounded-full border ${
+                      activeFilters?.profession?.includes(profession)
+                        ? "border-primary bg-primary bg-opacity-10 text-primary"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    onClick={() => handleFilterChange("profession", profession)}
+                  >
+                    {displayText}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Willing to Relocate */}
+          <div>
+            <h3 className="font-semibold mb-4">Willing to Relocate</h3>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { value: true, label: "Yes" },
+                { value: false, label: "No" },
+              ].map(({ value, label }) => (
                 <button
-                  key={facility}
+                  key={String(value)}
                   className={`px-4 py-2 rounded-full border ${
-                    activeFilters?.facilities?.includes(facility)
-                      ? "border-primary bg-primary bg-opacity-10 text-white"
+                    activeFilters?.willingToRelocate === value
+                      ? "border-primary bg-primary bg-opacity-10 text-primary"
                       : "border-gray-300 hover:border-gray-400"
                   }`}
-                  onClick={() => handleFilterChange("facilities", facility)}
+                  onClick={() => handleFilterChange("willingToRelocate", value)}
                 >
-                  {facility}
+                  {label}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Rating */}
-          <div>
-            <h3 className="font-semibold mb-4">Rating</h3>
-            <div className="flex gap-3">
-              {[3, 4, 4.5].map((rating) => (
-                <button
-                  key={rating}
-                  className={`px-4 py-2 rounded-full border flex items-center gap-1 ${
-                    activeFilters?.rating === rating
-                      ? "border-primary bg-primary bg-opacity-10 text-white"
-                      : "border-gray-300 hover:border-gray-400"
-                  }`}
-                  onClick={() => handleFilterChange("rating", rating)}
-                >
-                  {rating}+{" "}
-                  <Star
-                    size={16}
-                    fill={activeFilters?.rating === rating ? "#24936e" : "none"}
-                    stroke={
-                      activeFilters?.rating === rating
-                        ? "#24936e"
-                        : "currentColor"
-                    }
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Prayer Times */}
-          <div>
-            <h3 className="font-semibold mb-4">Prayer Times</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">
-                  Earliest
-                </label>
-                <select className="w-full border border-gray-300 rounded-lg p-2">
-                  <option>Any time</option>
-                  <option>4:00 AM</option>
-                  <option>5:00 AM</option>
-                  <option>12:00 PM</option>
-                  <option>1:00 PM</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">
-                  Latest
-                </label>
-                <select className="w-full border border-gray-300 rounded-lg p-2">
-                  <option>Any time</option>
-                  <option>2:00 PM</option>
-                  <option>6:00 PM</option>
-                  <option>9:00 PM</option>
-                  <option>10:00 PM</option>
-                </select>
-              </div>
             </div>
           </div>
         </div>
@@ -151,7 +293,7 @@ export default function FilterModal({
             onClick={toggleFilter}
             className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-opacity-90 font-medium transition-all"
           >
-            Show {filteredMosques.length} mosques
+            Show {filteredMatches.length} matches
           </button>
         </div>
       </div>

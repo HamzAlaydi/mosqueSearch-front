@@ -23,7 +23,7 @@ export const fetchUserProfile = createAsyncThunk(
   }
 );
 export const fetchMyProfile = createAsyncThunk(
-  "users/fetchUserProfile",
+  "users/fetchMyProfile",
   async (userId, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
@@ -144,18 +144,33 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Handle fetchUserProfile
       .addCase(fetchUserProfile.pending, (state) => {
-        state.loading = true;
+        state.loading = true; // Make sure this line exists
         state.error = null;
       })
       .addCase(fetchUserProfile.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loading = false; // Make sure this line exists
         state.currentUser = action.payload;
+        state.error = null;
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+        state.loading = false; // Make sure this line exists
+        state.error = action.error; // Or action.payload if you return errors in payload
+        state.currentUser = null; // Clear user if profile fails
+      })
+      .addCase(fetchMyProfile.pending, (state) => {
+        state.loading = true; // Make sure this line exists
+        state.error = null;
+      })
+      .addCase(fetchMyProfile.fulfilled, (state, action) => {
+        state.loading = false; // Make sure this line exists
+        state.currentUser = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchMyProfile.rejected, (state, action) => {
+        state.loading = false; // Make sure this line exists
+        state.error = action.error; // Or action.payload if you return errors in payload
+        state.currentUser = null; // Clear user if profile fails
       })
 
       // Handle updateUserProfile

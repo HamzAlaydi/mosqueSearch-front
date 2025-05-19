@@ -5,14 +5,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/mosqueSearch/Header";
-import CategoryNav from "../../components/mosqueSearch/CategoryNav";
 import FilterModal from "../../components/mosqueSearch/FilterModal";
 import ActiveFilters from "../../components/mosqueSearch/ActiveFilters";
 import MatchListings from "../../components/mosqueSearch/MatchListings";
 import MatchMapView from "../../components/mosqueSearch/MatchMapView";
 import { allMosquesInLondon } from "../../shared/allMosquesInLondon";
-import { categories } from "../../shared/categoryData";
-import { fetchMatches, setSearchDistance } from "../../redux/match/matchSlice";
+import {
+  fetchMatches,
+  setSearchDistance,
+  updateFilters,
+  removeFilter as removeFilterAction,
+  clearAllFilters as clearAllFiltersAction,
+} from "../../redux/match/matchSlice";
 import "./mosqueSearchPage.css";
 
 // Helper function to ensure mosque data is safe to use
@@ -69,27 +73,35 @@ const isWithinDistance = (mosque, center, radiusMeters) => {
  */
 export default function MatchSearchPage() {
   const dispatch = useDispatch();
-  const { searchDistance } = useSelector((state) => state.matches || {});
+  const {
+    matches = [],
+    activeFilters = {
+      prayer: [],
+      facilities: [],
+      rating: null,
+      distance: 20,
+      religiousness: [],
+      maritalStatus: [],
+      ageRange: { min: 18, max: 65 },
+      hasChildren: [],
+      childrenDesire: [],
+      educationLevel: [],
+      profession: [],
+      willingToRelocate: null,
+    },
+    loading = false,
+  } = useSelector((state) => state.matches || {});
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 51.5074, lng: -0.1278 }); // Default to London
   const [showMap, setShowMap] = useState(true);
   const [listingsView, setListingsView] = useState("grid");
   const [activeCategory, setActiveCategory] = useState("all");
-  const [activeFilters, setActiveFilters] = useState({
-    prayer: [],
-    facilities: [],
-    rating: null,
-    distance: searchDistance !== undefined ? searchDistance : 20,
-  });
 
   // Sync internal activeFilters.distance state with Redux searchDistance
   useEffect(() => {
-    setActiveFilters((prev) => ({
-      ...prev,
-      distance: searchDistance !== undefined ? searchDistance : 20,
-    }));
-  }, [searchDistance]);
+    dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
+  }, [dispatch, activeFilters, mapCenter]);
 
   // Calculate distance radius in meters based on activeFilters.distance
   const distanceRadiusMeters = useMemo(() => {
@@ -132,7 +144,7 @@ export default function MatchSearchPage() {
       }
 
       // Filter by prayer types
-      if (activeFilters.prayer.length > 0) {
+      if ((activeFilters.prayer?.length || 0) > 0) {
         const hasAllPrayers = activeFilters.prayer.every((prayer) =>
           mosque.prayers?.includes(prayer)
         );
@@ -140,7 +152,7 @@ export default function MatchSearchPage() {
       }
 
       // Filter by facilities
-      if (activeFilters.facilities.length > 0) {
+      if ((activeFilters.facilities?.length || 0) > 0) {
         const hasAllFacilities = activeFilters.facilities.every((facility) =>
           mosque.facilities?.includes(facility)
         );
@@ -178,66 +190,44 @@ export default function MatchSearchPage() {
 
   // --- Filter Change Handlers ---
   const handleFilterChange = (category, value) => {
-    setActiveFilters((prev) => {
-      const newFilters = { ...prev };
+    dispatch(updateFilters({ category, value }));
+  };
 
-      if (category === "prayer" || category === "facilities") {
-        // Toggle array values
-        if (newFilters[category].includes(value)) {
-          newFilters[category] = newFilters[category].filter(
-            (item) => item !== value
-          );
-        } else {
-          newFilters[category] = [...newFilters[category], value];
-        }
-      } else if (category === "distance") {
-        // Update distance filter
-        newFilters[category] = value;
-        dispatch(setSearchDistance(value));
-      } else {
-        // Update other single value filters (like rating)
-        newFilters[category] = value;
+  const handleMatchClick = (match) => {
+    if (match.location && typeof match.location === "object") {
+      // Check for standard lat/lng object { lat: number, lng: number }
+      if (
+        typeof match.location.lat === "number" &&
+        typeof match.location.lng === "number"
+      ) {
+        setMapCenter(match.location);
       }
-
-      return newFilters;
-    });
+      // Check for GeoJSON coordinates array [lng, lat]
+      else if (
+        match.location.coordinates &&
+        Array.isArray(match.location.coordinates) &&
+        match.location.coordinates.length === 2 &&
+        typeof match.location.coordinates[0] === "number" && // lng
+        typeof match.location.coordinates[1] === "number" // lat
+      ) {
+        setMapCenter({
+          lat: match.location.coordinates[1], // GeoJSON is [lng, lat]
+          lng: match.location.coordinates[0],
+        });
+      } else {
+        console.warn("Clicked item has invalid location data:", match.location);
+      }
+    } else {
+      console.warn("Clicked item has no location data:", match);
+    }
   };
 
   const removeFilter = (category, value) => {
-    setActiveFilters((prev) => {
-      const newFilters = { ...prev };
-
-      if (category === "prayer" || category === "facilities") {
-        // Remove item from array filters
-        newFilters[category] = newFilters[category].filter(
-          (item) => item !== value
-        );
-      } else if (category === "distance") {
-        // Reset distance to default (20 miles)
-        const defaultDistance = 20;
-        newFilters[category] = defaultDistance;
-        dispatch(setSearchDistance(defaultDistance));
-      } else {
-        // Reset other single value filters to null
-        newFilters[category] = null;
-      }
-
-      return newFilters;
-    });
+    dispatch(removeFilterAction({ category, value }));
   };
 
   const clearAllFilters = () => {
-    setActiveFilters({
-      prayer: [],
-      facilities: [],
-      rating: null,
-      distance: activeFilters.distance, // Keep current distance filter value
-    });
-    setActiveCategory("all");
-  };
-
-  const handleCategoryChange = (categoryId) => {
-    setActiveCategory(categoryId);
+    dispatch(clearAllFiltersAction());
   };
 
   // Handler for clicking on a mosque item
@@ -302,12 +292,9 @@ export default function MatchSearchPage() {
           toggleFilter={toggleFilter}
           activeFilters={activeFilters}
           handleFilterChange={handleFilterChange}
-          removeFilter={removeFilter}
-          clearAllFilters={clearAllFilters}
-          filteredMosques={mosquesWithinDistance}
+          filteredMatches={matches}
         />
       )}
-
       {/* Main Content Area */}
       <div className="pt-32 md:pt-36 flex flex-col md:flex-row">
         {/* Match Listings Section */}
@@ -383,8 +370,9 @@ export default function MatchSearchPage() {
           {/* Mosque Listings Cards */}
           <MatchListings
             listingsView={listingsView}
-            handleMosqueClick={handleMosqueClick}
-            mosquesToShow={fullyFilteredMosques}
+            handleMatchClick={handleMatchClick}
+            matchesToShow={matches}
+            loading={loading}
           />
         </div>
 
