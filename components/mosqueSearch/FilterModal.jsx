@@ -107,7 +107,7 @@ export default function FilterModal({
                     key={level}
                     className={`px-4 py-2 rounded-full border ${
                       activeFilters?.religiousness?.includes(level)
-                        ? "border-primary bg-primary bg-opacity-10 text-primary"
+                        ? "border-primary bg-primary bg-opacity-10 text-white"
                         : "border-gray-300 hover:border-gray-400"
                     }`}
                     onClick={() => handleFilterChange("religiousness", level)}
@@ -132,7 +132,7 @@ export default function FilterModal({
                     key={status}
                     className={`px-4 py-2 rounded-full border ${
                       activeFilters?.maritalStatus?.includes(status)
-                        ? "border-primary bg-primary bg-opacity-10 text-primary"
+                        ? "border-primary bg-primary bg-opacity-10 text-white"
                         : "border-gray-300 hover:border-gray-400"
                     }`}
                     onClick={() => handleFilterChange("maritalStatus", status)}
@@ -156,7 +156,7 @@ export default function FilterModal({
                   key={value}
                   className={`px-4 py-2 rounded-full border ${
                     activeFilters?.hasChildren?.includes(value)
-                      ? "border-primary bg-primary bg-opacity-10 text-primary"
+                      ? "border-primary bg-primary bg-opacity-10 text-white"
                       : "border-gray-300 hover:border-gray-400"
                   }`}
                   onClick={() => handleFilterChange("hasChildren", value)}
@@ -180,7 +180,7 @@ export default function FilterModal({
                   key={value}
                   className={`px-4 py-2 rounded-full border ${
                     activeFilters?.childrenDesire?.includes(value)
-                      ? "border-primary bg-primary bg-opacity-10 text-primary"
+                      ? "border-primary bg-primary bg-opacity-10 text-white"
                       : "border-gray-300 hover:border-gray-400"
                   }`}
                   onClick={() => handleFilterChange("childrenDesire", value)}
@@ -208,7 +208,7 @@ export default function FilterModal({
                       key={level}
                       className={`px-4 py-2 rounded-full border ${
                         activeFilters?.educationLevel?.includes(level)
-                          ? "border-primary bg-primary bg-opacity-10 text-primary"
+                          ? "border-primary bg-primary bg-opacity-10 text-white"
                           : "border-gray-300 hover:border-gray-400"
                       }`}
                       onClick={() =>
@@ -246,7 +246,7 @@ export default function FilterModal({
                     key={profession}
                     className={`px-4 py-2 rounded-full border ${
                       activeFilters?.profession?.includes(profession)
-                        ? "border-primary bg-primary bg-opacity-10 text-primary"
+                        ? "border-primary bg-primary bg-opacity-10 text-white"
                         : "border-gray-300 hover:border-gray-400"
                     }`}
                     onClick={() => handleFilterChange("profession", profession)}
@@ -270,7 +270,7 @@ export default function FilterModal({
                   key={String(value)}
                   className={`px-4 py-2 rounded-full border ${
                     activeFilters?.willingToRelocate === value
-                      ? "border-primary bg-primary bg-opacity-10 text-primary"
+                      ? "border-primary bg-primary bg-opacity-10 text-white"
                       : "border-gray-300 hover:border-gray-400"
                   }`}
                   onClick={() => handleFilterChange("willingToRelocate", value)}

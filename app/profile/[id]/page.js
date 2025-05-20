@@ -149,11 +149,7 @@ export default function UserProfile() {
   const params = useParams();
   const userId = params?.id;
 
-  const {
-    currentUser = {},
-    loading,
-    error,
-  } = useSelector((state) => ({
+  const { currentUser, loading, error } = useSelector((state) => ({
     currentUser: state.user.currentUser,
     loading: state.user.loading,
     error: state.user.error,
@@ -231,7 +227,7 @@ export default function UserProfile() {
     );
   }
 
-  if (!loading && (error || !currentUser?._id)) {
+  if (userId && !loading && (error || !currentUser?._id)) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 px-6">
         <div className="flex flex-col items-center justify-center max-w-lg mx-auto bg-white rounded-lg shadow-md border border-gray-200 p-8">

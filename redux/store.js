@@ -6,6 +6,7 @@ import formReducer from "./form/formSlice";
 import { authAPI } from "./auth/authAPI";
 import matchReducer from "./match/matchSlice";
 import userReducer from "./user/userSlice";
+import notificationReducer from "./notification/notificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -13,6 +14,7 @@ export const store = configureStore({
     form: formReducer,
     user: userReducer,
     matches: matchReducer,
+    notifications: notificationReducer,
     [authAPI.reducerPath]: authAPI.reducer,
   },
   middleware: (getDefaultMiddleware) =>
