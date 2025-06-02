@@ -1,0 +1,202 @@
+"use client";
+// @/components/ChatWindow.jsx
+import React from "react";
+import { useSelector } from "react-redux";
+import Image from "next/image";
+import {
+  Send,
+  Phone,
+  Video,
+  MoreVertical,
+  Smile,
+  Paperclip,
+} from "lucide-react";
+import MessageItem from "./MessageItem"; // Import the new MessageItem component
+import {
+  selectMessages,
+  selectActiveChat,
+  selectOnlineUsers,
+  selectTypingUsers,
+  selectChatLoading,
+  selectChatList,
+} from "@/redux/chat/chatSlice";
+import { getAvatar } from "@/shared/helper/defaultData";
+
+const ChatWindow = ({
+  currentUser,
+  messageText,
+  setMessageText,
+  handleSendMessage,
+  handlePhotoRequest,
+  showEmojiPicker,
+  setShowEmojiPicker,
+  messagesEndRef,
+  messageInputRef,
+  selectedMessage,
+  setSelectedMessage,
+  handleDeleteMessage,
+}) => {
+  const activeChat = useSelector(selectActiveChat);
+  const messages = useSelector((state) => selectMessages(state, activeChat));
+  const onlineUsers = useSelector(selectOnlineUsers);
+  const typingUsers = useSelector(selectTypingUsers);
+  const loading = useSelector(selectChatLoading);
+  const chatList = useSelector(selectChatList);
+
+  const activeChatData = chatList.find((chat) => chat._id === activeChat);
+  const isUserOnline =
+    activeChat && onlineUsers.includes(activeChatData?.participants[0]?._id);
+  const isUserTyping = typingUsers[activeChat]?.isTyping;
+
+  if (!activeChat) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Send className="w-12 h-12 text-gray-400" />
+          </div>
+          <h2 className="text-xl font-medium text-gray-900 mb-2">
+            Select a conversation
+          </h2>
+          <p className="text-gray-500">
+            Choose a conversation from the sidebar to start messaging
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Chat Header */}
+      <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Image
+              width={64}
+              height={64}
+              src={
+                activeChatData?.participants[0]?.profilePicture ||
+                getAvatar(activeChatData?.participants[0]?.gender)
+              }
+              alt={`${activeChatData?.participants[0]?.firstName || ""} ${
+                activeChatData?.participants[0]?.lastName || ""
+              }`.trim()}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+            {isUserOnline && (
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+            )}
+          </div>
+          <div>
+            <h2 className="font-medium text-gray-900">
+              {`${activeChatData?.participants[0]?.firstName || ""} ${
+                activeChatData?.participants[0]?.lastName || ""
+              }`.trim()}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {isUserTyping ? (
+                <span className="text-blue-500">Typing...</span>
+              ) : isUserOnline ? (
+                "Online"
+              ) : (
+                ""
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() =>
+              handlePhotoRequest(activeChatData?.participants[0]?._id)
+            }
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <Phone className="w-5 h-5" />
+          </button>
+          <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <Video className="w-5 h-5" />
+          </button>
+          <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <MoreVertical className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        {loading.messages ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center text-gray-500 mt-8">
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        ) : (
+          messages.map((message) => (
+            <MessageItem
+              key={message._id}
+              message={message}
+              currentUser={currentUser}
+              selectedMessage={selectedMessage}
+              setSelectedMessage={setSelectedMessage}
+              handleDeleteMessage={handleDeleteMessage}
+            />
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Message Input */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <form
+          onSubmit={handleSendMessage}
+          className="flex items-center space-x-2"
+        >
+          <button
+            type="button"
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <Paperclip className="w-5 h-5" />
+          </button>
+
+          <div className="flex-1 relative">
+            <input
+              ref={messageInputRef}
+              type="text"
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type a message..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading.sending}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          <button
+            type="submit"
+            disabled={!messageText.trim() || loading.sending}
+            className="p-2 bg-blue-500 text-gray-900 rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading.sending ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default ChatWindow;

@@ -7,6 +7,7 @@ import { authAPI } from "./auth/authAPI";
 import matchReducer from "./match/matchSlice";
 import userReducer from "./user/userSlice";
 import notificationReducer from "./notification/notificationSlice";
+import chatReducer from "./chat/chatSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     form: formReducer,
     user: userReducer,
     matches: matchReducer,
+    chat: chatReducer,
     notifications: notificationReducer,
     [authAPI.reducerPath]: authAPI.reducer,
   },
