@@ -196,7 +196,10 @@ const Messages = () => {
 
       {/* Click outside handler for message context menu */}
       {selectedMessage && (
-        <div className="fixed inset-0 z-5" onClick={() => setSelectedMessage(null)} />
+        <div
+          className="fixed inset-0 z-5"
+          onClick={() => setSelectedMessage(null)}
+        />
       )}
     </div>
   );

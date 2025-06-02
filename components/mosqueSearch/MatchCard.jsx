@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
 import {
   addInterest,
   removeInterest,
   addInterestLocal,
   removeInterestLocal,
 } from "../../redux/match/matchSlice";
+import { setActiveChat, fetchChatList } from "../../redux/chat/chatSlice";
 import { MapPin, MessageCircle, Heart } from "lucide-react";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
@@ -16,6 +18,7 @@ import Link from "next/link";
 
 const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const dispatch = useDispatch();
+  const router = useRouter();
   const [flagUrl, setFlagUrl] = useState(null);
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
 
@@ -51,6 +54,38 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
         dispatch(removeInterestLocal(match._id));
       }
       toast.error(error.message || "Failed to update interest");
+    }
+  };
+
+  const handleMessageClick = async (e) => {
+    e.stopPropagation();
+
+    try {
+      // Set the active chat with user details
+      dispatch(
+        setActiveChat({
+          chatId: match._id,
+          user: {
+            _id: match._id,
+            firstName: match.firstName,
+            lastName: match.lastName,
+            profilePicture: match.profilePicture?.startsWith("http")
+              ? match.profilePicture
+              : getAvatar(match.gender),
+          },
+        })
+      );
+
+      // Refresh chat list to ensure we have the latest data
+      await dispatch(fetchChatList()).unwrap();
+
+      // Navigate to messages page
+      router.push("/messages");
+
+      toast.success(`Opening chat with ${match.firstName || "User"}`);
+    } catch (error) {
+      console.error("Failed to open chat:", error);
+      toast.error("Failed to open chat");
     }
   };
 
@@ -150,14 +185,14 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           <Link href={`/profile/${match._id}`} passHref>
             <button
               className="flex items-center text-primary text-sm font-medium hover:underline"
-              onClick={(e) => e.stopPropagation()} // prevent bubbling if needed
+              onClick={(e) => e.stopPropagation()}
             >
               View Profile
             </button>
           </Link>
           <button
             className="flex items-center gap-1 bg-primary text-white px-3 py-1 rounded-full text-sm hover:bg-primary-dark transition-colors"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleMessageClick}
           >
             <MessageCircle size={14} />
             Message

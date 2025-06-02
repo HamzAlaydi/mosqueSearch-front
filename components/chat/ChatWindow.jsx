@@ -21,6 +21,7 @@ import {
   selectChatList,
 } from "@/redux/chat/chatSlice";
 import { getAvatar } from "@/shared/helper/defaultData";
+import EmojiPicker from "emoji-picker-react";
 
 const ChatWindow = ({
   currentUser,
@@ -153,7 +154,7 @@ const ChatWindow = ({
       <div className="bg-white border-t border-gray-200 p-4">
         <form
           onSubmit={handleSendMessage}
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-2 relative"
         >
           <button
             type="button"
@@ -172,11 +173,24 @@ const ChatWindow = ({
               className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={loading.sending}
             />
+
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <div className="absolute bottom-full mb-2 right-0 z-50">
+                <EmojiPicker
+                  onEmojiClick={(emojiData) =>
+                    setMessageText((prev) => prev + emojiData.emoji)
+                  }
+                  theme="light"
+                  height={350}
+                />
+              </div>
+            )}
           </div>
 
           <button
             type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
           >
             <Smile className="w-5 h-5" />

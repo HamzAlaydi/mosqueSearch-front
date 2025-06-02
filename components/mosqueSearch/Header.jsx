@@ -365,10 +365,12 @@ export default function Header({
             </button>
 
             {/* Messages Button */}
-            <button className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-sm">
-              <MessageCircle size={14} className="text-gray-600" />
-              <span>Messages</span>
-            </button>
+            <Link href="/messages">
+              <button className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-sm">
+                <MessageCircle size={14} className="text-gray-600" />
+                <span>Messages</span>
+              </button>
+            </Link>
 
             {/* Interests Button */}
             <button

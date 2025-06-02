@@ -140,6 +140,31 @@ export const approvePhotoAccess = createAsyncThunk(
   }
 );
 
+// New async thunk to find or create a conversation
+export const findOrCreateConversation = createAsyncThunk(
+  "chat/findOrCreateConversation",
+  async (userId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState();
+      const existingChat = state.chat.chatList.find(chat => {
+        const participant = chat.participants[0];
+        return participant && participant._id === userId;
+      });
+
+      if (existingChat) {
+        // Chat already exists, return the existing chat ID
+        return { chatId: existingChat._id, isNew: false };
+      } else {
+        // Need to create a new conversation by sending a message or fetching chat
+        // For now, we'll just set the active chat and let the message sending create it
+        return { chatId: userId, isNew: true };
+      }
+    } catch (error) {
+      return rejectWithValue("Failed to find or create conversation");
+    }
+  }
+);
+
 // Helper function to get current user from localStorage
 const getCurrentUser = () => {
   try {
@@ -171,11 +196,13 @@ const initialState = {
     chatList: false,
     messages: false,
     sending: false,
+    findingChat: false,
   },
   error: {
     chatList: null,
     messages: null,
     sending: null,
+    findingChat: null,
   },
   socketConnected: false,
 };
@@ -485,6 +512,22 @@ const chatSlice = createSlice({
         );
       });
     });
+
+    // Find or create conversation
+    builder
+      .addCase(findOrCreateConversation.pending, (state) => {
+        state.loading.findingChat = true;
+        state.error.findingChat = null;
+      })
+      .addCase(findOrCreateConversation.fulfilled, (state, action) => {
+        state.loading.findingChat = false;
+        const { chatId } = action.payload;
+        state.activeChat = chatId;
+      })
+      .addCase(findOrCreateConversation.rejected, (state, action) => {
+        state.loading.findingChat = false;
+        state.error.findingChat = action.payload;
+      });
   },
 });
 
