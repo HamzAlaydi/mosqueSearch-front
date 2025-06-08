@@ -9,7 +9,11 @@ import {
   addInterestLocal,
   removeInterestLocal,
 } from "../../redux/match/matchSlice";
-import { setActiveChat, fetchChatList } from "../../redux/chat/chatSlice";
+import {
+  setActiveChat,
+  fetchChatList,
+  findOrCreateConversation,
+} from "../../redux/chat/chatSlice";
 import { MapPin, MessageCircle, Heart } from "lucide-react";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
@@ -61,20 +65,17 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
     e.stopPropagation();
 
     try {
-      // Set the active chat with user details
-      dispatch(
-        setActiveChat({
-          chatId: match._id,
-          user: {
-            _id: match._id,
-            firstName: match.firstName,
-            lastName: match.lastName,
-            profilePicture: match.profilePicture?.startsWith("http")
-              ? match.profilePicture
-              : getAvatar(match.gender),
-          },
-        })
-      );
+      console.log("Clicking message for user:", match._id);
+
+      // First, dispatch the findOrCreateConversation action to ensure chat exists
+      const result = await dispatch(
+        findOrCreateConversation(match._id)
+      ).unwrap();
+
+      console.log("findOrCreateConversation result:", result);
+
+      // Set the active chat with the correct chatId
+      dispatch(setActiveChat(result.chatId));
 
       // Refresh chat list to ensure we have the latest data
       await dispatch(fetchChatList()).unwrap();
@@ -88,7 +89,6 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
       toast.error("Failed to open chat");
     }
   };
-
   return (
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer ${

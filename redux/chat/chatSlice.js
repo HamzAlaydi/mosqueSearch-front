@@ -144,9 +144,13 @@ export const approvePhotoAccess = createAsyncThunk(
 export const findOrCreateConversation = createAsyncThunk(
   "chat/findOrCreateConversation",
   async (userId, { getState, rejectWithValue }) => {
+    console.log("userId");
+    console.log(userId);
+    console.log("userId");
+
     try {
       const state = getState();
-      const existingChat = state.chat.chatList.find(chat => {
+      const existingChat = state.chat.chatList.find((chat) => {
         const participant = chat.participants[0];
         return participant && participant._id === userId;
       });
