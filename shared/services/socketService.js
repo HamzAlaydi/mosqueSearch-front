@@ -162,6 +162,42 @@ export const initializeSocket = () => {
         );
         store.dispatch(addNotification(photoResponseNotification));
       }
+      if (message.messageType === "wali_request") {
+        const waliRequestNotification = {
+          _id: `wali_req_${message._id}`,
+          userId: message.receiver._id,
+          type: "wali_request",
+          fromUserId: message.sender._id,
+          content: `${message.sender.firstName} has requested access to your wali information`,
+          isRead: false,
+          createdAt: message.timestamp,
+          messageId: message._id,
+        };
+        store.dispatch(addNotification(waliRequestNotification));
+      }
+
+      // Handle wali_response messages
+      if (message.messageType === "wali_response" && message.waliResponseData) {
+        const response = message.waliResponseData.response;
+        const responseText =
+          response === "accept"
+            ? "approved"
+            : response === "deny"
+            ? "declined"
+            : "will respond later to";
+
+        const waliResponseNotification = {
+          _id: `wali_resp_${message._id}`,
+          userId: message.receiver._id,
+          type: "wali_response",
+          fromUserId: message.sender._id,
+          content: `${message.sender.firstName} has ${responseText} your wali information request`,
+          isRead: false,
+          createdAt: message.timestamp,
+          messageId: message._id,
+        };
+        store.dispatch(addNotification(waliResponseNotification));
+      }
     }
   });
 
