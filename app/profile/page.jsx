@@ -37,7 +37,16 @@ import {
 import { calculateAge, getAvatar } from "@/shared/helper/defaultData";
 import useCountryFlag from "@/shared/helper/useCountryFlag";
 import coverImage from "@/public/images/matches/background.jpg";
-
+import {
+  revokePhotoAccess,
+  revokeWaliAccess,
+  fetchUserDetails,
+} from "@/redux/user/userSlice";
+import {
+  blockUser,
+  unblockUser,
+  fetchBlockedUsers,
+} from "@/redux/block/blockSlice";
 // Form Section Component
 const FormSection = ({ title, icon, children }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -202,17 +211,136 @@ const FormField = ({
     </div>
   );
 };
+// User Card Component for management lists
+const UserCard = ({
+  user,
+  onAction,
+  actionText,
+  actionIcon,
+  isLoading,
+  actionType,
+}) => (
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between hover:shadow-md transition-shadow">
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+        <Image
+          src={user.profilePicture || getAvatar(user.gender)}
+          alt={`${user.firstName} ${user.lastName}`}
+          width={48}
+          height={48}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.src = getAvatar(user.gender);
+          }}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <h4 className="font-medium text-gray-900 truncate">
+          {user.firstName || "UnKnown"} {user.lastName}
+        </h4>
+        <p className="text-sm text-gray-500 truncate">
+          {user.currentLocation || "Location not specified"}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+            {user.gender === "male" ? "Male" : "Female"}
+          </span>
+          {user.birthDate && (
+            <span className="text-xs text-gray-500">
+              Age: {calculateAge(user.birthDate)}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
 
+    <button
+      onClick={() => onAction(user._id)}
+      disabled={isLoading}
+      className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all flex-shrink-0 ${
+        actionType === "block" || actionType === "revoke"
+          ? "bg-red-50 text-red-600 hover:bg-red-100 focus:ring-2 focus:ring-red-200"
+          : "bg-green-50 text-green-600 hover:bg-green-100 focus:ring-2 focus:ring-green-200"
+      } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none`}
+    >
+      {isLoading ? <Loader size={16} className="animate-spin" /> : actionIcon}
+      <span className="hidden sm:inline">{actionText}</span>
+    </button>
+  </div>
+);
+const ManagementSection = ({
+  title,
+  icon,
+  users,
+  onAction,
+  actionText,
+  actionIcon,
+  loadingUserId,
+  actionType,
+  emptyMessage,
+}) => (
+  <div className="bg-gray-50 rounded-xl p-6">
+    <div className="flex items-center gap-3 mb-4">
+      {icon}
+      <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+      <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-sm font-medium">
+        {users.length}
+      </span>
+    </div>
+
+    {users.length === 0 ? (
+      <p className="text-gray-500 text-center py-8">{emptyMessage}</p>
+    ) : (
+      <div className="space-y-3">
+        {users.map((user) => (
+          <UserCard
+            key={user._id}
+            user={user}
+            onAction={onAction}
+            actionText={actionText}
+            actionIcon={actionIcon}
+            isLoading={loadingUserId === user._id}
+            actionType={actionType}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+);
 export default function EditProfile() {
   const dispatch = useDispatch();
   const router = useRouter();
-  const { currentUser } = useSelector(
+  const {
+    currentUser,
+    loading,
+    pictureLoading,
+    error,
+    success,
+    unblurRequest,
+    managementUsers,
+    managementLoading,
+    revokeLoading,
+  } = useSelector(
     (state) => ({
       currentUser: state.user.currentUser,
+      loading: state.user.loading,
+      pictureLoading: state.user.pictureLoading,
+      error: state.user.error,
+      success: state.user.success,
+      unblurRequest: state.user.unblurRequest,
+      managementUsers: state.user.managementUsers,
+      managementLoading: state.user.managementLoading,
+      revokeLoading: state.user.revokeLoading,
     }),
     shallowEqual
   );
-  const { loading, pictureLoading, error, success, unblurRequest } = "ss";
+  const { blockedUsers, blockingUserId } = useSelector(
+    (state) => ({
+      blockedUsers: state.block.blockedUsers,
+      blockingUserId: state.block.blockingUserId,
+    }),
+    shallowEqual
+  );
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -406,6 +534,30 @@ export default function EditProfile() {
       }
     }
   }, [dispatch, currentUser]);
+  useEffect(() => {
+    if (activeTab === "management" && currentUser) {
+      // Fetch blocked users
+      dispatch(fetchBlockedUsers()).catch((error) => {
+        console.error("Failed to fetch blocked users:", error);
+        toast.error("Failed to load blocked users");
+      });
+
+      // Collect all user IDs that need details
+      const userIds = [
+        ...(currentUser.blockedUsers || []),
+        ...(currentUser.approvedPhotosFor || []),
+        ...(currentUser.approvedWaliFor || []),
+      ];
+
+      if (userIds.length > 0) {
+        const uniqueUserIds = [...new Set(userIds)]; // Remove duplicates
+        dispatch(fetchUserDetails(uniqueUserIds)).catch((error) => {
+          console.error("Failed to fetch user details:", error);
+          toast.error("Failed to load user details");
+        });
+      }
+    }
+  }, [activeTab, dispatch, currentUser]);
 
   // Load user data on component mount
   useEffect(() => {
@@ -532,7 +684,69 @@ export default function EditProfile() {
       console.error("Failed to request unblur:", err);
     }
   };
+  // Helper functions to filter users by type
+  const getBlockedUserDetails = () => {
+    return managementUsers.filter((user) =>
+      currentUser?.blockedUsers?.includes(user._id)
+    );
+  };
 
+  const getPhotoApprovedUsers = () => {
+    return managementUsers.filter((user) =>
+      currentUser?.approvedPhotosFor?.includes(user._id)
+    );
+  };
+
+  const getWaliApprovedUsers = () => {
+    return managementUsers.filter((user) =>
+      currentUser?.approvedWaliFor?.includes(user._id)
+    );
+  };
+
+  // Action handlers
+  const handleUnblockUser = async (userId) => {
+    try {
+      await dispatch(unblockUser(userId)).unwrap();
+      toast.success("User unblocked successfully");
+      // Refresh the blocked users list
+      dispatch(fetchBlockedUsers());
+    } catch (error) {
+      console.error("Failed to unblock user:", error);
+      toast.error("Failed to unblock user");
+    }
+  };
+
+  const handleRevokePhotoAccess = async (userId) => {
+    try {
+      await dispatch(revokePhotoAccess(userId)).unwrap();
+      toast.success("Photo access revoked successfully");
+      // Refresh user profile to update the lists
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        const user = JSON.parse(userString);
+        dispatch(fetchMyProfile(user.id));
+      }
+    } catch (error) {
+      console.error("Failed to revoke photo access:", error);
+      toast.error("Failed to revoke photo access");
+    }
+  };
+
+  const handleRevokeWaliAccess = async (userId) => {
+    try {
+      await dispatch(revokeWaliAccess(userId)).unwrap();
+      toast.success("Wali access revoked successfully");
+      // Refresh user profile to update the lists
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        const user = JSON.parse(userString);
+        dispatch(fetchMyProfile(user.id));
+      }
+    } catch (error) {
+      console.error("Failed to revoke wali access:", error);
+      toast.error("Failed to revoke wali access");
+    }
+  };
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -718,7 +932,7 @@ export default function EditProfile() {
                 { id: "religion", label: "Religion" },
                 { id: "preferences", label: "Preferences" },
                 { id: "about", label: "About & Interests" },
-                // Show Wali tab only for females
+                { id: "management", label: "Management" },
                 ...(currentUser.gender === "female"
                   ? [{ id: "wali", label: "Wali Contact" }]
                   : []),
@@ -726,13 +940,20 @@ export default function EditProfile() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 sm:px-5 py-4 font-semibold text-sm sm:text-base whitespace-nowrap focus:outline-none transition-colors ${
+                  className={`px-3 sm:px-5 py-4 font-semibold text-sm sm:text-base whitespace-nowrap focus:outline-none transition-colors relative ${
                     activeTab === tab.id
                       ? "text-primary border-b-2 border-primary"
                       : "text-gray-600 hover:text-primary"
                   }`}
                 >
                   {tab.label}
+                  {tab.id === "management" && currentUser && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {(currentUser.blockedUsers?.length || 0) +
+                        (currentUser.approvedPhotosFor?.length || 0) +
+                        (currentUser.approvedWaliFor?.length || 0)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -1135,22 +1356,72 @@ export default function EditProfile() {
               </FormSection>
             )}
           </div>
-
-          {/* Save Button */}
-          <div className="mt-8 text-center">
-            <button
-              type="submit"
-              disabled={loading || pictureLoading}
-              className="bg-primary text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-primary-dark transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
-            >
-              {loading ? (
-                <Loader size={24} className="animate-spin" />
+          {activeTab === "management" && (
+            <div className="space-y-6">
+              {managementLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader size={32} className="animate-spin text-primary" />
+                </div>
               ) : (
-                <Save size={24} />
+                <>
+                  <ManagementSection
+                    title="Blocked Users"
+                    icon={<Flag size={20} className="text-red-500" />}
+                    users={getBlockedUserDetails()}
+                    onAction={handleUnblockUser}
+                    actionText="Unblock"
+                    actionIcon={<Check size={16} />}
+                    loadingUserId={blockingUserId}
+                    actionType="unblock"
+                    emptyMessage="You haven't blocked any users yet."
+                  />
+
+                  <ManagementSection
+                    title="Photo Access Granted"
+                    icon={<User size={20} className="text-blue-500" />}
+                    users={getPhotoApprovedUsers()}
+                    onAction={handleRevokePhotoAccess}
+                    actionText="Revoke Access"
+                    actionIcon={<AlertCircle size={16} />}
+                    loadingUserId={revokeLoading}
+                    actionType="revoke"
+                    emptyMessage="You haven't granted photo access to anyone yet."
+                  />
+
+                  {currentUser.gender === "female" && (
+                    <ManagementSection
+                      title="Wali Contact Shared"
+                      icon={<Phone size={20} className="text-green-500" />}
+                      users={getWaliApprovedUsers()}
+                      onAction={handleRevokeWaliAccess}
+                      actionText="Revoke Access"
+                      actionIcon={<AlertCircle size={16} />}
+                      loadingUserId={revokeLoading}
+                      actionType="revoke"
+                      emptyMessage="You haven't shared wali contact with anyone yet."
+                    />
+                  )}
+                </>
               )}
-              Save Profile
-            </button>
-          </div>
+            </div>
+          )}
+          {/* Save Button */}
+          {activeTab !== "management" && (
+            <div className="mt-8 text-center">
+              <button
+                type="submit"
+                disabled={loading || pictureLoading}
+                className="bg-primary text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-primary-dark transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
+              >
+                {loading ? (
+                  <Loader size={24} className="animate-spin" />
+                ) : (
+                  <Save size={24} />
+                )}
+                Save Profile
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

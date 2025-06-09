@@ -110,6 +110,72 @@ export const requestUnblurPicture = createAsyncThunk(
     }
   }
 );
+export const revokePhotoAccess = createAsyncThunk(
+  "users/revokePhotoAccess",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(
+        `${rootRoute}/users/photo-access/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return { userId, message: response.data.message };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to revoke photo access"
+      );
+    }
+  }
+);
+
+export const revokeWaliAccess = createAsyncThunk(
+  "users/revokeWaliAccess",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(
+        `${rootRoute}/users/wali-access/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return { userId, message: response.data.message };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to revoke wali access"
+      );
+    }
+  }
+);
+
+export const fetchUserDetails = createAsyncThunk(
+  "users/fetchUserDetails",
+  async (userIds, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${rootRoute}/users/details`,
+        { userIds },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch user details"
+      );
+    }
+  }
+);
 
 const initialState = {
   currentUser: null,
@@ -123,6 +189,9 @@ const initialState = {
     success: false,
     error: null,
   },
+  managementUsers: [], // For storing user details for management tabs
+  managementLoading: false,
+  revokeLoading: null, // Track which user is being processed
 };
 
 const userSlice = createSlice({
@@ -221,6 +290,54 @@ const userSlice = createSlice({
       .addCase(requestUnblurPicture.rejected, (state, action) => {
         state.unblurRequest.loading = false;
         state.unblurRequest.error = action.payload;
+      })
+      .addCase(revokePhotoAccess.pending, (state, action) => {
+        state.revokeLoading = action.meta.arg;
+        state.error = null;
+      })
+      .addCase(revokePhotoAccess.fulfilled, (state, action) => {
+        state.revokeLoading = null;
+        const { userId } = action.payload;
+        if (state.currentUser?.approvedPhotosFor) {
+          state.currentUser.approvedPhotosFor =
+            state.currentUser.approvedPhotosFor.filter((id) => id !== userId);
+        }
+        state.success = "Photo access revoked successfully";
+      })
+      .addCase(revokePhotoAccess.rejected, (state, action) => {
+        state.revokeLoading = null;
+        state.error = action.payload;
+      })
+
+      .addCase(revokeWaliAccess.pending, (state, action) => {
+        state.revokeLoading = action.meta.arg;
+        state.error = null;
+      })
+      .addCase(revokeWaliAccess.fulfilled, (state, action) => {
+        state.revokeLoading = null;
+        const { userId } = action.payload;
+        if (state.currentUser?.approvedWaliFor) {
+          state.currentUser.approvedWaliFor =
+            state.currentUser.approvedWaliFor.filter((id) => id !== userId);
+        }
+        state.success = "Wali access revoked successfully";
+      })
+      .addCase(revokeWaliAccess.rejected, (state, action) => {
+        state.revokeLoading = null;
+        state.error = action.payload;
+      })
+
+      .addCase(fetchUserDetails.pending, (state) => {
+        state.managementLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserDetails.fulfilled, (state, action) => {
+        state.managementLoading = false;
+        state.managementUsers = action.payload;
+      })
+      .addCase(fetchUserDetails.rejected, (state, action) => {
+        state.managementLoading = false;
+        state.error = action.payload;
       });
   },
 });
