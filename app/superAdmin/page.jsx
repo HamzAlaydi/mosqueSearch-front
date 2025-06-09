@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { adminUsers } from "@/shared/constants/adminUsers";
 import { toast, Toaster } from "react-hot-toast";
 import DataTable from "@/components/common/DataTable";
-import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import ConfirmationDialog from "@/components/common/ConfirmationModal";
 import {
   Paper,
   Box,

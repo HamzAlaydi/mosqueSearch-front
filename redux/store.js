@@ -8,6 +8,7 @@ import matchReducer from "./match/matchSlice";
 import userReducer from "./user/userSlice";
 import notificationReducer from "./notification/notificationSlice";
 import chatReducer from "./chat/chatSlice";
+import blockReducer from "./block/blockSlice";
 
 export const store = configureStore({
   reducer: {
@@ -17,6 +18,7 @@ export const store = configureStore({
     matches: matchReducer,
     chat: chatReducer,
     notifications: notificationReducer,
+    block: blockReducer,
     [authAPI.reducerPath]: authAPI.reducer,
   },
   middleware: (getDefaultMiddleware) =>

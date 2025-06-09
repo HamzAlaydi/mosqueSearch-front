@@ -70,8 +70,6 @@ const ChatWindow = ({
       </div>
     );
   }
-  console.log(activeChatData?.participants[0]);
-  console.log(currentUser);
 
   return (
     <div className="flex-1 flex flex-col">

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import {
   addInterest,
@@ -19,6 +19,13 @@ import {
   requestWaliAccess,
 } from "../../redux/chat/chatSlice";
 import {
+  blockUser,
+  unblockUser,
+  blockUserLocal,
+  unblockUserLocal,
+  // fetchBlockedUsers, // Optionally fetch blocked users if not already done globally
+} from "../../redux/block/blockSlice";
+import {
   MapPin,
   Heart,
   Image as ImageIcon,
@@ -32,19 +39,15 @@ import { toast } from "react-hot-toast";
 import { getAvatar } from "@/shared/helper/defaultData";
 import Link from "next/link";
 import { countryFlags } from "@/shared/helper/flagsData";
+import ConfirmationModal from "../common/ConfirmationModal";
 
 const checkPhotoAccess = (targetUser, currentUserId) => {
-  // If the target user has no profile picture, no blur needed
   if (!targetUser.profilePicture) {
     return true;
   }
-
-  // If it's the user's own profile
   if (targetUser._id === currentUserId) {
     return true;
   }
-
-  // Check if current user is in the target user's approvedPhotosFor array
   return (
     targetUser.approvedPhotosFor &&
     targetUser.approvedPhotosFor.includes(currentUserId)
@@ -57,7 +60,14 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const [flagUrl, setFlagUrl] = useState(null);
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
   const currentUserId = getCurrentUser().id;
+
+  // State for the confirmation modal
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+
+  const { blockedUsers } = useSelector((state) => state.block);
+  const isBlocked = blockedUsers.some((user) => user._id === match._id);
   const hasPhotoAccess = checkPhotoAccess(match, currentUserId);
+
   useEffect(() => {
     setFlagUrl(countryFlags[match.citizenship]);
     setOriginFlagUrl(countryFlags[match.originCountry]);
@@ -87,22 +97,15 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
   const handleMessageClick = async (e) => {
     e.stopPropagation();
-
     try {
       console.log("Clicking message for user:", match._id);
-
       const result = await dispatch(
         findOrCreateConversation(match._id)
       ).unwrap();
-
       console.log("findOrCreateConversation result:", result);
-
       dispatch(setActiveChat(result.chatId));
-
       await dispatch(fetchChatList()).unwrap();
-
       router.push("/messages");
-
       toast.success(`Opening chat with ${match.firstName || "User"}`);
     } catch (error) {
       console.error("Failed to open chat:", error);
@@ -120,6 +123,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
       toast.error("Failed to send photo request");
     }
   };
+
   const handleRequestWali = async (e) => {
     e.stopPropagation();
     try {
@@ -130,6 +134,38 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
       toast.error("Failed to send wali request");
     }
   };
+
+  // This function now just opens the modal
+  const handleBlockUserClick = (e) => {
+    e.stopPropagation();
+    setIsBlockModalOpen(true);
+  };
+
+  // This function performs the actual block/unblock logic after confirmation
+  const confirmBlock = async () => {
+    setIsBlockModalOpen(false); // Close the modal
+    try {
+      if (isBlocked) {
+        dispatch(unblockUserLocal(match._id));
+        await dispatch(unblockUser(match._id)).unwrap();
+        toast.success(`Unblocked ${match.firstName || "User"}`);
+      } else {
+        dispatch(blockUserLocal(match._id));
+        await dispatch(blockUser(match._id)).unwrap();
+        toast.success(`Blocked ${match.firstName || "User"}`);
+      }
+    } catch (error) {
+      // Revert local state on error
+      if (isBlocked) {
+        dispatch(blockUserLocal(match._id));
+      } else {
+        dispatch(unblockUserLocal(match._id));
+      }
+      console.error("Failed to update block status:", error);
+      toast.error(error.message || "Failed to update block status");
+    }
+  };
+
   return (
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer ${
@@ -142,7 +178,6 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           isListView ? "w-1/3 h-full" : "h-48"
         } relative overflow-hidden`}
       >
-        {console.log()}
         <Image
           src={
             match.profilePicture?.startsWith("http")
@@ -247,15 +282,16 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
               <ImageIcon size={18} className="text-gray-700" />
             </button>
 
+            {/* Changed onClick to open the modal */}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log("Block user");
-              }}
+              onClick={handleBlockUserClick}
               className="p-1 rounded-full hover:bg-gray-100"
-              title="Block User"
+              title={isBlocked ? "Unblock User" : "Block User"}
             >
-              <Ban size={18} className="text-gray-700" />
+              <Ban
+                size={18}
+                className={isBlocked ? "text-red-500" : "text-gray-700"}
+              />
             </button>
 
             <button
@@ -287,6 +323,25 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isBlockModalOpen}
+        onClose={() => setIsBlockModalOpen(false)}
+        onConfirm={confirmBlock}
+        title={isBlocked ? "Confirm Unblock" : "Confirm Block"}
+        message={
+          isBlocked
+            ? `Are you sure you want to unblock ${
+                match.firstName || "this user"
+              }?`
+            : `Are you sure you want to block ${
+                match.firstName || "this user"
+              }? Blocking will prevent them from seeing your profile and messaging you, and vice versa.`
+        }
+        confirmText={isBlocked ? "Unblock" : "Block"}
+        cancelText="Cancel"
+      />
     </div>
   );
 };
