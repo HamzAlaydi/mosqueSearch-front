@@ -139,11 +139,17 @@ const ChatWindow = ({
         ) : (
           messages.map((message) => (
             <div key={message._id} className="mb-4">
+              {/* {console.log(message)} */}
               {message.messageType === "photo_request" ? (
                 <PhotoRequestMessage
                   message={message}
                   currentUserId={currentUser.id}
                   allMessages={messages}
+                  // Pass the handleResponse function down to PhotoRequestMessage
+                  // This is important because the thunk needs the original message ID
+                  handleRespondToRequest={(responseType) =>
+                    handleResponse(responseType, message._id)
+                  }
                 />
               ) : (
                 <MessageItem

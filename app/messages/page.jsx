@@ -32,9 +32,12 @@ import {
 
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
+import { useSearchParams } from "next/navigation";
 
 const Messages = () => {
   const dispatch = useDispatch();
+  const searchParams = useSearchParams(); // Get URL search params
+  const [initialChatLoaded, setInitialChatLoaded] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -43,6 +46,8 @@ const Messages = () => {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const messageInputRef = useRef(null);
+
+  const urlChatId = searchParams.get("chat");
 
   // Redux selectors
   const activeChat = useSelector(selectActiveChat);
@@ -68,7 +73,12 @@ const Messages = () => {
       }
     };
   }, [dispatch, activeChat, currentUser.id, currentUser._id]);
-
+  useEffect(() => {
+    if (urlChatId && !initialChatLoaded) {
+      dispatch(setActiveChat(urlChatId));
+      setInitialChatLoaded(true);
+    }
+  }, [urlChatId, initialChatLoaded, dispatch]);
   // Handle active chat changes
   useEffect(() => {
     if (activeChat) {

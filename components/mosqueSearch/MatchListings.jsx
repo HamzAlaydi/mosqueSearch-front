@@ -28,6 +28,7 @@ const formatUserResponse = (user) => {
     rating,
     location,
     unblurRequest,
+    approvedPhotosFor,
   } = user;
 
   const age = calculateAge(birthDate);
@@ -51,6 +52,7 @@ const formatUserResponse = (user) => {
     rating,
     location,
     unblurRequest,
+    approvedPhotosFor,
   };
 };
 

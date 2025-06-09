@@ -170,7 +170,7 @@ export const findOrCreateConversation = createAsyncThunk(
 );
 
 // Helper function to get current user from localStorage
-const getCurrentUser = () => {
+export const getCurrentUser = () => {
   try {
     const userStr = localStorage.getItem("user");
     if (!userStr) {
@@ -188,7 +188,6 @@ const getCurrentUser = () => {
     return null;
   }
 };
-
 export const requestPhotoAccess = createAsyncThunk(
   "chat/requestPhotoAccess",
   async (userId, { rejectWithValue }) => {
@@ -201,7 +200,7 @@ export const requestPhotoAccess = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return response.data;
+      return response.data.data; // Return the message data
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to request photo access"
@@ -210,19 +209,27 @@ export const requestPhotoAccess = createAsyncThunk(
   }
 );
 
+// Async thunk for responding to photo request
 export const respondToPhotoRequest = createAsyncThunk(
   "chat/respondToPhotoRequest",
-  async ({ requesterId, response }, { rejectWithValue }) => {
+  async ({ requesterId, response, originalMessageId }, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
       const apiResponse = await axios.post(
         `${rootRoute}/chats/respond-photo/${requesterId}`,
-        { response },
+        { response, originalMessageId },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return apiResponse.data;
+
+      // Backend returns: { message, data, originalMessageId, responseType, accessGranted }
+      return {
+        message: apiResponse.data.data, // The new photo_response Chat message
+        originalMessageId: apiResponse.data.originalMessageId,
+        response: apiResponse.data.responseType,
+        accessGranted: apiResponse.data.accessGranted,
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to respond to photo request"
@@ -250,6 +257,8 @@ const initialState = {
     sending: null,
     findingChat: null,
   },
+  onlineUsers: [],
+  typingUsers: {},
   socketConnected: false,
 };
 
@@ -471,6 +480,69 @@ const chatSlice = createSlice({
         );
       }
     },
+    addPhotoResponseMessage: (state, action) => {
+      const message = action.payload;
+      const currentUser = getCurrentUser();
+      if (!currentUser || !message || !message.photoResponseData) {
+        console.error(
+          "Invalid photo response message or current user not found."
+        );
+        return;
+      }
+
+      // Determine the chat ID this message belongs to
+      let otherUserId;
+      if (message.sender._id === currentUser.id) {
+        otherUserId = message.receiver._id;
+      } else {
+        otherUserId = message.sender._id;
+      }
+
+      if (!state.messages[otherUserId]) {
+        state.messages[otherUserId] = [];
+      }
+
+      // Add the photo_response message itself to the chat
+      const responseMessageExists = state.messages[otherUserId].find(
+        (msg) => msg._id === message._id
+      );
+      if (!responseMessageExists) {
+        state.messages[otherUserId].push(message);
+        state.messages[otherUserId].sort(
+          (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+        );
+      }
+
+      // Find and update the original photo_request message
+      const originalRequestMessageId =
+        message.photoResponseData.originalMessageId;
+      if (originalRequestMessageId) {
+        const originalRequestMessage = state.messages[otherUserId].find(
+          (msg) =>
+            msg._id === originalRequestMessageId &&
+            msg.messageType === "photo_request"
+        );
+
+        if (originalRequestMessage) {
+          originalRequestMessage.photoResponseData = {
+            ...originalRequestMessage.photoResponseData,
+            response: message.photoResponseData.response,
+            responderId: message.sender._id,
+          };
+          originalRequestMessage.status = "responded";
+          console.log(
+            "Original photo request message updated:",
+            originalRequestMessage
+          );
+        } else {
+          console.warn(
+            "Original photo request message not found for ID:",
+            originalRequestMessageId
+          );
+        }
+      }
+    },
+
     // Reset chat state
     resetChatState: () => initialState,
   },
@@ -604,17 +676,102 @@ const chatSlice = createSlice({
       })
       .addCase(requestPhotoAccess.fulfilled, (state, action) => {
         state.loading.sending = false;
+        const message = action.payload;
+
+        if (message && message.receiver && message.sender) {
+          const currentUser = getCurrentUser();
+          if (!currentUser) return;
+
+          const otherUserId =
+            message.receiver._id === currentUser.id
+              ? message.sender._id
+              : message.receiver._id;
+
+          if (!state.messages[otherUserId]) {
+            state.messages[otherUserId] = [];
+          }
+
+          const exists = state.messages[otherUserId].find(
+            (msg) => msg._id === message._id
+          );
+          if (!exists) {
+            state.messages[otherUserId].push(message);
+            state.messages[otherUserId].sort(
+              (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+            );
+          }
+        }
       })
       .addCase(requestPhotoAccess.rejected, (state, action) => {
         state.loading.sending = false;
         state.error.sending = action.payload;
       })
+
       .addCase(respondToPhotoRequest.pending, (state) => {
         state.loading.sending = true;
         state.error.sending = null;
       })
       .addCase(respondToPhotoRequest.fulfilled, (state, action) => {
         state.loading.sending = false;
+        const { message, originalMessageId, response } = action.payload;
+        const currentUser = getCurrentUser();
+
+        if (!currentUser || !message) {
+          console.error(
+            "respondToPhotoRequest.fulfilled: Invalid payload or current user."
+          );
+          return;
+        }
+
+        // Determine the chat ID this message belongs to
+        let otherUserId;
+        if (message.sender._id === currentUser.id) {
+          otherUserId = message.receiver._id;
+        } else {
+          otherUserId = message.sender._id;
+        }
+
+        if (!state.messages[otherUserId]) {
+          state.messages[otherUserId] = [];
+        }
+
+        // Add the newly created photo_response message to the chat
+        const responseMessageExists = state.messages[otherUserId].find(
+          (msg) => msg._id === message._id
+        );
+        if (!responseMessageExists) {
+          state.messages[otherUserId].push(message);
+          state.messages[otherUserId].sort(
+            (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+          );
+        }
+
+        // Find and update the original photo_request message if originalMessageId exists
+        if (originalMessageId) {
+          const originalRequestMessage = state.messages[otherUserId].find(
+            (msg) =>
+              msg._id === originalMessageId &&
+              msg.messageType === "photo_request"
+          );
+
+          if (originalRequestMessage) {
+            originalRequestMessage.photoResponseData = {
+              ...originalRequestMessage.photoResponseData,
+              response: response,
+              responderId: currentUser.id,
+            };
+            originalRequestMessage.status = "responded";
+            console.log(
+              "Original photo request updated after sending response:",
+              originalRequestMessage
+            );
+          } else {
+            console.warn(
+              "Original photo request not found in state after sending response:",
+              originalMessageId
+            );
+          }
+        }
       })
       .addCase(respondToPhotoRequest.rejected, (state, action) => {
         state.loading.sending = false;
@@ -635,6 +792,8 @@ export const {
   clearError,
   resetChatState,
   addPhotoRequestMessage,
+  addPhotoResponseMessage,
+
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

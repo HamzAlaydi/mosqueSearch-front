@@ -15,6 +15,7 @@ import {
   fetchChatList,
   findOrCreateConversation,
   requestPhotoAccess,
+  getCurrentUser,
 } from "../../redux/chat/chatSlice";
 import {
   MapPin,
@@ -31,12 +32,30 @@ import { getAvatar } from "@/shared/helper/defaultData";
 import Link from "next/link";
 import { countryFlags } from "@/shared/helper/flagsData";
 
+const checkPhotoAccess = (targetUser, currentUserId) => {
+  // If the target user has no profile picture, no blur needed
+  if (!targetUser.profilePicture) {
+    return true;
+  }
+
+  // If it's the user's own profile
+  if (targetUser._id === currentUserId) {
+    return true;
+  }
+
+  // Check if current user is in the target user's approvedPhotosFor array
+  return (
+    targetUser.approvedPhotosFor &&
+    targetUser.approvedPhotosFor.includes(currentUserId)
+  );
+};
 const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const dispatch = useDispatch();
   const router = useRouter();
   const [flagUrl, setFlagUrl] = useState(null);
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
-
+  const currentUserId = getCurrentUser().id;
+  const hasPhotoAccess = checkPhotoAccess(match, currentUserId);
   useEffect(() => {
     setFlagUrl(countryFlags[match.citizenship]);
     setOriginFlagUrl(countryFlags[match.originCountry]);
@@ -111,6 +130,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           isListView ? "w-1/3 h-full" : "h-48"
         } relative overflow-hidden`}
       >
+        {console.log()}
         <Image
           src={
             match.profilePicture?.startsWith("http")
@@ -122,7 +142,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           height={500}
           className={`object-cover ${
             isListView ? "w-full h-full" : "w-full h-48"
-          } ${!match.unblurRequest ? "blur-sm" : ""}`}
+          } ${!hasPhotoAccess ? "blur-sm" : ""}`}
         />
 
         <button

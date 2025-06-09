@@ -84,11 +84,85 @@ export const initializeSocket = () => {
   // Chat message handlers
   socket.on("newMessage", (message) => {
     console.log("New message received via socket:", message);
-    console.log(
-      "Current user from localStorage:",
-      JSON.parse(localStorage.getItem("user") || "{}")
-    );
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+    // Handle regular chat message
     store.dispatch(addNewMessage(message));
+
+    // Only create notification if current user is the receiver
+    if (message.receiver._id === currentUser.id) {
+      // If this is a regular message (not photo_request or photo_response)
+      if (!message.messageType || message.messageType === "text") {
+        const messageNotification = {
+          _id: `msg_${message._id}_${Date.now()}`, // Unique ID for notification
+          userId: message.receiver._id,
+          type: "message",
+          fromUserId: message.sender._id,
+          content: `${message.sender.firstName}: ${
+            message.text.length > 50
+              ? message.text.substring(0, 50) + "..."
+              : message.text
+          }`,
+          isRead: false,
+          createdAt: message.timestamp,
+          messageId: message._id,
+        };
+
+        console.log("Creating message notification:", messageNotification);
+        store.dispatch(addNotification(messageNotification));
+      }
+
+      // If this is a photo_request message, also create a notification
+      if (message.messageType === "photo_request") {
+        const photoRequestNotification = {
+          _id: `photo_req_${message._id}`, // Create unique ID for notification
+          userId: message.receiver._id,
+          type: "photo_request",
+          fromUserId: message.sender._id,
+          content: `${message.sender.firstName} has requested access to your profile photos`,
+          isRead: false,
+          createdAt: message.timestamp,
+          messageId: message._id, // Link to the original message
+        };
+
+        console.log(
+          "Creating photo request notification:",
+          photoRequestNotification
+        );
+        store.dispatch(addNotification(photoRequestNotification));
+      }
+
+      // If this is a photo_response message, also create a notification
+      if (
+        message.messageType === "photo_response" &&
+        message.photoResponseData
+      ) {
+        const response = message.photoResponseData.response;
+        const responseText =
+          response === "accept"
+            ? "approved"
+            : response === "deny"
+            ? "declined"
+            : "will respond later to";
+
+        const photoResponseNotification = {
+          _id: `photo_resp_${message._id}`, // Create unique ID for notification
+          userId: message.receiver._id,
+          type: "photo_response",
+          fromUserId: message.sender._id,
+          content: `${message.sender.firstName} has ${responseText} your photo access request`,
+          isRead: false,
+          createdAt: message.timestamp,
+          messageId: message._id, // Link to the original message
+        };
+
+        console.log(
+          "Creating photo response notification:",
+          photoResponseNotification
+        );
+        store.dispatch(addNotification(photoResponseNotification));
+      }
+    }
   });
 
   socket.on("messagesRead", (data) => {
@@ -148,7 +222,7 @@ export const initializeSocket = () => {
     }
   });
 
-  // Online status handlers
+  // Online status handlers - FIXED
   socket.on("userOnline", (data) => {
     console.log("User came online:", data);
     store.dispatch(
@@ -176,40 +250,40 @@ export const initializeSocket = () => {
     store.dispatch(setOnlineUsers(users));
   });
 
-  // Notification handlers
+  // Notification handlers - FIXED to dispatch to Redux
   socket.on("newNotification", (notification) => {
-    console.log("New notification received:", notification);
+    console.log("New notification received via socket:", notification);
+    // Dispatch directly to Redux store
     store.dispatch(addNotification(notification));
   });
 
+  // Legacy handlers - keeping for backward compatibility but updating to use Redux
   socket.on("photoRequest", (data) => {
     console.log("Photo request received:", data);
-    store.dispatch(
-      addNotification({
-        id: Date.now(),
-        type: "photo_request",
-        title: "Photo Access Request",
-        message: data.message,
-        data: data,
-        timestamp: data.timestamp,
-        read: false,
-      })
-    );
+    const photoNotification = {
+      _id: `photo_legacy_${Date.now()}`,
+      userId: data.receiverId || data.userId,
+      type: "photo_request",
+      fromUserId: data.senderId || data.fromUserId,
+      content: data.message || "Photo access request received",
+      isRead: false,
+      createdAt: data.timestamp || new Date(),
+    };
+    store.dispatch(addNotification(photoNotification));
   });
 
   socket.on("photoAccessApproved", (data) => {
     console.log("Photo access approved:", data);
-    store.dispatch(
-      addNotification({
-        id: Date.now(),
-        type: "photo_approval",
-        title: "Photo Access Approved",
-        message: data.message,
-        data: data,
-        timestamp: data.timestamp,
-        read: false,
-      })
-    );
+    const approvalNotification = {
+      _id: `photo_approval_legacy_${Date.now()}`,
+      userId: data.requesterId || data.userId,
+      type: "photo_approval",
+      fromUserId: data.approverId || data.fromUserId,
+      content: data.message || "Photo access approved",
+      isRead: false,
+      createdAt: data.timestamp || new Date(),
+    };
+    store.dispatch(addNotification(approvalNotification));
   });
 
   return socket;
