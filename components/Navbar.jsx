@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { logoutUser } from "@/redux/auth/authSlice"; // adjust the path based on your folder structure
+import { logoutUser } from "@/redux/auth/authSlice";
 import { useDispatch } from "react-redux";
+import { HeaderNotifications } from "./NotificationSystem";
 
 export default function Navbar() {
   const dispatch = useDispatch();
@@ -14,17 +15,17 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const pathname = usePathname();
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    router.push("/auth/login"); // redirect to login or home after logout
+    router.push("/auth/login");
   };
-  // Check if we're on one of the auth pages or home page
-  const isAuthOrHomePage =
-    pathname === "/" ||
+
+  const isAuthPage =
     pathname === "/auth/login" ||
     pathname === "/auth/signup" ||
     pathname === "/auth/imam";
@@ -38,39 +39,12 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {isAuthOrHomePage ? (
-          <>
-            <div className={`navbar-links ${isMenuOpen ? "active" : ""}`}>
-              <Link
-                href="/auth/login"
-                className="text-sm px-1 py-1 rounded-md"
-                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
-              >
-                Login
-              </Link>
-              <Link
-                href="/auth/signup"
-                className="text-sm px-3 py-1 rounded-md"
-                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
-              >
-                SignUp
-              </Link>
+        {!isAuthPage && (
+          <div className="flex items-center gap-4 ml-auto">
+            {/* Notifications */}
+            <HeaderNotifications />
 
-              <Link
-                href="/auth/imam"
-                className="text-sm px-3 py-1 rounded-md"
-                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
-              >
-                SignUp Imam
-              </Link>
-            </div>
-
-            <div className="mobile-toggle" onClick={toggleMenu}>
-              <i className={`fas ${isMenuOpen ? "fa-times" : "fa-bars"}`}></i>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center gap-4">
+            {/* User menu */}
             <div className="relative">
               <button
                 className="flex items-center gap-2 border border-gray-300 rounded-full p-2 hover:shadow-md transition"
@@ -82,7 +56,6 @@ export default function Navbar() {
                 </div>
               </button>
 
-              {/* User Menu Dropdown */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-40">
                   <div className="py-2">
@@ -103,6 +76,38 @@ export default function Navbar() {
               )}
             </div>
           </div>
+        )}
+
+        {isAuthPage && (
+          <>
+            <div className={`navbar-links ${isMenuOpen ? "active" : ""}`}>
+              <Link
+                href="/auth/login"
+                className="text-sm px-1 py-1 rounded-md"
+                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
+              >
+                Login
+              </Link>
+              <Link
+                href="/auth/signup"
+                className="text-sm px-3 py-1 rounded-md"
+                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
+              >
+                SignUp
+              </Link>
+              <Link
+                href="/auth/imam"
+                className="text-sm px-3 py-1 rounded-md"
+                style={{ backgroundColor: "var(--primary)", color: "#fff" }}
+              >
+                SignUp Imam
+              </Link>
+            </div>
+
+            <div className="mobile-toggle" onClick={toggleMenu}>
+              <i className={`fas ${isMenuOpen ? "fa-times" : "fa-bars"}`}></i>
+            </div>
+          </>
         )}
       </div>
     </nav>

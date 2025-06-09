@@ -70,6 +70,8 @@ const ChatWindow = ({
       </div>
     );
   }
+  console.log(activeChatData?.participants[0]);
+  console.log(currentUser);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -87,8 +89,17 @@ const ChatWindow = ({
               alt={`${activeChatData?.participants[0]?.firstName || ""} ${
                 activeChatData?.participants[0]?.lastName || ""
               }`.trim()}
-              className="w-10 h-10 rounded-full object-cover"
+              className={`w-8 h-8 rounded-full object-cover ${
+                activeChatData?.participants[0]?.profilePicture &&
+                activeChatData?.participants[0]?.approvedPhotosFor &&
+                !activeChatData.participants[0].approvedPhotosFor.includes(
+                  currentUser.id
+                )
+                  ? "blur-sm"
+                  : ""
+              }`}
             />
+
             {isUserOnline && (
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             )}

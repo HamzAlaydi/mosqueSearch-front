@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // @/components/ChatSidebar.jsx
 import React from "react";
@@ -45,6 +45,15 @@ const ChatSidebar = ({
     return false;
   });
 
+  const getLoggedInUserId = () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+      return userData?.id || null;
+    } catch (error) {
+      console.error("Error parsing user from localStorage", error);
+      return null;
+    }
+  };
   return (
     <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
@@ -65,7 +74,9 @@ const ChatSidebar = ({
       {/* Connection Status */}
       <div
         className={`px-4 py-2 text-sm flex items-center gap-2 ${
-          socketConnected ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
+          socketConnected
+            ? "text-green-600 bg-green-50"
+            : "text-red-600 bg-red-50"
         }`}
       >
         <Circle
@@ -115,7 +126,15 @@ const ChatSidebar = ({
                         getAvatar(participant.gender)
                       }
                       alt={`${participant.firstName}`}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className={`w-8 h-8 rounded-full object-cover ${
+                        participant.profilePicture &&
+                        participant.approvedPhotosFor &&
+                        !participant.approvedPhotosFor.includes(
+                          getLoggedInUserId()
+                        )
+                          ? "blur-sm"
+                          : ""
+                      }`}
                     />
                     {isParticipantOnline && (
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
