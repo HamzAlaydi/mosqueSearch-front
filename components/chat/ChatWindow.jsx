@@ -11,7 +11,7 @@ import {
   Smile,
   Paperclip,
 } from "lucide-react";
-import MessageItem from "./MessageItem"; // Import the new MessageItem component
+import MessageItem from "./MessageItem";
 import {
   selectMessages,
   selectActiveChat,
@@ -22,14 +22,15 @@ import {
 } from "@/redux/chat/chatSlice";
 import { getAvatar } from "@/shared/helper/defaultData";
 import EmojiPicker from "emoji-picker-react";
-import PhotoRequestMessage from "@/components/chat/PhotoRequestMessage";
+import RequestMessageItem from "./PhotoRequestMessage";
+// REMOVED: import PhotoRequestMessage from "@/components/chat/PhotoRequestMessage";
 
 const ChatWindow = ({
   currentUser,
   messageText,
   setMessageText,
   handleSendMessage,
-  handlePhotoRequest,
+  handlePhotoRequest, // This prop is for sending a request, not handling responses within the message display
   showEmojiPicker,
   setShowEmojiPicker,
   messagesEndRef,
@@ -47,7 +48,9 @@ const ChatWindow = ({
 
   const activeChatData = chatList.find((chat) => chat._id === activeChat);
   const isUserOnline =
-    activeChat && onlineUsers.includes(activeChatData?.participants[0]?._id);
+    activeChat && activeChatData?.participants[0]?._id
+      ? onlineUsers.includes(activeChatData.participants[0]._id)
+      : false; // Added null check for participants[0]
   const isUserTyping = typingUsers[activeChat]?.isTyping;
 
   if (!activeChat) {
@@ -109,13 +112,15 @@ const ChatWindow = ({
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Example of a button to send a photo request - keep if needed */}
           <button
             onClick={() =>
               handlePhotoRequest(activeChatData?.participants[0]?._id)
             }
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <Phone className="w-5 h-5" />
+            <Phone className="w-5 h-5" />{" "}
+            {/* This might be a placeholder for photo request */}
           </button>
           <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <Video className="w-5 h-5" />
@@ -139,17 +144,15 @@ const ChatWindow = ({
         ) : (
           messages.map((message) => (
             <div key={message._id} className="mb-4">
-              {/* {console.log(message)} */}
-              {message.messageType === "photo_request" ? (
-                <PhotoRequestMessage
+              {/* Check if it's a request or response message type (e.g., photo_request, wali_request, photo_response, wali_response) */}
+              {message.messageType &&
+              (message.messageType.endsWith("_request") ||
+                message.messageType.endsWith("_response")) ? (
+                <RequestMessageItem
                   message={message}
                   currentUserId={currentUser.id}
-                  allMessages={messages}
-                  // Pass the handleResponse function down to PhotoRequestMessage
-                  // This is important because the thunk needs the original message ID
-                  handleRespondToRequest={(responseType) =>
-                    handleResponse(responseType, message._id)
-                  }
+                  allMessages={messages} // Pass all messages for the component to find associated responses
+                  // REMOVED: handleRespondToRequest prop - RequestMessageItem handles its own dispatch
                 />
               ) : (
                 <MessageItem

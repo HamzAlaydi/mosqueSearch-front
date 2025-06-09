@@ -16,6 +16,7 @@ import {
   findOrCreateConversation,
   requestPhotoAccess,
   getCurrentUser,
+  requestWaliAccess,
 } from "../../redux/chat/chatSlice";
 import {
   MapPin,
@@ -49,6 +50,7 @@ const checkPhotoAccess = (targetUser, currentUserId) => {
     targetUser.approvedPhotosFor.includes(currentUserId)
   );
 };
+
 const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -116,6 +118,16 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
     } catch (error) {
       console.error("Failed to request photo access:", error);
       toast.error("Failed to send photo request");
+    }
+  };
+  const handleRequestWali = async (e) => {
+    e.stopPropagation();
+    try {
+      await dispatch(requestWaliAccess(match._id)).unwrap();
+      toast.success(`Wali request sent to ${match.firstName || "User"}`);
+    } catch (error) {
+      console.error("Failed to request wali access:", error);
+      toast.error("Failed to send wali request");
     }
   };
   return (
@@ -247,10 +259,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
             </button>
 
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log("Request wali information");
-              }}
+              onClick={handleRequestWali}
               className="p-1 rounded-full hover:bg-gray-100"
               title="Request Wali Info"
             >

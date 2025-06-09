@@ -1,64 +1,122 @@
-// @/components/chat/PhotoRequestMessage.jsx
+// @/components/chat/RequestMessageItem.jsx
 import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { respondToPhotoRequest } from "../../redux/chat/chatSlice";
-import { Check, X, Clock, Camera } from "lucide-react";
+import { useDispatch } from "react-redux";
+import {
+  respondToPhotoRequest,
+  respondToWaliRequest,
+} from "../../redux/chat/chatSlice";
+import { Check, X, Clock, Camera, Users } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-const PhotoRequestMessage = ({
-  message,
-  currentUserId,
-  allMessages = [],
-  handleRespondToRequest, // New prop received from ChatWindow
-}) => {
+const MESSAGE_TYPE_MAP = {
+  photo_request: {
+    responseType: "photo_response",
+    responseDataKey: "photoResponseData",
+    requestText: "📸 Photo request sent",
+    responseTextPrefix: "Photo", // Changed to just "Photo"
+    icon: Camera,
+    requestTitle: "Photo Access",
+    requestMessage: (senderName) =>
+      `${senderName} is requesting access to your photos.`,
+    requestColors: {
+      bg: "bg-blue-50",
+      border: "border-blue-200",
+      iconBg: "bg-blue-500",
+      iconText: "text-white",
+      senderInitialBg: "bg-blue-100",
+      senderInitialText: "text-blue-600",
+      text: "text-gray-700",
+    },
+    responseColors: {
+      accept: "bg-green-50 border-green-200 text-green-800",
+      deny: "bg-red-50 border-red-200 text-red-800",
+      later: "bg-yellow-50 border-yellow-200 text-yellow-800",
+    },
+  },
+  wali_request: {
+    responseType: "wali_response",
+    responseDataKey: "waliResponseData",
+    requestText: "🤝 Wali request sent",
+    responseTextPrefix: "Wali", // Changed to just "Wali"
+    icon: Users,
+    requestTitle: "Wali Access",
+    requestMessage: (senderName) =>
+      `${senderName} is requesting your wali details.`,
+    requestColors: {
+      bg: "bg-purple-50",
+      border: "border-purple-200",
+      iconBg: "bg-purple-500",
+      iconText: "text-white",
+      senderInitialBg: "bg-purple-100",
+      senderInitialText: "text-purple-600",
+      text: "text-gray-700",
+    },
+    responseColors: {
+      accept: "bg-green-50 border-green-200 text-green-800",
+      deny: "bg-red-50 border-red-200 text-red-800",
+      later: "bg-yellow-50 border-yellow-200 text-yellow-800",
+    },
+  },
+};
+
+const RequestMessageItem = ({ message, currentUserId, allMessages = [] }) => {
   const dispatch = useDispatch();
   const [responding, setResponding] = useState(false);
   const [hasResponded, setHasResponded] = useState(false);
 
-  // Debug logging - keep for a bit, then remove
-  console.log("PhotoRequestMessage Debug:", {
-    messageType: message.messageType,
-    messageId: message._id,
-    senderId: message.sender._id,
-    receiverId: message.receiver?._id,
-    currentUserId: currentUserId,
-    photoResponseData: message.photoResponseData,
-    hasRespondedState: hasResponded, // Renamed to avoid conflict
-  });
+  const isRequestMessage = message.messageType.endsWith("_request");
+  const isResponseMessage = message.messageType.endsWith("_response");
 
-  const isPhotoRequest = message.messageType === "photo_request";
-  const isPhotoResponse = message.messageType === "photo_response";
+  const messageConfig = MESSAGE_TYPE_MAP[message.messageType] || {};
 
   const isReceiver = message.receiver && message.receiver._id === currentUserId;
   const isSender = message.sender && message.sender._id === currentUserId;
 
-  // Check if this specific request has already been responded to
   useEffect(() => {
-    if (isPhotoRequest && isReceiver) {
-      const hasResponseMessage = allMessages.some(
-        (msg) =>
-          msg.messageType === "photo_response" &&
-          msg.photoResponseData?.originalMessageId === message._id && // Crucial change: check originalMessageId
-          msg.photoResponseData?.responderId === currentUserId
+    if (isRequestMessage && isReceiver) {
+      const expectedResponseType = message.messageType.replace(
+        "_request",
+        "_response"
       );
-      setHasResponded(hasResponseMessage);
+      const responseDataKey =
+        MESSAGE_TYPE_MAP[message.messageType]?.responseDataKey;
+
+      if (expectedResponseType && responseDataKey) {
+        const foundResponseMessage = allMessages.some(
+          (msg) =>
+            msg.messageType === expectedResponseType &&
+            msg[responseDataKey]?.originalMessageId === message._id &&
+            msg[responseDataKey]?.responderId === currentUserId
+        );
+        setHasResponded(foundResponseMessage);
+      }
     }
-  }, [allMessages, isPhotoRequest, isReceiver, message._id, currentUserId]); // Add message._id to dependencies
+  }, [allMessages, message, isReceiver, isRequestMessage, currentUserId]);
 
   const handleResponse = async (responseType) => {
     try {
       setResponding(true);
-      await dispatch(
-        respondToPhotoRequest({
-          requesterId: message.sender._id,
-          response: responseType,
-          originalMessageId: message._id, // Pass the original message ID
-        })
-      ).unwrap();
+      if (message.messageType === "photo_request") {
+        await dispatch(
+          respondToPhotoRequest({
+            requesterId: message.sender._id,
+            response: responseType,
+            originalMessageId: message._id,
+          })
+        ).unwrap();
+      } else if (message.messageType === "wali_request") {
+        await dispatch(
+          respondToWaliRequest({
+            requesterId: message.sender._id,
+            response: responseType,
+            originalMessageId: message._id,
+          })
+        ).unwrap();
+      }
 
-      setHasResponded(true); // Update state to reflect response immediately
+      setHasResponded(true);
       toast.success(
-        `Photo request ${
+        `${messageConfig.requestTitle} request ${
           responseType === "accept"
             ? "accepted"
             : responseType === "deny"
@@ -67,34 +125,45 @@ const PhotoRequestMessage = ({
         }`
       );
     } catch (error) {
-      console.error("Failed to respond to photo request:", error);
-      toast.error("Failed to respond to photo request");
+      console.error(
+        `Failed to respond to ${messageConfig.requestTitle} request:`,
+        error
+      );
+      toast.error(`Failed to respond to ${messageConfig.requestTitle} request`);
     } finally {
       setResponding(false);
     }
   };
 
-  // The `alreadyResponded` check needs to be more robust.
-  // It should primarily rely on the `hasResponded` state from the useEffect.
-  // The `message.photoResponseData?.response` would only exist if the response
-  // was *part of the same message object* (which is unlikely for a new response message).
-  // The `message.status === "responded"` is also a potential source of truth,
-  // but for messages fetched from the server, we rely on `allMessages.some`
-  // and the `hasResponded` state.
   const alreadyResponded = hasResponded;
+  const SenderIcon = messageConfig.icon;
 
-  // Show action buttons for photo requests that haven't been responded to
-  if (isPhotoRequest && isReceiver && !alreadyResponded) {
+  // --- RENDERING LOGIC ---
+
+  // 1. Render for an **incoming request** that hasn't been responded to (Receiver's view)
+  if (isRequestMessage && isReceiver && !alreadyResponded) {
+    const { requestColors, requestTitle, requestMessage } = messageConfig;
+
     return (
-      <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-lg bg-blue-50 border-2 border-blue-200 ml-0 mr-auto shadow-sm">
+      <div
+        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${requestColors.bg} ${requestColors.border} ml-0 mr-auto shadow-sm`}
+      >
         <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <Camera size={16} className="text-white" />
+          <div
+            className={`w-10 h-10 rounded-full ${requestColors.iconBg} flex items-center justify-center flex-shrink-0`}
+          >
+            {SenderIcon && (
+              <SenderIcon size={16} className={requestColors.iconText} />
+            )}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 text-sm font-semibold">
+              <span
+                className={`w-7 h-7 rounded-full ${requestColors.senderInitialBg} flex items-center justify-center`}
+              >
+                <span
+                  className={`${requestColors.senderInitialText} text-sm font-semibold`}
+                >
                   {message.sender.firstName?.[0] || "U"}
                 </span>
               </span>
@@ -102,8 +171,8 @@ const PhotoRequestMessage = ({
                 {message.sender.firstName} {message.sender.lastName}
               </span>
             </div>
-            <p className="text-sm text-gray-700 mb-2 leading-relaxed">
-              {message.text}
+            <p className={`text-sm ${requestColors.text} mb-2 leading-relaxed`}>
+              {requestMessage(message.sender.firstName || "User")}
             </p>
             <div className="text-xs text-gray-500">
               {new Date(message.timestamp).toLocaleTimeString([], {
@@ -116,11 +185,11 @@ const PhotoRequestMessage = ({
 
         <div className="bg-white rounded-lg p-3 border border-blue-100">
           <p className="text-xs text-gray-600 mb-3 font-medium">
-            How would you like to respond?
+            How would you like to respond to the {requestTitle} request?
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => handleResponse("accept")} // Call the local handleResponse
+              onClick={() => handleResponse("accept")}
               disabled={responding}
               className="photo-request-btn photo-request-btn-accept flex items-center gap-1 px-3 py-2 bg-primary !text-white rounded-lg text-xs hover:!bg-[darkgreen] disabled:!opacity-50 disabled:!cursor-not-allowed !transition-colors"
             >
@@ -129,7 +198,7 @@ const PhotoRequestMessage = ({
             </button>
 
             <button
-              onClick={() => handleResponse("deny")} // Call the local handleResponse
+              onClick={() => handleResponse("deny")}
               disabled={responding}
               className="photo-request-btn photo-request-btn-deny flex items-center gap-1 px-4 py-2 !bg-red-500 !text-white rounded-lg text-xs font-medium hover:!bg-red-600 disabled:!opacity-50 disabled:!cursor-not-allowed !transition-all duration-200 shadow-sm"
             >
@@ -138,7 +207,7 @@ const PhotoRequestMessage = ({
             </button>
 
             <button
-              onClick={() => handleResponse("later")} // Call the local handleResponse
+              onClick={() => handleResponse("later")}
               disabled={responding}
               className="photo-request-btn photo-request-btn-later flex items-center gap-1 px-4 py-2 !bg-gray-500 !text-white rounded-lg text-xs font-medium hover:!bg-gray-600 disabled:!opacity-50 disabled:!cursor-not-allowed !transition-all duration-200 shadow-sm"
             >
@@ -151,19 +220,23 @@ const PhotoRequestMessage = ({
     );
   }
 
-  // Show different UI for already responded requests (this part is largely correct,
-  // but now `alreadyResponded` is more accurate)
-  if (isPhotoRequest && isReceiver && alreadyResponded) {
-    // Determine the response type from the message that responded to this request
-    const responseMessage = allMessages.find(
-      (msg) =>
-        msg.messageType === "photo_response" &&
-        msg.photoResponseData?.originalMessageId === message._id &&
-        msg.photoResponseData?.responderId === currentUserId
+  // 2. Render for an **incoming request** that HAS been responded to (Receiver's view)
+  if (isRequestMessage && isReceiver && alreadyResponded) {
+    const responseExpectedType = message.messageType.replace(
+      "_request",
+      "_response"
     );
+    const responseDataKey =
+      MESSAGE_TYPE_MAP[message.messageType]?.responseDataKey;
 
-    const responseType = responseMessage?.photoResponseData?.response;
+    const responseMessageData = allMessages.find(
+      (msg) =>
+        msg.messageType === responseExpectedType &&
+        msg[responseDataKey]?.originalMessageId === message._id &&
+        msg[responseDataKey]?.responderId === currentUserId
+    )?.[responseDataKey];
 
+    const responseType = responseMessageData?.response;
     const responseText =
       responseType === "accept"
         ? "Accepted"
@@ -173,18 +246,17 @@ const PhotoRequestMessage = ({
         ? "Deferred"
         : "Responded"; // Fallback for general 'responded' status
 
-    const responseColor =
-      responseType === "accept"
-        ? "text-green-600 bg-green-50 border-green-200"
-        : responseType === "deny"
-        ? "text-red-600 bg-red-50 border-red-200"
-        : "text-gray-600 bg-gray-50 border-gray-200";
+    const responseColorClass =
+      messageConfig.responseColors?.[responseType] ||
+      "text-gray-600 bg-gray-50 border-gray-200";
 
     return (
-      <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 ml-0 mr-auto">
+      <div
+        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 ml-0 mr-auto`}
+      >
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-            <Camera size={14} className="text-gray-500" />
+            {SenderIcon && <SenderIcon size={14} className="text-gray-500" />}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -197,15 +269,17 @@ const PhotoRequestMessage = ({
                 {message.sender.firstName} {message.sender.lastName}
               </span>
             </div>
-            <p className="text-sm text-gray-700 mb-2">{message.text}</p>
+            <p className="text-sm text-gray-700 mb-2">
+              {messageConfig.requestMessage(message.sender.firstName || "User")}
+            </p>
             <div
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium mb-2 ${responseColor}`}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium mb-2 ${responseColorClass}`}
             >
-              {/* Display appropriate icon based on response type */}
               {responseType === "accept" && <Check size={10} />}
               {responseType === "deny" && <X size={10} />}
               {responseType === "later" && <Clock size={10} />}
-              {responseText}
+              {/* Display "Photo Responded" or "Wali Responded" */}
+              {messageConfig.responseTextPrefix} {responseText}
             </div>
             <div className="text-xs text-gray-500">
               {new Date(message.timestamp).toLocaleTimeString([], {
@@ -219,64 +293,78 @@ const PhotoRequestMessage = ({
     );
   }
 
-  // Photo response messages (the acceptance/decline notifications)
-  if (isPhotoResponse) {
-    const responseType = message.photoResponseData?.response;
-    const isResponseReceiver =
-      message.receiver && message.receiver._id === currentUserId;
-    // const isResponseSender = message.sender && message.sender._id === currentUserId; // This variable is not used
+  // 3. Render for **response messages** (notifications to the original requester - i.e., current user is the receiver of the response)
+  if (isResponseMessage && isReceiver) {
+    const originalRequestTypeKey = message.messageType.replace(
+      "_response",
+      "_request"
+    );
+    const originalRequestConfig =
+      MESSAGE_TYPE_MAP[originalRequestTypeKey] || {};
 
-    if (isResponseReceiver) {
-      // This is a response notification received by the original requester
-      const responseIcon =
-        responseType === "accept"
-          ? "✅"
-          : responseType === "deny"
-          ? "❌"
-          : "⏰";
+    const responseDataKey = originalRequestConfig.responseDataKey;
+    const responseType = message[responseDataKey]?.response;
+    const responseTextPrefix = originalRequestConfig.responseTextPrefix;
 
-      const responseColor =
-        responseType === "accept"
-          ? "bg-green-50 border-green-200 text-green-800"
-          : responseType === "deny"
-          ? "bg-red-50 border-red-200 text-red-800"
-          : "bg-yellow-50 border-yellow-200 text-yellow-800";
+    const responseIcon =
+      responseType === "accept" ? "✅" : responseType === "deny" ? "❌" : "⏰";
 
-      return (
-        <div
-          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg border-2 ml-0 mr-auto shadow-sm ${responseColor}`}
-        >
-          <div className="flex items-start gap-3">
-            <div className="text-xl">{responseIcon}</div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-7 h-7 rounded-full bg-white bg-opacity-50 flex items-center justify-center">
-                  <span className="text-sm font-semibold">
-                    {message.sender.firstName?.[0] || "U"}
-                  </span>
-                </span>
+    const responseColorClass =
+      originalRequestConfig.responseColors?.[responseType] ||
+      "bg-yellow-50 border-yellow-200 text-yellow-800";
+
+    return (
+      <div
+        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg border-2 ml-0 mr-auto shadow-sm ${responseColorClass}`}
+      >
+        <div className="flex items-start gap-3">
+          <div className="text-xl">{responseIcon}</div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-7 h-7 rounded-full bg-white bg-opacity-50 flex items-center justify-center">
                 <span className="text-sm font-semibold">
-                  {message.sender.firstName} {message.sender.lastName}
+                  {message.sender.firstName?.[0] || "U"}
                 </span>
-              </div>
-              <p className="text-sm font-medium mb-1">{message.text}</p>
-              <div className="text-xs opacity-70">
-                {new Date(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
+              </span>
+              <span className="text-sm font-semibold">
+                {message.sender.firstName} {message.sender.lastName}
+              </span>
+            </div>
+            <p className="text-sm font-medium mb-1">
+              {responseTextPrefix} {responseType || "response"}: {message.text}
+            </p>
+            <div className="text-xs opacity-70">
+              {new Date(message.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </div>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
-  // Regular message display for sent requests or other message types
+  // 4. Default render for sent requests (by the current user) or other message types
   const messageClass = isSender
     ? "max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-primary text-white ml-auto mr-0"
     : "max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-100 text-gray-800 ml-0 mr-auto";
+
+  const suffixText =
+    isRequestMessage && isSender
+      ? messageConfig.requestText
+      : isResponseMessage
+      ? `${
+          MESSAGE_TYPE_MAP[message.messageType.replace("_response", "_request")]
+            ?.responseTextPrefix || "Access"
+        } ${
+          message[
+            MESSAGE_TYPE_MAP[
+              message.messageType.replace("_response", "_request")
+            ]?.responseDataKey
+          ]?.response || "response"
+        }`
+      : null;
 
   return (
     <div className={messageClass}>
@@ -299,15 +387,8 @@ const PhotoRequestMessage = ({
               hour: "2-digit",
               minute: "2-digit",
             })}
-            {isPhotoRequest && isSender && (
-              <span className="ml-2 text-xs opacity-75">
-                📸 Photo request sent
-              </span>
-            )}
-            {isPhotoResponse && (
-              <span className="ml-2 text-xs opacity-75">
-                📸 Photo {message.photoResponseData?.response || "response"}
-              </span>
+            {suffixText && (
+              <span className="ml-2 text-xs opacity-75">{suffixText}</span>
             )}
           </div>
         </div>
@@ -316,4 +397,4 @@ const PhotoRequestMessage = ({
   );
 };
 
-export default PhotoRequestMessage;
+export default RequestMessageItem;

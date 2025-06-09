@@ -98,48 +98,6 @@ export const deleteMessage = createAsyncThunk(
   }
 );
 
-// export const requestPhotoAccess = createAsyncThunk(
-//   "chat/requestPhotoAccess",
-//   async (userId, { rejectWithValue }) => {
-//     try {
-//       const token = localStorage.getItem("token");
-//       const response = await axios.post(
-//         `${rootRoute}/chats/request-photo/${userId}`,
-//         {},
-//         {
-//           headers: { Authorization: `Bearer ${token}` },
-//         }
-//       );
-//       return response.data;
-//     } catch (error) {
-//       return rejectWithValue(
-//         error.response?.data?.message || "Failed to request photo access"
-//       );
-//     }
-//   }
-// );
-
-// export const approvePhotoAccess = createAsyncThunk(
-//   "chat/approvePhotoAccess",
-//   async (userId, { rejectWithValue }) => {
-//     try {
-//       const token = localStorage.getItem("token");
-//       const response = await axios.post(
-//         `${rootRoute}/chats/approve-photo/${userId}`,
-//         {},
-//         {
-//           headers: { Authorization: `Bearer ${token}` },
-//         }
-//       );
-//       return response.data;
-//     } catch (error) {
-//       return rejectWithValue(
-//         error.response?.data?.message || "Failed to approve photo access"
-//       );
-//     }
-//   }
-// );
-
 // New async thunk to find or create a conversation
 export const findOrCreateConversation = createAsyncThunk(
   "chat/findOrCreateConversation",
@@ -188,6 +146,7 @@ export const getCurrentUser = () => {
     return null;
   }
 };
+
 export const requestPhotoAccess = createAsyncThunk(
   "chat/requestPhotoAccess",
   async (userId, { rejectWithValue }) => {
@@ -238,6 +197,57 @@ export const respondToPhotoRequest = createAsyncThunk(
   }
 );
 
+// --- WALII LOGIC START ---
+export const requestWaliAccess = createAsyncThunk(
+  "chat/requestWaliAccess",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${rootRoute}/chats/request-wali/${userId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data.data; // Return the new wali request message
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to request wali access"
+      );
+    }
+  }
+);
+
+export const respondToWaliRequest = createAsyncThunk(
+  "chat/respondToWaliRequest",
+  async ({ requesterId, response, originalMessageId }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const apiResponse = await axios.post(
+        `${rootRoute}/chats/respond-wali/${requesterId}`,
+        { response, originalMessageId },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Assuming your backend returns similar data for wali response
+      return {
+        message: apiResponse.data.data, // The new wali_response Chat message
+        originalMessageId: apiResponse.data.originalMessageId,
+        response: apiResponse.data.responseType,
+        accessGranted: apiResponse.data.accessGranted, // If applicable for wali access
+      };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to respond to wali request"
+      );
+    }
+  }
+);
+// --- WALII LOGIC END ---
+
 const initialState = {
   chatList: [],
   messages: {}, // Object to store messages for each chat { userId: [messages] }
@@ -257,8 +267,6 @@ const initialState = {
     sending: null,
     findingChat: null,
   },
-  onlineUsers: [],
-  typingUsers: {},
   socketConnected: false,
 };
 
@@ -669,7 +677,10 @@ const chatSlice = createSlice({
       .addCase(findOrCreateConversation.rejected, (state, action) => {
         state.loading.findingChat = false;
         state.error.findingChat = action.payload;
-      })
+      });
+
+    // --- PHOTO ACCESS START ---
+    builder
       .addCase(requestPhotoAccess.pending, (state) => {
         state.loading.sending = true;
         state.error.sending = null;
@@ -705,8 +716,9 @@ const chatSlice = createSlice({
       .addCase(requestPhotoAccess.rejected, (state, action) => {
         state.loading.sending = false;
         state.error.sending = action.payload;
-      })
+      });
 
+    builder
       .addCase(respondToPhotoRequest.pending, (state) => {
         state.loading.sending = true;
         state.error.sending = null;
@@ -777,6 +789,112 @@ const chatSlice = createSlice({
         state.loading.sending = false;
         state.error.sending = action.payload;
       });
+    // --- PHOTO ACCESS END ---
+
+    // --- WALII ACCESS START ---
+    builder
+      .addCase(requestWaliAccess.pending, (state) => {
+        state.loading.sending = true;
+        state.error.sending = null;
+      })
+      .addCase(requestWaliAccess.fulfilled, (state, action) => {
+        state.loading.sending = false;
+        const message = action.payload;
+
+        if (message && message.receiver && message.sender) {
+          const currentUser = getCurrentUser();
+          if (!currentUser) return;
+
+          const otherUserId =
+            message.receiver._id === currentUser.id
+              ? message.sender._id
+              : message.receiver._id;
+
+          if (!state.messages[otherUserId]) {
+            state.messages[otherUserId] = [];
+          }
+
+          const exists = state.messages[otherUserId].find(
+            (msg) => msg._id === message._id
+          );
+          if (!exists) {
+            state.messages[otherUserId].push(message);
+            state.messages[otherUserId].sort(
+              (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+            );
+          }
+        }
+      })
+      .addCase(requestWaliAccess.rejected, (state, action) => {
+        state.loading.sending = false;
+        state.error.sending = action.payload;
+      });
+
+    builder
+      .addCase(respondToWaliRequest.pending, (state) => {
+        state.loading.sending = true;
+        state.error.sending = null;
+      })
+      .addCase(respondToWaliRequest.fulfilled, (state, action) => {
+        state.loading.sending = false;
+        const { message, originalMessageId, response } = action.payload;
+        const currentUser = getCurrentUser();
+
+        if (!currentUser || !message) {
+          console.error(
+            "respondToWaliRequest.fulfilled: Invalid payload or current user."
+          );
+          return;
+        }
+
+        let otherUserId;
+        if (message.sender._id === currentUser.id) {
+          otherUserId = message.receiver._id;
+        } else {
+          otherUserId = message.sender._id;
+        }
+
+        if (!state.messages[otherUserId]) {
+          state.messages[otherUserId] = [];
+        }
+
+        const responseMessageExists = state.messages[otherUserId].find(
+          (msg) => msg._id === message._id
+        );
+        if (!responseMessageExists) {
+          state.messages[otherUserId].push(message);
+          state.messages[otherUserId].sort(
+            (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+          );
+        }
+
+        if (originalMessageId) {
+          const originalRequestMessage = state.messages[otherUserId].find(
+            (msg) =>
+              msg._id === originalMessageId &&
+              msg.messageType === "wali_request"
+          );
+
+          if (originalRequestMessage) {
+            originalRequestMessage.waliResponseData = {
+              ...originalRequestMessage.waliResponseData,
+              response: response,
+              responderId: currentUser.id,
+            };
+            originalRequestMessage.status = "responded";
+          } else {
+            console.warn(
+              "Original wali request message not found in state after sending response:",
+              originalMessageId
+            );
+          }
+        }
+      })
+      .addCase(respondToWaliRequest.rejected, (state, action) => {
+        state.loading.sending = false;
+        state.error.sending = action.payload;
+      });
+    // --- WALII ACCESS END ---
   },
 });
 
@@ -793,7 +911,6 @@ export const {
   resetChatState,
   addPhotoRequestMessage,
   addPhotoResponseMessage,
-
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

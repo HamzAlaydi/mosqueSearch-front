@@ -27,6 +27,7 @@ import {
   ExternalLink,
   FileText,
   Search,
+  Eye,
 } from "lucide-react";
 import { calculateAge, getAvatar } from "@/shared/helper/defaultData";
 import {
@@ -34,6 +35,11 @@ import {
   removeInterest,
   fetchUserInterests,
 } from "@/redux/match/matchSlice";
+import {
+  requestPhotoAccess,
+  getCurrentUser,
+  requestWaliAccess,
+} from "@/redux/chat/chatSlice";
 import { fetchUserProfile, clearViewingUser } from "@/redux/user/userSlice";
 import { useParams, useRouter } from "next/navigation";
 import coverImage from "@/public/images/matches/background.jpg";
@@ -162,6 +168,28 @@ export default function UserProfile() {
   const [activeTab, setActiveTab] = useState("about");
   const [interestLoading, setInterestLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
+  const getLoggedInUserId = () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+      return userData?.id || null;
+    } catch (error) {
+      console.error("Error parsing user from localStorage", error);
+      return null;
+    }
+  };
+
+  const isPhotoApproved = (currentUser) => {
+    const loggedInUserId = getLoggedInUserId();
+    console.log({ currentUser });
+    console.log({ loggedInUserId });
+
+    return currentUser?.approvedPhotosFor?.includes(loggedInUserId);
+  };
+
+  const isWaliApproved = (currentUser) => {
+    const loggedInUserId = getLoggedInUserId();
+    return currentUser?.approvedWaliFor?.includes(loggedInUserId);
+  };
 
   // Fetch profile data and user interests
   useEffect(() => {
@@ -217,6 +245,26 @@ export default function UserProfile() {
     }
   };
 
+  // Add these handler functions after the existing handlers
+  const handleRequestPhoto = async () => {
+    try {
+      await dispatch(requestPhotoAccess(currentUser._id)).unwrap();
+      toast.success(`Photo request sent to ${currentUser.firstName || "User"}`);
+    } catch (error) {
+      console.error("Failed to request photo access:", error);
+      toast.error("Failed to send photo request");
+    }
+  };
+
+  const handleRequestWali = async () => {
+    try {
+      await dispatch(requestWaliAccess(currentUser._id)).unwrap();
+      toast.success(`Wali request sent to ${currentUser.firstName || "User"}`);
+    } catch (error) {
+      console.error("Failed to request wali access:", error);
+      toast.error("Failed to send wali request");
+    }
+  };
   const handleSendMessage = () => {
     if (currentUser?._id) {
       router.push(`/messages/${currentUser._id}`);
@@ -292,27 +340,62 @@ export default function UserProfile() {
             <div className="flex flex-col md:flex-row md:items-center">
               {/* Avatar */}
               <div className="mb-6 md:mb-0 md:mr-8 flex-shrink-0">
-                <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl mx-auto md:mx-0 relative">
-                  <Image
-                    src={
-                      currentUser.profilePicture?.startsWith("http")
-                        ? currentUser.profilePicture
-                        : getAvatar(currentUser.gender)
-                    }
-                    alt={`${currentUser?.firstName || "User"}'s profile`}
-                    width={128}
-                    height={128}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.target.src = getAvatar(currentUser.gender);
-                    }}
-                  />
+                <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-xl mx-auto md:mx-0 relative group">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={
+                        isPhotoApproved(currentUser)
+                          ? currentUser.profilePicture?.startsWith("http")
+                            ? currentUser.profilePicture
+                            : getAvatar(currentUser.gender)
+                          : currentUser.blurredProfilePicture ||
+                            getAvatar(currentUser.gender)
+                      }
+                      alt={`${currentUser?.firstName || "User"}'s profile`}
+                      fill
+                      className={`h-full w-full object-cover transition-all duration-300 ${
+                        !isPhotoApproved(currentUser)
+                          ? "filter blur-md brightness-75"
+                          : ""
+                      }`}
+                      onError={(e) => {
+                        e.target.src = getAvatar(currentUser.gender);
+                      }}
+                    />
 
-                  {currentUser.isVerified && (
-                    <div className="absolute bottom-0 right-0 transform translate-x-1 translate-y-1 bg-green-500 text-white border-2 border-white rounded-full p-1 shadow-md">
-                      <UserCheck size={16} />
-                    </div>
-                  )}
+                    {!isPhotoApproved(currentUser) && (
+                      <>
+                        {/* Visual blur overlay (non-interactive) */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30 rounded-full pointer-events-none z-10" />
+
+                        {/* Central unlock icon */}
+                        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                          <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 border border-white/30 shadow-lg">
+                            <Lock
+                              size={24}
+                              className="text-white drop-shadow-lg"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Request button - interactive and frontmost */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent rounded-b-full p-3 pb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-30">
+                          <button
+                            onClick={handleRequestPhoto}
+                            className="w-full bg-white/90 backdrop-blur-sm text-white py-2 px-3 rounded-full text-xs font-semibold hover:bg-white transition-all duration-200 shadow-lg border border-white/20 flex items-center justify-center gap-1.5"
+                          >
+                            <Eye size={14} className="text-white" />
+                            <span className="text-white-800">
+                              Request Photo
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* Optional shimmer (non-interactive) */}
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse pointer-events-none z-0" />
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -734,60 +817,80 @@ export default function UserProfile() {
             {currentUser.wali && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="font-semibold text-lg text-gray-800">
+                  <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
                     Wali Contact
+                    {!isWaliApproved(currentUser, "LOGGED_IN_USER_ID") && (
+                      <Lock size={16} className="text-gray-400" />
+                    )}
                   </h3>
                 </div>
                 <div className="p-6">
-                  <div className="space-y-4">
-                    {currentUser.wali.name && (
-                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <UserCheck size={20} className="text-primary mt-1" />
-                        <div>
-                          <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-                            Name
-                          </div>
-                          <div className="font-medium text-gray-800">
-                            {currentUser.wali.name}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {currentUser.wali.email && (
-                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <Mail size={20} className="text-primary mt-1" />
-                        <div>
-                          <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-                            Email
-                          </div>
-                          <div className="font-medium text-gray-800">
-                            {currentUser.wali.email}
+                  {isWaliApproved(currentUser, "LOGGED_IN_USER_ID") ? (
+                    <div className="space-y-4">
+                      {currentUser.wali.name && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <UserCheck size={20} className="text-primary mt-1" />
+                          <div>
+                            <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                              Name
+                            </div>
+                            <div className="font-medium text-gray-800">
+                              {currentUser.wali.name}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                    {currentUser.wali.phone && (
-                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <Phone size={20} className="text-primary mt-1" />
-                        <div>
-                          <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
-                            Phone
-                          </div>
-                          <div className="font-medium text-gray-800">
-                            {currentUser.wali.phone}
+                      )}
+                      {currentUser.wali.email && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <Mail size={20} className="text-primary mt-1" />
+                          <div>
+                            <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                              Email
+                            </div>
+                            <div className="font-medium text-gray-800">
+                              {currentUser.wali.email}
+                            </div>
                           </div>
                         </div>
+                      )}
+                      {currentUser.wali.phone && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <Phone size={20} className="text-primary mt-1" />
+                          <div>
+                            <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                              Phone
+                            </div>
+                            <div className="font-medium text-gray-800">
+                              {currentUser.wali.phone}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-6 text-xs text-blue-800 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+                        <Info size={18} className="text-blue-600 mt-0.5" />
+                        <p>
+                          Wali contact details are provided to facilitate formal
+                          steps towards marriage after mutual interest. Please
+                          use this information respectfully.
+                        </p>
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-6 text-xs text-blue-800 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-                    <Info size={18} className="text-blue-600 mt-0.5" />
-                    <p>
-                      Wali contact details are provided to facilitate formal
-                      steps towards marriage after mutual interest. Please use
-                      this information respectfully.
-                    </p>
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center py-8 px-4">
+                      <Lock size={48} className="text-gray-300 mb-4" />
+                      <p className="text-gray-600 mb-6 max-w-md">
+                        Wali contact information is private. Request access to
+                        view these details.
+                      </p>
+                      <button
+                        onClick={handleRequestWali}
+                        className="bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition duration-200 flex items-center justify-center gap-2"
+                      >
+                        <Mail size={18} />
+                        Request Wali Contact
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
