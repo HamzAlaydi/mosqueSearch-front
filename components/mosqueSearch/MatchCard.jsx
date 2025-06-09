@@ -1,3 +1,4 @@
+// MatchCard.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,11 +15,20 @@ import {
   fetchChatList,
   findOrCreateConversation,
 } from "../../redux/chat/chatSlice";
-import { MapPin, MessageCircle, Heart } from "lucide-react";
+import {
+  MapPin,
+  Heart,
+  Image as ImageIcon,
+  Ban,
+  UserCheck,
+  AlertCircle,
+  MessageCircle,
+} from "lucide-react";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
-import { getAvatar, fetchFlagUrl } from "@/shared/helper/defaultData";
+import { getAvatar } from "@/shared/helper/defaultData";
 import Link from "next/link";
+import { countryFlags } from "@/shared/helper/flagsData";
 
 const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const dispatch = useDispatch();
@@ -27,16 +37,13 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
 
   useEffect(() => {
-    const loadFlags = async () => {
-      const [citizenshipFlag, originFlag] = await Promise.all([
-        fetchFlagUrl(match.citizenship),
-        fetchFlagUrl(match.originCountry),
-      ]);
-      setFlagUrl(citizenshipFlag);
-      setOriginFlagUrl(originFlag);
-    };
+    // Directly get flag URLs from the hardcoded data
+    setFlagUrl(countryFlags[match.citizenship]);
+    console.log(countryFlags[match.citizenship]);
+    console.log(match.citizenship);
+    console.log(countryFlags[match.citizenship]);
 
-    loadFlags();
+    setOriginFlagUrl(countryFlags[match.originCountry]);
   }, [match.citizenship, match.originCountry]);
 
   const handleInterestClick = async (e) => {
@@ -131,7 +138,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
       <div className={`p-4 ${isListView ? "w-2/3" : ""}`}>
         <div className="flex justify-between items-start mb-1">
           <h3 className="font-semibold text-lg flex items-center gap-2">
-            {match.firstName || ""} {match.lastName || ""}
+            {match.firstName || "UnKnown User"} {match.lastName || ""}
           </h3>
         </div>
 
@@ -162,7 +169,12 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
               />
             )}
           </p>
-          <p>Languages: {match.languages.join(", ")}</p>
+          <p>
+            Languages:{" "}
+            {match.languages
+              .map((lang) => lang.charAt(0).toUpperCase() + lang.slice(1))
+              .join(", ")}
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-1 mt-2">
@@ -181,7 +193,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           )}
         </div>
 
-        <div className="mt-3 flex justify-between">
+        <div className="mt-3 flex justify-between items-center">
           <Link href={`/profile/${match._id}`} passHref>
             <button
               className="flex items-center text-primary text-sm font-medium hover:underline"
@@ -190,13 +202,60 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
               View Profile
             </button>
           </Link>
-          <button
-            className="flex items-center gap-1 bg-primary text-white px-3 py-1 rounded-full text-sm hover:bg-primary-dark transition-colors"
-            onClick={handleMessageClick}
-          >
-            <MessageCircle size={14} />
-            Message
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("Request profile photo");
+              }}
+              className="p-1 rounded-full hover:bg-gray-100"
+              title="Request Profile Photo"
+            >
+              <ImageIcon size={18} className="text-gray-700" />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("Block user");
+              }}
+              className="p-1 rounded-full hover:bg-gray-100"
+              title="Block User"
+            >
+              <Ban size={18} className="text-gray-700" />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("Request wali information");
+              }}
+              className="p-1 rounded-full hover:bg-gray-100"
+              title="Request Wali Info"
+            >
+              <UserCheck size={18} className="text-gray-700" />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("Warning");
+              }}
+              className="p-1 rounded-full hover:bg-gray-100"
+              title="Warning"
+            >
+              <AlertCircle size={18} className="text-red-500" />
+            </button>
+
+            <button
+              className="flex items-center gap-1 bg-primary text-white px-3 py-1 rounded-full text-sm hover:bg-primary-dark transition-colors"
+              onClick={handleMessageClick}
+            >
+              <MessageCircle size={14} />
+              Message
+            </button>
+          </div>
         </div>
       </div>
     </div>
