@@ -22,6 +22,7 @@ import {
 } from "@/redux/chat/chatSlice";
 import { getAvatar } from "@/shared/helper/defaultData";
 import EmojiPicker from "emoji-picker-react";
+import PhotoRequestMessage from "@/components/chat/PhotoRequestMessage";
 
 const ChatWindow = ({
   currentUser,
@@ -137,14 +138,24 @@ const ChatWindow = ({
           </div>
         ) : (
           messages.map((message) => (
-            <MessageItem
-              key={message._id}
-              message={message}
-              currentUser={currentUser}
-              selectedMessage={selectedMessage}
-              setSelectedMessage={setSelectedMessage}
-              handleDeleteMessage={handleDeleteMessage}
-            />
+            <div key={message._id} className="mb-4">
+              {message.messageType === "photo_request" ? (
+                <PhotoRequestMessage
+                  message={message}
+                  currentUserId={currentUser.id}
+                  allMessages={messages}
+                />
+              ) : (
+                <MessageItem
+                  key={message._id}
+                  message={message}
+                  currentUser={currentUser}
+                  selectedMessage={selectedMessage}
+                  setSelectedMessage={setSelectedMessage}
+                  handleDeleteMessage={handleDeleteMessage}
+                />
+              )}
+            </div>
           ))
         )}
         <div ref={messagesEndRef} />

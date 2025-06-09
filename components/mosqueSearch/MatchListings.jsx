@@ -27,6 +27,7 @@ const formatUserResponse = (user) => {
     interests = [],
     rating,
     location,
+    unblurRequest,
   } = user;
 
   const age = calculateAge(birthDate);
@@ -49,6 +50,7 @@ const formatUserResponse = (user) => {
     interests,
     rating,
     location,
+    unblurRequest,
   };
 };
 

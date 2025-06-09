@@ -14,6 +14,7 @@ import {
   setActiveChat,
   fetchChatList,
   findOrCreateConversation,
+  requestPhotoAccess,
 } from "../../redux/chat/chatSlice";
 import {
   MapPin,
@@ -37,12 +38,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
 
   useEffect(() => {
-    // Directly get flag URLs from the hardcoded data
     setFlagUrl(countryFlags[match.citizenship]);
-    console.log(countryFlags[match.citizenship]);
-    console.log(match.citizenship);
-    console.log(countryFlags[match.citizenship]);
-
     setOriginFlagUrl(countryFlags[match.originCountry]);
   }, [match.citizenship, match.originCountry]);
 
@@ -74,26 +70,33 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
     try {
       console.log("Clicking message for user:", match._id);
 
-      // First, dispatch the findOrCreateConversation action to ensure chat exists
       const result = await dispatch(
         findOrCreateConversation(match._id)
       ).unwrap();
 
       console.log("findOrCreateConversation result:", result);
 
-      // Set the active chat with the correct chatId
       dispatch(setActiveChat(result.chatId));
 
-      // Refresh chat list to ensure we have the latest data
       await dispatch(fetchChatList()).unwrap();
 
-      // Navigate to messages page
       router.push("/messages");
 
       toast.success(`Opening chat with ${match.firstName || "User"}`);
     } catch (error) {
       console.error("Failed to open chat:", error);
       toast.error("Failed to open chat");
+    }
+  };
+
+  const handleRequestPhoto = async (e) => {
+    e.stopPropagation();
+    try {
+      await dispatch(requestPhotoAccess(match._id)).unwrap();
+      toast.success(`Photo request sent to ${match.firstName || "User"}`);
+    } catch (error) {
+      console.error("Failed to request photo access:", error);
+      toast.error("Failed to send photo request");
     }
   };
   return (
@@ -119,7 +122,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           height={500}
           className={`object-cover ${
             isListView ? "w-full h-full" : "w-full h-48"
-          }`}
+          } ${!match.unblurRequest ? "blur-sm" : ""}`}
         />
 
         <button
@@ -205,10 +208,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log("Request profile photo");
-              }}
+              onClick={handleRequestPhoto}
               className="p-1 rounded-full hover:bg-gray-100"
               title="Request Profile Photo"
             >

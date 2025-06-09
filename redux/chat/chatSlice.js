@@ -98,47 +98,47 @@ export const deleteMessage = createAsyncThunk(
   }
 );
 
-export const requestPhotoAccess = createAsyncThunk(
-  "chat/requestPhotoAccess",
-  async (userId, { rejectWithValue }) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${rootRoute}/chats/request-photo/${userId}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to request photo access"
-      );
-    }
-  }
-);
+// export const requestPhotoAccess = createAsyncThunk(
+//   "chat/requestPhotoAccess",
+//   async (userId, { rejectWithValue }) => {
+//     try {
+//       const token = localStorage.getItem("token");
+//       const response = await axios.post(
+//         `${rootRoute}/chats/request-photo/${userId}`,
+//         {},
+//         {
+//           headers: { Authorization: `Bearer ${token}` },
+//         }
+//       );
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(
+//         error.response?.data?.message || "Failed to request photo access"
+//       );
+//     }
+//   }
+// );
 
-export const approvePhotoAccess = createAsyncThunk(
-  "chat/approvePhotoAccess",
-  async (userId, { rejectWithValue }) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${rootRoute}/chats/approve-photo/${userId}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to approve photo access"
-      );
-    }
-  }
-);
+// export const approvePhotoAccess = createAsyncThunk(
+//   "chat/approvePhotoAccess",
+//   async (userId, { rejectWithValue }) => {
+//     try {
+//       const token = localStorage.getItem("token");
+//       const response = await axios.post(
+//         `${rootRoute}/chats/approve-photo/${userId}`,
+//         {},
+//         {
+//           headers: { Authorization: `Bearer ${token}` },
+//         }
+//       );
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(
+//         error.response?.data?.message || "Failed to approve photo access"
+//       );
+//     }
+//   }
+// );
 
 // New async thunk to find or create a conversation
 export const findOrCreateConversation = createAsyncThunk(
@@ -188,6 +188,48 @@ const getCurrentUser = () => {
     return null;
   }
 };
+
+export const requestPhotoAccess = createAsyncThunk(
+  "chat/requestPhotoAccess",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${rootRoute}/chats/request-photo/${userId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to request photo access"
+      );
+    }
+  }
+);
+
+export const respondToPhotoRequest = createAsyncThunk(
+  "chat/respondToPhotoRequest",
+  async ({ requesterId, response }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const apiResponse = await axios.post(
+        `${rootRoute}/chats/respond-photo/${requesterId}`,
+        { response },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return apiResponse.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to respond to photo request"
+      );
+    }
+  }
+);
 
 const initialState = {
   chatList: [],
@@ -405,6 +447,30 @@ const chatSlice = createSlice({
       }
     },
 
+    addPhotoRequestMessage: (state, action) => {
+      const { requesterId, receiverId, messageData } = action.payload;
+      const currentUser = getCurrentUser();
+      if (!currentUser) return;
+
+      const otherUserId =
+        currentUser.id === requesterId ? receiverId : requesterId;
+
+      if (!state.messages[otherUserId]) {
+        state.messages[otherUserId] = [];
+      }
+
+      // Check if message already exists
+      const exists = state.messages[otherUserId].find(
+        (msg) => msg._id === messageData._id
+      );
+
+      if (!exists) {
+        state.messages[otherUserId].push(messageData);
+        state.messages[otherUserId].sort(
+          (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+        );
+      }
+    },
     // Reset chat state
     resetChatState: () => initialState,
   },
@@ -531,6 +597,28 @@ const chatSlice = createSlice({
       .addCase(findOrCreateConversation.rejected, (state, action) => {
         state.loading.findingChat = false;
         state.error.findingChat = action.payload;
+      })
+      .addCase(requestPhotoAccess.pending, (state) => {
+        state.loading.sending = true;
+        state.error.sending = null;
+      })
+      .addCase(requestPhotoAccess.fulfilled, (state, action) => {
+        state.loading.sending = false;
+      })
+      .addCase(requestPhotoAccess.rejected, (state, action) => {
+        state.loading.sending = false;
+        state.error.sending = action.payload;
+      })
+      .addCase(respondToPhotoRequest.pending, (state) => {
+        state.loading.sending = true;
+        state.error.sending = null;
+      })
+      .addCase(respondToPhotoRequest.fulfilled, (state, action) => {
+        state.loading.sending = false;
+      })
+      .addCase(respondToPhotoRequest.rejected, (state, action) => {
+        state.loading.sending = false;
+        state.error.sending = action.payload;
       });
   },
 });
@@ -546,6 +634,7 @@ export const {
   setActiveChat,
   clearError,
   resetChatState,
+  addPhotoRequestMessage,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

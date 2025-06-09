@@ -39,6 +39,7 @@ import { useParams, useRouter } from "next/navigation";
 import coverImage from "@/public/images/matches/background.jpg";
 import useCountryFlag from "@/shared/helper/useCountryFlag";
 import toast from "react-hot-toast";
+import { countryFlags } from "@/shared/helper/flagsData";
 
 const ProfileSection = ({
   title,
@@ -76,12 +77,11 @@ const ProfileSection = ({
 const ProfileTag = ({ icon, label, value, flagUrl }) => (
   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
     {flagUrl ? (
-      <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shadow-sm">
+      <div className="relative w-10 h-10 rounded-full overflow-hidden shadow-sm">
         <Image
           src={flagUrl}
           alt={`${label} flag`}
-          width={40}
-          height={40}
+          fill
           className="object-cover"
         />
       </div>
@@ -185,9 +185,13 @@ export default function UserProfile() {
   }, [userInterests, currentUser]);
 
   // Flag hooks
-  const citizenshipFlag = useCountryFlag(currentUser?.citizenship);
-  const originCountryFlag = useCountryFlag(currentUser?.originCountry);
+  const citizenshipFlag = currentUser?.citizenship
+    ? countryFlags[currentUser.citizenship.toUpperCase()]
+    : null;
 
+  const originCountryFlag = currentUser?.originCountry
+    ? countryFlags[currentUser.originCountry.toUpperCase()]
+    : null;
   const handleInterestToggle = async () => {
     if (!currentUser?._id || interestLoading) return;
 
