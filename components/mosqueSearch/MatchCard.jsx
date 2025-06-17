@@ -53,13 +53,29 @@ const checkPhotoAccess = (targetUser, currentUserId) => {
     targetUser.approvedPhotosFor.includes(currentUserId)
   );
 };
+const extractCountryFromLocation = (location) => {
+  if (!location) return null;
+  // Split by comma and get the last part (country)
+  const parts = location.split(",").map((part) => part.trim());
+  const country = parts[parts.length - 1];
 
+  // Map common location names to flag keys
+  const countryMap = {
+    "Palestinian Territory": "PS",
+    Palestine: "PS",
+    "Gaza Strip": "PS",
+    // Add more mappings as needed
+  };
+
+  return countryMap[country] || country;
+};
 const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const dispatch = useDispatch();
   const router = useRouter();
   const [flagUrl, setFlagUrl] = useState(null);
   const [originFlagUrl, setOriginFlagUrl] = useState(null);
   const currentUserId = getCurrentUser().id;
+  const [locationFlagUrl, setLocationFlagUrl] = useState(null);
 
   // State for the confirmation modal
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -192,25 +208,35 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           } ${!hasPhotoAccess ? "blur-sm" : ""}`}
         />
 
-        <button
-          onClick={handleInterestClick}
-          className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition-colors z-10"
-          aria-label={isInterested ? "Remove interest" : "Add interest"}
-        >
-          <Heart
-            size={18}
-            className="text-primary"
-            fill={isInterested ? "currentColor" : "none"}
-          />
-        </button>
+        <div className="absolute top-2 left-2 flex items-center gap-2 z-10">
+          {flagUrl && (
+            <img
+              src={flagUrl}
+              alt={`${match.citizenship} flag`}
+              className="w-5 h-4 rounded-sm"
+            />
+          )}
+        </div>
+        <div className="absolute top-2 right-2 z-10">
+          <button
+            onClick={handleInterestClick}
+            className="bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition-colors"
+            aria-label={isInterested ? "Remove interest" : "Add interest"}
+          >
+            <Heart
+              size={18}
+              className="text-primary"
+              fill={isInterested ? "currentColor" : "none"}
+            />
+          </button>
+        </div>
       </div>
 
       <div className={`p-4 ${isListView ? "w-2/3" : ""}`}>
-        <div className="flex justify-between items-start mb-1">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            {match.firstName || "UnKnown User"} {match.lastName || ""}
-          </h3>
-        </div>
+        <h3 className="font-semibold text-lg flex items-center gap-2">
+          {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
+          <span className="font-normal">{match.age}</span>
+        </h3>
 
         <div className="flex items-center text-sm text-gray-600 mb-2">
           <MapPin size={14} className="mr-1" />
@@ -218,27 +244,6 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
         </div>
 
         <div className="mb-2 text-sm text-gray-600 space-y-1">
-          <p>Age: {match.age}</p>
-          <p className="flex items-center">
-            Citizenship: {match.citizenship}
-            {flagUrl && (
-              <img
-                src={flagUrl}
-                alt={`${match.citizenship} flag`}
-                className="w-4 h-4 ml-2 rounded-sm"
-              />
-            )}
-          </p>
-          <p className="flex items-center">
-            Origin Country: {match.originCountry}
-            {originFlagUrl && (
-              <img
-                src={originFlagUrl}
-                alt={`${match.originCountry} flag`}
-                className="w-4 h-4 ml-2 rounded-sm"
-              />
-            )}
-          </p>
           <p>
             Languages:{" "}
             {match.languages

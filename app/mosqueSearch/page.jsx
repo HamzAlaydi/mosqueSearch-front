@@ -1,8 +1,8 @@
-// src/app/match-search/page.jsx (or .js)
+// src/app/match-search/page.jsx
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/mosqueSearch/Header";
 import FilterModal from "../../components/mosqueSearch/FilterModal";
@@ -16,6 +16,10 @@ import {
   updateFilters,
   removeFilter as removeFilterAction,
   clearAllFilters as clearAllFiltersAction,
+  fetchMatchesByMosque,
+  clearMatches,
+  switchToMosqueMode,
+  switchToProfessionalMode,
 } from "../../redux/match/matchSlice";
 import "./mosqueSearchPage.css";
 
@@ -75,6 +79,9 @@ export default function MatchSearchPage() {
   const dispatch = useDispatch();
   const {
     matches = [],
+    professionalMatches = [],
+    mosqueMatches = [],
+    searchedMosques = [],
     activeFilters = {
       prayer: [],
       facilities: [],
@@ -98,6 +105,8 @@ export default function MatchSearchPage() {
   const [listingsView, setListingsView] = useState("grid");
   const [activeCategory, setActiveCategory] = useState("all");
 
+  const [searchMode, setSearchMode] = useState("professional"); // 'professional' or 'mosque'
+  const [selectedMosqueForSearch, setSelectedMosqueForSearch] = useState(null);
   // Sync internal activeFilters.distance state with Redux searchDistance
   useEffect(() => {
     dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
@@ -179,11 +188,11 @@ export default function MatchSearchPage() {
 
   // Effect to dispatch fetchMatches when distance or mapCenter changes
   useEffect(() => {
-    console.log("Dispatching fetchMatches...");
-    dispatch(
-      fetchMatches({ distance: activeFilters.distance, center: mapCenter })
-    );
-  }, [dispatch, activeFilters.distance, mapCenter]);
+    if (searchMode === "professional") {
+      console.log("Dispatching fetchMatches for professional mode...");
+      dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
+    }
+  }, [dispatch, activeFilters, mapCenter, searchMode]);
 
   // --- UI Toggle Functions ---
   const toggleFilter = () => setIsFilterOpen(!isFilterOpen);
@@ -273,6 +282,55 @@ export default function MatchSearchPage() {
     // Implementation for geocoding would go here
   };
 
+  // Add this function to handle mosque-based search:
+  const handleSearchInMosque = useCallback(
+    (mosque) => {
+      const mosqueId = mosque.id || mosque._id;
+
+      // Check if this mosque has already been searched
+      if (searchedMosques.includes(mosqueId)) {
+        console.log(`Mosque ${mosque.name} already searched, skipping...`);
+        return;
+      }
+
+      setSelectedMosqueForSearch(mosque);
+
+      // Dispatch action to fetch females attached to this mosque
+      dispatch(
+        fetchMatchesByMosque({
+          mosqueId: mosqueId,
+          mosqueName: mosque.name,
+        })
+      );
+    },
+    [dispatch, searchedMosques]
+  );
+
+  const handleSearchModeToggle = useCallback(() => {
+    const newMode = searchMode === "professional" ? "mosque" : "professional";
+    setSearchMode(newMode);
+
+    if (newMode === "professional") {
+      // Switching to Professional mode
+      dispatch(switchToProfessionalMode());
+      setSelectedMosqueForSearch(null);
+
+      // Only fetch if we don't have professional matches
+      if (professionalMatches.length === 0) {
+        dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
+      }
+    } else {
+      // Switching to Mosque mode
+      dispatch(switchToMosqueMode());
+      setSelectedMosqueForSearch(null);
+    }
+  }, [
+    searchMode,
+    dispatch,
+    activeFilters,
+    mapCenter,
+    professionalMatches.length,
+  ]);
   return (
     <div className="bg-white min-h-screen">
       {/* Main Navigation Header */}
@@ -307,6 +365,8 @@ export default function MatchSearchPage() {
           <div className="px-4 py-2 sticky top-12 bg-white z-20 border-b border-gray-200">
             {/* Top row: Title and View Toggles */}
             <div className="flex justify-between items-center mb-2">
+              {/* Toggle: Professional / Mosque */}
+
               <div>
                 <h1 className="text-lg font-semibold">Potential Matches</h1>
                 <p className="text-sm text-gray-600">
@@ -357,6 +417,45 @@ export default function MatchSearchPage() {
                   )}
                 </button>
               </div>
+              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                {/* Professional Label */}
+                <span
+                  className={`text-sm transition-colors duration-200 ${
+                    searchMode === "professional"
+                      ? "text-blue-600 font-semibold"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Professional
+                </span>
+
+                {/* Switch Button */}
+                <button
+                  onClick={handleSearchModeToggle}
+                  className={`relative inline-flex h-6 w-12 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    searchMode === "mosque" ? "bg-blue-600" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                      searchMode === "mosque"
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+
+                {/* Mosque Label */}
+                <span
+                  className={`text-sm transition-colors duration-200 ${
+                    searchMode === "mosque"
+                      ? "text-blue-600 font-semibold"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Mosque
+                </span>
+              </div>
             </div>
 
             {/* Active Filters Display */}
@@ -383,6 +482,8 @@ export default function MatchSearchPage() {
             mapCenter={mapCenter}
             allMosques={allMosquesInLondon}
             activeFilters={activeFilters}
+            onSearchInMosque={handleSearchInMosque}
+            searchMode={searchMode}
           />
         )}
       </div>

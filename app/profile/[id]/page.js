@@ -405,12 +405,9 @@ export default function UserProfile() {
                   <div className="text-center md:text-left mb-6 md:mb-0">
                     <h1 className="text-3xl font-bold text-gray-900">
                       {currentUser.firstName} {currentUser.lastName}
-                      {age !== "Not specified" && (
-                        <span className="ml-3 text-xl font-normal text-gray-500">
-                          {age}
-                        </span>
-                      )}
+                      {age !== "Not specified" && `, ${age}`}
                     </h1>
+
                     {currentUser.currentLocation && (
                       <p className="text-gray-600 mt-2 flex items-center justify-center md:justify-start">
                         <MapPin size={18} className="mr-2 text-gray-400" />

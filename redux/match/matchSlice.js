@@ -121,25 +121,56 @@ export const loadMoreMatches = createAsyncThunk(
 
 export const fetchMatchesByMosque = createAsyncThunk(
   "matches/fetchMatchesByMosque",
-  async (mosqueId, { rejectWithValue }) => {
+  async ({ mosqueId, mosqueName }, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${rootRoute}/matches/mosque/${mosqueId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      return response.data;
+      // Replace with your actual API endpoint
+      const response = await fetch(`${rootRoute}/matches/mosque/${mosqueId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+
+          // Add authentication headers if needed
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch matches by mosque");
+      }
+
+      const data = await response.json();
+      return {
+        matches: data.matches || data.users || data, // Adjust based on your API response structure
+        mosqueName,
+        mosqueId,
+      };
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch mosque matches"
-      );
+      return rejectWithValue(error.message);
     }
   }
 );
+
+// export const fetchMatchesByMosque = createAsyncThunk(
+//   "matches/fetchMatchesByMosque",
+//   async (mosqueId, { rejectWithValue }) => {
+//     try {
+//       const token = localStorage.getItem("token");
+//       const response = await axios.get(
+//         `${rootRoute}/matches/mosque/${mosqueId}`,
+//         {
+//           headers: {
+//             Authorization: `Bearer ${token}`,
+//           },
+//         }
+//       );
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(
+//         error.response?.data?.message || "Failed to fetch mosque matches"
+//       );
+//     }
+//   }
+// );
 
 export const addInterest = createAsyncThunk(
   "matches/addInterest",
@@ -202,6 +233,8 @@ export const fetchUserInterests = createAsyncThunk(
 
 const initialState = {
   matches: [],
+  professionalMatches: [], // Store professional matches separately
+  mosqueMatches: [], // Store all accumulated mosque matches
   selectedMatch: null,
   loading: false,
   error: null,
@@ -222,6 +255,7 @@ const initialState = {
   userInterests: [],
   page: 1,
   hasMore: true,
+  searchedMosques: [], // Track which mosques have been searched
 };
 
 const matchSlice = createSlice({
@@ -323,6 +357,26 @@ const matchSlice = createSlice({
         (item) => item._id !== action.payload
       );
     },
+    switchToMosqueMode: (state) => {
+      // Save current professional matches and switch to mosque matches
+      if (state.matches.length > 0 && !state.professionalMatches.length) {
+        state.professionalMatches = [...state.matches];
+      }
+      state.matches = [...state.mosqueMatches];
+    },
+
+    switchToProfessionalMode: (state) => {
+      // Save current mosque matches and switch to professional matches
+      state.mosqueMatches = [...state.matches];
+      state.matches = [...state.professionalMatches];
+    },
+
+    addSearchedMosque: (state, action) => {
+      const mosqueId = action.payload;
+      if (!state.searchedMosques.includes(mosqueId)) {
+        state.searchedMosques.push(mosqueId);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -365,12 +419,33 @@ const matchSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchMatchesByMosque.fulfilled, (state, action) => {
-        state.matches = action.payload;
+        const matchesData = action.payload.matches || action.payload;
+        const newMatches = Array.isArray(matchesData) ? matchesData : [];
+        const mosqueId = action.payload.mosqueId;
+
+        // Add mosque to searched list
+        if (!state.searchedMosques.includes(mosqueId)) {
+          state.searchedMosques.push(mosqueId);
+        }
+
+        // Accumulate matches instead of replacing
+        const existingIds = new Set(
+          state.matches.map((match) => match._id || match.id)
+        );
+        const uniqueNewMatches = newMatches.filter(
+          (match) => !existingIds.has(match._id || match.id)
+        );
+
+        state.matches = [...state.matches, ...uniqueNewMatches];
+        state.mosqueMatches = [...state.matches]; // Keep mosque matches in sync
         state.loading = false;
+        state.page = 1;
+        state.hasMore = false;
       })
       .addCase(fetchMatchesByMosque.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.matches = []; // Clear matches on error as well for mosque search
       })
       .addCase(fetchUserInterests.fulfilled, (state, action) => {
         state.userInterests = action.payload;
@@ -395,6 +470,9 @@ export const {
   clearMatches,
   addInterestLocal,
   removeInterestLocal,
+  switchToMosqueMode,
+  switchToProfessionalMode,
+  addSearchedMosque,
 } = matchSlice.actions;
 
 export default matchSlice.reducer;

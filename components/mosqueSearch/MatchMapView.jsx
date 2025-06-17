@@ -54,6 +54,7 @@ export default function OptimizedMosqueMap({
   mapCenter,
   activeFilters,
   allMosques = [],
+  onSearchInMosque, // Add this new prop
 }) {
   const dispatch = useDispatch();
 
@@ -481,6 +482,18 @@ export default function OptimizedMosqueMap({
     [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose] // Include attachedMosqueIds in dependencies
   );
 
+  const handleSearchInMosque = useCallback(
+    (mosque) => {
+      // Call the parent component's function to trigger search by mosque
+      if (onSearchInMosque) {
+        onSearchInMosque(mosque);
+      }
+
+      // Close the InfoWindow after triggering search
+      handleInfoWindowClose();
+    },
+    [onSearchInMosque, handleInfoWindowClose]
+  );
   // Render InfoWindow content
   const renderInfoWindowContent = useCallback(
     (mosque) => {
@@ -505,38 +518,33 @@ export default function OptimizedMosqueMap({
                 Your Mosque
               </span>
             )}
-            {/* Add other facility badges here if needed */}
-            {/* Example: mosque.facilities?.includes("Parking") && (...) */}
           </div>
 
           {/* Attach/Detach Button */}
-          {console.log({ currentUser })}
           {currentUser && (
             <button
               onClick={() => handleAttachToggle(mosque)}
-              // Apply appropriate classes based on attachment status
-              className={`mt-2 text-sm text-black  px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
+              className={`mt-2 text-sm !text-white px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
                 isAttached
-                  ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
-                  : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                  ? "!bg-red-600 hover:!bg-red-700 focus:!ring-red-500"
+                  : "!bg-emerald-600 hover:!bg-emerald-700 focus:!ring-emerald-500"
               }`}
             >
               {isAttached ? "Detach from Mosque" : "Attach to Mosque"}
             </button>
           )}
 
-          {/* View Details Button */}
-          {/* Replace with actual navigation or modal logic */}
+          {/* Search Females in This Mosque Button - UPDATED */}
           <button
-            onClick={() => alert(`View details for ${mosque.name}`)}
-            className="mt-2 text-sm text-blue-700 bg-blue-100 hover:bg-blue-200 px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            onClick={() => handleSearchInMosque(mosque)}
+            className="mt-2 text-sm !text-white !bg-blue-600 hover:!bg-blue-700 px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:!ring-blue-400"
           >
-            View Details
+            Search in This Mosque
           </button>
         </div>
       );
     },
-    [currentUser, handleAttachToggle]
+    [currentUser, handleAttachToggle] // Add handleSearchInMosque to dependencies when you create it
   );
 
   // Map load handlers
