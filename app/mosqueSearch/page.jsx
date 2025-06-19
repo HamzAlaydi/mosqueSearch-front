@@ -1,5 +1,3 @@
-// src/app/match-search/page.jsx
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -18,8 +16,7 @@ import {
   clearAllFilters as clearAllFiltersAction,
   fetchMatchesByMosque,
   clearMatches,
-  switchToMosqueMode,
-  switchToProfessionalMode,
+  setSearchMode, // Renamed import
 } from "../../redux/match/matchSlice";
 import "./mosqueSearchPage.css";
 
@@ -79,8 +76,8 @@ export default function MatchSearchPage() {
   const dispatch = useDispatch();
   const {
     matches = [],
-    professionalMatches = [],
-    mosqueMatches = [],
+    professionalMatches = [], // No longer directly used for display logic here, but for triggering fetch
+    mosqueMatches = [], // No longer directly used for display logic here, but for triggering fetch
     searchedMosques = [],
     activeFilters = {
       prayer: [],
@@ -95,22 +92,74 @@ export default function MatchSearchPage() {
       educationLevel: [],
       profession: [],
       willingToRelocate: null,
+      selectedMosque: null, // This is updated directly by fetchMatchesByMosque fulfilled
     },
     loading = false,
+    searchMode, // Get the searchMode from Redux state
   } = useSelector((state) => state.matches || {});
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 51.5074, lng: -0.1278 }); // Default to London
   const [showMap, setShowMap] = useState(true);
   const [listingsView, setListingsView] = useState("grid");
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState("all"); // This seems unused, consider removing if not needed.
 
-  const [searchMode, setSearchMode] = useState("professional"); // 'professional' or 'mosque'
-  const [selectedMosqueForSearch, setSelectedMosqueForSearch] = useState(null);
-  // Sync internal activeFilters.distance state with Redux searchDistance
+  // Use the selectedMosque from Redux activeFilters directly
+  const selectedMosqueForSearch = activeFilters.selectedMosque;
+
+  // Effect to dispatch fetchMatches when filters or mapCenter change in professional mode
   useEffect(() => {
-    dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
-  }, [dispatch, activeFilters, mapCenter]);
+    // Only fetch professional matches if in professional mode AND no specific mosque is selected
+    // professionalMatches.length === 0 added to prevent refetching if already populated
+    if (
+      searchMode === "professional" &&
+      !selectedMosqueForSearch &&
+      professionalMatches.length === 0 &&
+      !loading
+    ) {
+      console.log("Dispatching fetchMatches for professional mode...");
+      dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
+      console.log(
+        dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }))
+      );
+      console.log("Dispatching fetchMatches for professional mode...");
+    }
+  }, [
+    dispatch,
+    activeFilters,
+    mapCenter,
+    searchMode,
+    selectedMosqueForSearch,
+    professionalMatches.length,
+    loading,
+  ]);
+
+  // Effect to dispatch fetchMatchesByMosque when selectedMosqueForSearch changes
+  // This will be triggered by handleSearchInMosque and selectedMosque being set in redux
+  useEffect(() => {
+    if (
+      searchMode === "mosque" &&
+      selectedMosqueForSearch &&
+      !mosqueMatches.length &&
+      !loading
+    ) {
+      console.log(
+        "Dispatching fetchMatchesByMosque because a mosque is selected and in mosque mode..."
+      );
+      dispatch(
+        fetchMatchesByMosque({
+          mosqueId: selectedMosqueForSearch.id,
+          mosqueName: selectedMosqueForSearch.name,
+        })
+      );
+    }
+  }, [
+    dispatch,
+    searchMode,
+    selectedMosqueForSearch,
+    mosqueMatches.length,
+    loading,
+  ]);
 
   // Calculate distance radius in meters based on activeFilters.distance
   const distanceRadiusMeters = useMemo(() => {
@@ -186,14 +235,6 @@ export default function MatchSearchPage() {
     activeFilters.rating,
   ]);
 
-  // Effect to dispatch fetchMatches when distance or mapCenter changes
-  useEffect(() => {
-    if (searchMode === "professional") {
-      console.log("Dispatching fetchMatches for professional mode...");
-      dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
-    }
-  }, [dispatch, activeFilters, mapCenter, searchMode]);
-
   // --- UI Toggle Functions ---
   const toggleFilter = () => setIsFilterOpen(!isFilterOpen);
 
@@ -232,16 +273,67 @@ export default function MatchSearchPage() {
   };
 
   const removeFilter = (category, value) => {
-    dispatch(removeFilterAction({ category, value }));
+    // Special handling for selectedMosques (multiple mosque selection)
+    if (category === "selectedMosques") {
+      // Remove specific mosque from the selectedMosques array via Redux
+      dispatch(
+        updateFilters({
+          category: "selectedMosques",
+          value: { id: value }, // Pass the mosque object with ID for removal logic in Redux
+        })
+      );
+
+      // Get the updated mosques array after removal
+      const currentMosques = activeFilters.selectedMosques || [];
+      const updatedMosques = currentMosques.filter(
+        (mosque) => mosque.id !== value
+      );
+
+      // If no mosques left, switch back to professional mode
+      if (updatedMosques.length === 0) {
+        dispatch(setSearchMode("professional"));
+        // Clear mosque matches and load professional matches
+        dispatch(clearMatches());
+        dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
+      } else {
+        // Still have mosques selected, refetch matches for remaining mosques
+        // Clear current matches first
+        dispatch(clearMatches());
+
+        // Fetch matches for each remaining mosque
+        updatedMosques.forEach((mosque) => {
+          dispatch(
+            fetchMatchesByMosque({
+              mosqueId: mosque.id,
+              mosqueName: mosque.name,
+            })
+          );
+        });
+      }
+    }
+    // Special handling for single selectedMosque (keeping your existing logic)
+    else if (category === "selectedMosque") {
+      // Clear the selectedMosque and switch back to professional mode
+      dispatch(updateFilters({ category: "selectedMosque", value: null }));
+      dispatch(setSearchMode("professional"));
+
+      // Clear mosque matches and fetch professional matches
+      dispatch(clearMatches());
+      dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
+    }
+    // Handle other filter categories normally
+    else {
+      dispatch(removeFilterAction({ category, value }));
+    }
   };
 
   const clearAllFilters = () => {
     dispatch(clearAllFiltersAction());
   };
 
-  // Handler for clicking on a mosque item
+  // Handler for clicking on a mosque item (for map centering)
   const handleMosqueClick = (item) => {
-    console.log("Mosque clicked:", item);
+    console.log("Mosque clicked for map centering:", item);
 
     if (item.location && typeof item.location === "object") {
       // Check for standard lat/lng object { lat: number, lng: number }
@@ -271,66 +363,59 @@ export default function MatchSearchPage() {
     }
   };
 
-  // --- View Toggle Functions ---
-  const toggleMap = () => setShowMap(!showMap);
-  const toggleListingsView = () =>
-    setListingsView(listingsView === "grid" ? "list" : "grid");
-
-  // --- Search Input Handler ---
-  const handleSearchSubmit = (query) => {
-    console.log("Search submitted:", query);
-    // Implementation for geocoding would go here
-  };
-
   // Add this function to handle mosque-based search:
   const handleSearchInMosque = useCallback(
     (mosque) => {
       const mosqueId = mosque.id || mosque._id;
+      const mosqueName = mosque.name; // Ensure name is passed
 
-      // Check if this mosque has already been searched
-      if (searchedMosques.includes(mosqueId)) {
-        console.log(`Mosque ${mosque.name} already searched, skipping...`);
-        return;
-      }
-
-      setSelectedMosqueForSearch(mosque);
-
-      // Dispatch action to fetch females attached to this mosque
+      // Dispatch action to set the selected mosque filter and fetch females attached to this mosque
+      dispatch(
+        updateFilters({
+          category: "selectedMosque",
+          value: { id: mosqueId, name: mosqueName },
+        })
+      );
       dispatch(
         fetchMatchesByMosque({
           mosqueId: mosqueId,
-          mosqueName: mosque.name,
+          mosqueName: mosqueName,
         })
       );
     },
-    [dispatch, searchedMosques]
-  );
+    [dispatch]
+  ); // searchedMosques is managed by Redux, no need for it here
 
   const handleSearchModeToggle = useCallback(() => {
     const newMode = searchMode === "professional" ? "mosque" : "professional";
-    setSearchMode(newMode);
+    dispatch(setSearchMode(newMode)); // Dispatch the new search mode
 
+    // If switching to professional mode, clear any selected mosque filter
     if (newMode === "professional") {
-      // Switching to Professional mode
-      dispatch(switchToProfessionalMode());
-      setSelectedMosqueForSearch(null);
-
-      // Only fetch if we don't have professional matches
-      if (professionalMatches.length === 0) {
-        dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
-      }
+      dispatch(updateFilters({ category: "selectedMosque", value: null }));
+      dispatch(clearMatches()); // Clear matches when switching mode
     } else {
-      // Switching to Mosque mode
-      dispatch(switchToMosqueMode());
-      setSelectedMosqueForSearch(null);
+      // If switching to mosque mode, ensure matches are cleared if there's no selected mosque yet
+      if (!selectedMosqueForSearch) {
+        dispatch(clearMatches());
+      }
     }
-  }, [
-    searchMode,
-    dispatch,
-    activeFilters,
-    mapCenter,
-    professionalMatches.length,
-  ]);
+  }, [searchMode, dispatch, selectedMosqueForSearch]);
+
+  const clearMosqueSearch = useCallback(() => {
+    // When clearing a specific mosque search, we set selectedMosque back to null
+    dispatch(updateFilters({ category: "selectedMosque", value: null }));
+    dispatch(clearMatches()); // Also clear the matches specific to that mosque
+  }, [dispatch]);
+
+  const toggleMap = () => setShowMap(!showMap);
+
+  const handleSearchSubmit = () => {
+    console.log("Dsa");
+  };
+  const toggleListingsView = () =>
+    setListingsView(listingsView === "grid" ? "list" : "grid");
+
   return (
     <div className="bg-white min-h-screen">
       {/* Main Navigation Header */}
@@ -370,7 +455,11 @@ export default function MatchSearchPage() {
               <div>
                 <h1 className="text-lg font-semibold">Potential Matches</h1>
                 <p className="text-sm text-gray-600">
-                  Within {activeFilters.distance} miles
+                  {searchMode === "professional"
+                    ? `Within ${activeFilters.distance} miles`
+                    : selectedMosqueForSearch
+                    ? `Matches from ${selectedMosqueForSearch.name}`
+                    : `Select a mosque on the map to view matches`}
                 </p>
               </div>
 
@@ -464,18 +553,34 @@ export default function MatchSearchPage() {
               removeFilter={removeFilter}
               clearAllFilters={clearAllFilters}
             />
+            {/* Display selected mosque and clear button if in mosque mode */}
+            {searchMode === "mosque" && selectedMosqueForSearch && (
+              <div className="flex items-center mt-2 p-2 bg-blue-50 rounded-md">
+                <span className="text-sm font-medium text-blue-800">
+                  Showing matches for: {selectedMosqueForSearch.name}
+                </span>
+                <button
+                  onClick={clearMosqueSearch}
+                  className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200"
+                >
+                  Clear Mosque Selection
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mosque Listings Cards */}
+          {console.log({ matches })}
+
           <MatchListings
             listingsView={listingsView}
             handleMatchClick={handleMatchClick}
-            matchesToShow={matches}
+            matchesToShow={matches} // This will now correctly reflect searchMode
             loading={loading}
           />
         </div>
 
-        {/* Map Section */}
+        {/* Map View Section */}
         {showMap && (
           <MatchMapView
             filteredMosques={mosquesWithinDistance}
@@ -486,36 +591,6 @@ export default function MatchSearchPage() {
             searchMode={searchMode}
           />
         )}
-      </div>
-
-      {/* Mobile Filter Button */}
-      <div className="md:hidden fixed bottom-4 left-0 right-0 flex justify-center z-20">
-        <button
-          onClick={toggleFilter}
-          className="bg-primary text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
-          aria-label="Open filter modal"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-          </svg>
-          Filters (
-          {
-            Object.values(activeFilters)
-              .flat()
-              .filter((f) => f !== null && f !== 20).length
-          }
-          )
-        </button>
       </div>
     </div>
   );

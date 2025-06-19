@@ -245,11 +245,19 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
         <div className="mb-2 text-sm text-gray-600 space-y-1">
           <p>
-            Languages:{" "}
+            <span className="font-medium text-gray-700">Languages:</span>{" "}
             {match.languages
               .map((lang) => lang.charAt(0).toUpperCase() + lang.slice(1))
               .join(", ")}
           </p>
+          {match.currentLocation && (
+            <div className="flex items-center gap-1">
+              <MapPin size={14} className="text-gray-500" />
+              <span className="font-medium text-gray-700">
+                {match.currentLocation}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-1 mt-2">

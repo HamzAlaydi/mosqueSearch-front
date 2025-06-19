@@ -539,7 +539,7 @@ export default function OptimizedMosqueMap({
             onClick={() => handleSearchInMosque(mosque)}
             className="mt-2 text-sm !text-white !bg-blue-600 hover:!bg-blue-700 px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:!ring-blue-400"
           >
-            Search in This Mosque
+            Find Users in This Mosque
           </button>
         </div>
       );

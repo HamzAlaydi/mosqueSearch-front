@@ -1,42 +1,48 @@
 import { X } from "lucide-react";
 
-const FilterTag = ({ category, value, removeFilter }) => {
-  // Format display values based on category
-  let displayValue = value;
+const FilterTag = ({ category, value, displayValue, removeFilter }) => {
+  // Determine what to display. Prioritize displayValue if provided, otherwise use value.
+  let finalDisplayValue = displayValue || value;
 
+  // Format display values based on category
   if (
     category === "religiousness" ||
     category === "educationLevel" ||
     category === "maritalStatus"
   ) {
     // Convert snake_case to Title Case
-    displayValue = value
+    finalDisplayValue = value
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
   } else if (category === "profession") {
     // Capitalize first letter
-    displayValue = value.charAt(0).toUpperCase() + value.slice(1);
+    finalDisplayValue = value.charAt(0).toUpperCase() + value.slice(1);
   } else if (category === "willingToRelocate") {
-    displayValue = value ? "Willing to Relocate" : "Not Willing to Relocate";
+    finalDisplayValue = value
+      ? "Willing to Relocate"
+      : "Not Willing to Relocate";
   } else if (category === "hasChildren" || category === "childrenDesire") {
     if (value === "yes")
-      displayValue =
+      finalDisplayValue =
         category === "hasChildren" ? "Has Children" : "Wants Children";
     else if (value === "no")
-      displayValue =
+      finalDisplayValue =
         category === "hasChildren" ? "No Children" : "Doesn't Want Children";
-    else if (value === "open") displayValue = "Open to Children";
+    else if (value === "open") finalDisplayValue = "Open to Children";
   } else if (category === "ageRange") {
-    displayValue = `Age ${value.min}-${value.max}`;
+    // For ageRange, 'value' is an object {min, max}
+    finalDisplayValue = `Age ${value.min}-${value.max}`;
   } else if (category === "distance") {
-    displayValue = `Within ${value} miles`;
+    finalDisplayValue = `Within ${value} miles`;
   }
+  // For 'selectedMosques', 'finalDisplayValue' will already be the mosque name passed via 'displayValue' prop.
 
   return (
     <div className="bg-gray-100 rounded-full px-3 py-1 flex items-center gap-1 text-sm">
-      {displayValue}
+      {finalDisplayValue}
       <button
+        // Pass the original 'value' prop (which is the ID for selectedMosques) to removeFilter
         onClick={() => removeFilter(category, value)}
         className="ml-1 text-gray-500 hover:text-gray-700"
       >
@@ -51,7 +57,7 @@ export default function ActiveFilters({
   removeFilter,
   clearAllFilters,
 }) {
-  // Check if there are no active filters
+  // Check if there are no active filters to decide whether to render the component at all.
   const hasNoFilters =
     (activeFilters.religiousness?.length || 0) === 0 &&
     (activeFilters.maritalStatus?.length || 0) === 0 &&
@@ -60,12 +66,14 @@ export default function ActiveFilters({
     (activeFilters.educationLevel?.length || 0) === 0 &&
     (activeFilters.profession?.length || 0) === 0 &&
     activeFilters.willingToRelocate === null &&
+    activeFilters.selectedMosque === null && // Check for single selected mosque
+    (activeFilters.selectedMosques?.length || 0) === 0 && // Check for multiple selected mosques
     (!activeFilters.ageRange ||
       (activeFilters.ageRange.min === 18 &&
         activeFilters.ageRange.max === 65)) &&
     (!activeFilters.distance || activeFilters.distance === 20);
 
-  // Skip rendering if no active filters
+  // If no active filters, return null to not render anything
   if (hasNoFilters) {
     return null;
   }
@@ -77,14 +85,14 @@ export default function ActiveFilters({
         (activeFilters.ageRange.min !== 18 ||
           activeFilters.ageRange.max !== 65) && (
           <FilterTag
-            key="age-range"
+            key="age-range" // Unique key is important
             category="ageRange"
             value={activeFilters.ageRange}
             removeFilter={removeFilter}
           />
         )}
 
-      {/* Array-based filters */}
+      {/* Array-based filters (religiousness, maritalStatus, hasChildren, childrenDesire, educationLevel, profession) */}
       {activeFilters.religiousness?.map((value) => (
         <FilterTag
           key={`religiousness-${value}`}
@@ -139,7 +147,7 @@ export default function ActiveFilters({
         />
       ))}
 
-      {/* Boolean filter */}
+      {/* Boolean filter (willingToRelocate) */}
       {activeFilters.willingToRelocate !== null && (
         <FilterTag
           category="willingToRelocate"
@@ -156,6 +164,17 @@ export default function ActiveFilters({
           removeFilter={removeFilter}
         />
       )}
+
+      {/* IMPORTANT: Handling multiple selected mosques */}
+      {activeFilters.selectedMosques?.map((mosque) => (
+        <FilterTag
+          key={`selected-mosque-${mosque.id}`} // Use mosque.id for a stable and unique key
+          category="selectedMosques"
+          value={mosque.id} // Pass the ID for removal
+          displayValue={mosque.name} // Pass the name for display in the tag
+          removeFilter={removeFilter}
+        />
+      ))}
 
       <button
         onClick={clearAllFilters}
