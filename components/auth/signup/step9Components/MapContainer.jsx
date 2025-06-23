@@ -17,8 +17,9 @@ import { GOOGLE_API } from "@/shared/constants/backendLink";
 // Constants
 const DEG2RAD = Math.PI / 180;
 const MILES_TO_METERS = 1609.34;
-const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // Default fallback center (London)
-const INFOWINDOW_PAN_PIXEL_OFFSET_Y = 150; // Pixels to pan down when InfoWindow opens (adjust if needed)
+const DEFAULT_CENTER = { lat: 100.5074, lng: 500.1278 }; // London
+const INFOWINDOW_PAN_PIXEL_OFFSET_Y = 250; // Pixels to pan up for InfoWindow visibility
+
 
 const MAP_CONTAINER_STYLE_DEFAULT = {
   width: "100%",
