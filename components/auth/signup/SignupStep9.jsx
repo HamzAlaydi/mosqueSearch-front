@@ -20,11 +20,15 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
   const [error, setError] = useState(null);
 
   // Validation schema
+
   const validationSchema = Yup.object().shape({
     distance: Yup.number()
       .required("Distance is required")
       .min(1, "Minimum 1 mile")
       .max(100, "Maximum 100 miles"),
+    attachedMosques: Yup.array()
+      .min(5, "Please select at least 5 mosques")
+      .required("Mosque selection is required"),
   });
 
   // Get user location
@@ -62,6 +66,9 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
       }}
       validationSchema={validationSchema}
       onSubmit={(values, actions) => {
+        // Touch the attachedMosques field to show validation errors
+        actions.setFieldTouched("attachedMosques", true);
+
         const updatedValues = {
           ...values,
           attachedMosques: attachedMosques,
@@ -117,6 +124,11 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
                 attachedMosques={attachedMosques}
                 toggleMosqueAttachment={toggleMosqueAttachment}
               />
+              {errors.attachedMosques && touched.attachedMosques && (
+                <div className="mt-2 text-red-600 text-sm">
+                  {errors.attachedMosques}
+                </div>
+              )}
             </div>
 
             <FormNavigation

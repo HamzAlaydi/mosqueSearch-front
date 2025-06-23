@@ -70,6 +70,29 @@ const buildFilterQueryString = (filters) => {
 };
 
 // Async thunks
+export const initializeUserMosques = createAsyncThunk(
+  "matches/initializeUserMosques",
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${rootRoute}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Extract attached mosques from user profile
+      const attachedMosques = response.data.attachedMosques || [];
+      return attachedMosques.map((mosque) => ({
+        id: mosque.id,
+        name: mosque.name,
+        isDefault: true, // Mark as default/attached mosque
+      }));
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch user mosques"
+      );
+    }
+  }
+);
 export const fetchMatches = createAsyncThunk(
   "matches/fetchMatches",
   async ({ filters, center }, { rejectWithValue }) => {
@@ -253,7 +276,7 @@ const initialState = {
   page: 1, // for professional search pagination
   hasMore: true, // for professional search pagination
   searchedMosques: [], // Track which mosques have been searched (for caching/optimization, though not strictly used for direct data display)
-  searchMode: "professional", // 'professional' or 'mosque' - new state to explicitly track current mode
+  searchMode: "mosque", // 'professional' or 'mosque' - new state to explicitly track current mode
 };
 
 const matchSlice = createSlice({
@@ -413,9 +436,8 @@ const matchSlice = createSlice({
       state.searchMode = newMode;
       if (newMode === "professional") {
         state.matches = [...state.professionalMatches];
-        // Ensure selectedMosques is cleared when switching to professional mode
         state.activeFilters.selectedMosques = [];
-        state.mosqueMatches = []; // Clear mosque matches when leaving mosque mode
+        state.mosqueMatches = [];
       } else {
         // newMode === 'mosque'
         // When switching to mosque mode, if there are already selected mosques, display their matches.
@@ -428,6 +450,14 @@ const matchSlice = createSlice({
         } else {
           state.matches = [];
         }
+      }
+    },
+    initializeDefaultMosques: (state, action) => {
+      const defaultMosques = action.payload;
+      state.activeFilters.selectedMosques = defaultMosques;
+      state.mosqueMatches = []; // Clear to force fresh fetch
+      if (state.searchMode === "mosque") {
+        state.matches = [];
       }
     },
     addSearchedMosque: (state, action) => {
@@ -612,6 +642,18 @@ const matchSlice = createSlice({
         state.userInterests = state.userInterests.filter(
           (item) => item !== deinterestedFemaleId
         ); // Assuming userInterests stores IDs
+      })
+      .addCase(initializeUserMosques.fulfilled, (state, action) => {
+        const defaultMosques = action.payload;
+        // Only set default mosques if in mosque mode and no mosques are currently selected
+        if (
+          state.searchMode === "mosque" &&
+          state.activeFilters.selectedMosques.length === 0
+        ) {
+          state.activeFilters.selectedMosques = defaultMosques;
+          state.mosqueMatches = []; // Clear to trigger fresh fetch
+          state.matches = [];
+        }
       });
   },
 });
@@ -625,8 +667,9 @@ export const {
   clearMatches,
   addInterestLocal,
   removeInterestLocal,
-  setSearchMode, // Renamed and simplified
+  setSearchMode,
   addSearchedMosque,
+  initializeDefaultMosques,
 } = matchSlice.actions;
 
 export default matchSlice.reducer;

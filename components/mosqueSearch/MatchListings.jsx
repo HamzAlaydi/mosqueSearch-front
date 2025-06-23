@@ -30,7 +30,10 @@ const formatUserResponse = (user) => {
     unblurRequest,
     approvedPhotosFor,
     currentLocation,
+    maritalStatus,
+    religiousness,
   } = user;
+  console.log({ user });
 
   const age = calculateAge(birthDate);
   const distanceText = distance
@@ -55,6 +58,8 @@ const formatUserResponse = (user) => {
     unblurRequest,
     approvedPhotosFor,
     currentLocation,
+    maritalStatus,
+    religiousness,
   };
 };
 

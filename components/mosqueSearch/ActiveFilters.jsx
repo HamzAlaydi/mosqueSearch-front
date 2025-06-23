@@ -1,8 +1,17 @@
 import { X } from "lucide-react";
 
-const FilterTag = ({ category, value, displayValue, removeFilter }) => {
-  // Determine what to display. Prioritize displayValue if provided, otherwise use value.
+const FilterTag = ({
+  category,
+  value,
+  displayValue,
+  removeFilter,
+  isDefault = false,
+}) => {
   let finalDisplayValue = displayValue || value;
+  const baseClasses = "rounded-full px-3 py-1 flex items-center gap-1 text-sm";
+  const defaultMosqueClasses = isDefault
+    ? "bg-blue-100 text-blue-800 border border-blue-200"
+    : "bg-gray-100";
 
   // Format display values based on category
   if (
@@ -39,12 +48,19 @@ const FilterTag = ({ category, value, displayValue, removeFilter }) => {
   // For 'selectedMosques', 'finalDisplayValue' will already be the mosque name passed via 'displayValue' prop.
 
   return (
-    <div className="bg-gray-100 rounded-full px-3 py-1 flex items-center gap-1 text-sm">
+    <div className={`${baseClasses} ${defaultMosqueClasses}`}>
+      {isDefault && (
+        <span
+          className="w-2 h-2 bg-blue-500 rounded-full mr-1"
+          title="Your attached mosque"
+        />
+      )}
       {finalDisplayValue}
       <button
-        // Pass the original 'value' prop (which is the ID for selectedMosques) to removeFilter
         onClick={() => removeFilter(category, value)}
-        className="ml-1 text-gray-500 hover:text-gray-700"
+        className={`ml-1 hover:text-gray-700 ${
+          isDefault ? "text-blue-600" : "text-gray-500"
+        }`}
       >
         <X size={16} />
       </button>
@@ -168,10 +184,11 @@ export default function ActiveFilters({
       {/* IMPORTANT: Handling multiple selected mosques */}
       {activeFilters.selectedMosques?.map((mosque) => (
         <FilterTag
-          key={`selected-mosque-${mosque.id}`} // Use mosque.id for a stable and unique key
+          key={`selected-mosque-${mosque.id}`}
           category="selectedMosques"
-          value={mosque.id} // Pass the ID for removal
-          displayValue={mosque.name} // Pass the name for display in the tag
+          value={mosque.id}
+          displayValue={mosque.name}
+          isDefault={mosque.isDefault} // Pass the isDefault flag
           removeFilter={removeFilter}
         />
       ))}

@@ -16,7 +16,12 @@ import {
   clearAllFilters as clearAllFiltersAction,
   fetchMatchesByMosque,
   clearMatches,
-  setSearchMode, // Renamed import
+  setSearchMode,
+  initializeUserMosques, // Renamed import
+  saveMosqueFilters,
+  loadMosqueFilters,
+  clearSavedMosqueFilters,
+  checkSavedFilters,
 } from "../../redux/match/matchSlice";
 import "./mosqueSearchPage.css";
 
@@ -96,6 +101,7 @@ export default function MatchSearchPage() {
     },
     loading = false,
     searchMode, // Get the searchMode from Redux state
+    hasSavedFilters = false,
   } = useSelector((state) => state.matches || {});
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -402,6 +408,38 @@ export default function MatchSearchPage() {
     }
   }, [searchMode, dispatch, selectedMosqueForSearch]);
 
+  useEffect(() => {
+    // Initialize user's attached mosques when switching to mosque mode
+    if (searchMode === "mosque" && activeFilters.selectedMosques.length === 0) {
+      dispatch(initializeUserMosques());
+    }
+  }, [searchMode, dispatch, activeFilters.selectedMosques.length]);
+
+  useEffect(() => {
+    // Fetch matches for all selected mosques in mosque mode
+    if (
+      searchMode === "mosque" &&
+      activeFilters.selectedMosques.length > 0 &&
+      mosqueMatches.length === 0 &&
+      !loading
+    ) {
+      console.log("Fetching matches for selected mosques...");
+      activeFilters.selectedMosques.forEach((mosque) => {
+        dispatch(
+          fetchMatchesByMosque({
+            mosqueId: mosque.id,
+            mosqueName: mosque.name,
+          })
+        );
+      });
+    }
+  }, [
+    dispatch,
+    searchMode,
+    activeFilters.selectedMosques,
+    mosqueMatches.length,
+    loading,
+  ]);
   const clearMosqueSearch = useCallback(() => {
     // When clearing a specific mosque search, we set selectedMosque back to null
     dispatch(updateFilters({ category: "selectedMosque", value: null }));

@@ -98,22 +98,26 @@ export const additionalInfoSchema = Yup.object().shape({
   ),
 });
 
+
 export const mosqueSelectionSchema = Yup.object().shape({
   distance: Yup.number()
     .required("Distance is required")
     .min(1, "Distance must be at least 1 mile")
     .max(30, "Distance cannot exceed 30 miles"),
-  attachedMosques: Yup.array().of(
-    Yup.object().shape({
-      id: Yup.string().required(),
-      name: Yup.string().required(),
-      address: Yup.string().required(),
-      location: Yup.object().shape({
-        lat: Yup.number().required(),
-        lng: Yup.number().required(),
-      }),
-    })
-  ),
+  attachedMosques: Yup.array()
+    .of(
+      Yup.object().shape({
+        id: Yup.string().required(),
+        name: Yup.string().required(),
+        address: Yup.string().required(),
+        location: Yup.object().shape({
+          lat: Yup.number().required(),
+          lng: Yup.number().required(),
+        }),
+      })
+    )
+    .min(5, "Please select at least 5 mosques")
+    .required("Mosque selection is required"),
 });
 
 export const signupSchema = Yup.object().shape({

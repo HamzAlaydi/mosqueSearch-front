@@ -74,6 +74,7 @@ export default function OptimizedMosqueMap({
   const [hoveredMosqueId, setHoveredMosqueId] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
   const [showAttachedMosques, setShowAttachedMosques] = useState(false); // State to toggle showing only attached mosques
+  const [searchedMosqueIds, setSearchedMosqueIds] = useState(new Set());
   const mapRef = useRef(null);
 
   // Fetch user profile on component mount
@@ -223,59 +224,102 @@ export default function OptimizedMosqueMap({
   ]);
 
   // Create marker icons
-  const createMarkerIcon = useCallback((mosque, isHovered, isSelected) => {
-    // Female mosque - Purple
-    // Attached mosque - Gold/Orange
-    // Normal mosque - Blue
-    const isAttached = mosque.isAttached;
-    const hasFemaleArea = mosque.hasFemaleArea;
+  // 1. Modified createMarkerIcon function with professional mosque icon
+  // Modified createMarkerIcon function with search indicator
+  const createMarkerIcon = useCallback(
+    (mosque, isHovered, isSelected) => {
+      const isAttached = mosque.isAttached;
+      const hasFemaleArea = mosque.hasFemaleArea;
+      const hasBeenSearched = searchedMosqueIds.has(mosque.id); // Add this line
 
-    const baseColor = isAttached
-      ? "#F59E0B" // Gold/Orange
-      : hasFemaleArea
-      ? "#8B5CF6" // Purple
-      : "#2563EB"; // Blue
+      const baseColor = isAttached
+        ? "#F59E0B" // Gold/Orange
+        : hasFemaleArea
+        ? "#8B5CF6" // Purple
+        : "#2563EB"; // Blue
 
-    const hoverColor = isAttached
-      ? "#D97706"
-      : hasFemaleArea
-      ? "#7C3AED"
-      : "#1D4ED8";
+      const hoverColor = isAttached
+        ? "#D97706"
+        : hasFemaleArea
+        ? "#7C3AED"
+        : "#1D4ED8";
 
-    const selectedColor = "#10B981"; // Green
+      const selectedColor = "#10B981"; // Green
 
-    const currentColor = isSelected
-      ? selectedColor
-      : isHovered
-      ? hoverColor
-      : baseColor;
+      const currentColor = isSelected
+        ? selectedColor
+        : isHovered
+        ? hoverColor
+        : baseColor;
 
-    const iconSize = isHovered || isSelected ? 40 : 36;
+      const iconSize = isHovered || isSelected ? 44 : 40;
+      const mosqueSize = isHovered || isSelected ? 24 : 20;
 
-    const svgContent = `
-      <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M24 48C24 48 40 32 40 19C40 10.1634 32.8366 3 24 3C15.1634 3 8 10.1634 8 19C8 32 24 48 24 48Z" fill="${currentColor}" stroke="white" stroke-width="2"/>
-        <circle cx="24" cy="19" r="7" fill="white"/>
-        ${
-          hasFemaleArea
-            ? `<circle cx="24" cy="19" r="3" fill="${baseColor}"/>`
-            : ""
-        }
-        ${
-          isAttached
-            ? `<path d="M24 24 L20 30 L28 30 L24 24 Z" fill="white"/>`
-            : ""
-        }
-      </svg>
-    `;
+      // Professional mosque icon SVG
+      const svgContent = `
+  <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background circle -->
+    <circle cx="24" cy="24" r="22" fill="${currentColor}" stroke="white" stroke-width="2"/>
+    
+    <!-- Mosque icon -->
+    <g transform="translate(${24 - mosqueSize / 2}, ${24 - mosqueSize / 2})">
+      <!-- Main building -->
+      <rect x="4" y="12" width="12" height="8" fill="white" rx="1"/>
+      
+      <!-- Dome -->
+      <path d="M6 12 C6 9, 8 8, 10 8 C12 8, 14 9, 14 12" fill="white"/>
+      
+      <!-- Minaret left -->
+      <rect x="1" y="6" width="2" height="12" fill="white" rx="1"/>
+      <circle cx="2" cy="6" r="1" fill="white"/>
+      
+      <!-- Minaret right -->
+      <rect x="17" y="6" width="2" height="12" fill="white" rx="1"/>
+      <circle cx="18" cy="6" r="1" fill="white"/>
+      
+      <!-- Door -->
+      <rect x="8.5" y="16" width="3" height="4" fill="${currentColor}" rx="0.5"/>
+      
+      <!-- Windows -->
+      <rect x="6" y="14" width="1.5" height="1.5" fill="${currentColor}" rx="0.2"/>
+      <rect x="12.5" y="14" width="1.5" height="1.5" fill="${currentColor}" rx="0.2"/>
+    </g>
+    
+    ${
+      hasFemaleArea
+        ? `<circle cx="38" cy="10" r="4" fill="#8B5CF6" stroke="white" stroke-width="1"/>`
+        : ""
+    }
+    ${
+      isAttached
+        ? `<circle cx="38" cy="38" r="4" fill="#F59E0B" stroke="white" stroke-width="1"/>`
+        : ""
+    }
+    ${
+      hasBeenSearched
+        ? `<circle cx="10" cy="38" r="5" fill="#10B981" stroke="white" stroke-width="1"/>
+           <path d="M7 38 L9 40 L13 36" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+        : ""
+    }
+  </svg>
+`;
 
-    return {
-      url: `data:image/svg+xml;utf-8,${encodeURIComponent(svgContent)}`,
-      scaledSize: new window.google.maps.Size(iconSize, iconSize),
-      anchor: new window.google.maps.Point(iconSize / 2, iconSize),
-      zIndex: isHovered || isSelected ? 1000 : isAttached ? 10 : 5,
-    };
-  }, []);
+      return {
+        url: `data:image/svg+xml;utf-8,${encodeURIComponent(svgContent)}`,
+        scaledSize: new window.google.maps.Size(iconSize, iconSize),
+        anchor: new window.google.maps.Point(iconSize / 2, iconSize / 2),
+        zIndex:
+          isHovered || isSelected
+            ? 1000
+            : isAttached
+            ? 10
+            : hasBeenSearched
+            ? 8
+            : 5, // Add higher zIndex for searched mosques
+      };
+    },
+    [searchedMosqueIds]
+  ); // Add searchedMosqueIds to dependencies
 
   // Fit map to bounds
   const fitMapToBounds = useCallback(() => {
@@ -484,6 +528,9 @@ export default function OptimizedMosqueMap({
 
   const handleSearchInMosque = useCallback(
     (mosque) => {
+      // Add mosque to searched set
+      setSearchedMosqueIds((prev) => new Set([...prev, mosque.id]));
+
       // Call the parent component's function to trigger search by mosque
       if (onSearchInMosque) {
         onSearchInMosque(mosque);
@@ -500,6 +547,7 @@ export default function OptimizedMosqueMap({
       console.log({ mosque });
 
       const isAttached = mosque.isAttached;
+      const hasBeenSearched = searchedMosqueIds.has(mosque.id);
 
       return (
         <div className="p-2 max-w-xs font-sans text-gray-800">
@@ -534,17 +582,21 @@ export default function OptimizedMosqueMap({
             </button>
           )}
 
-          {/* Search Females in This Mosque Button - UPDATED */}
+          {/* Search Users in This Mosque Button - UPDATED with visual feedback */}
           <button
             onClick={() => handleSearchInMosque(mosque)}
-            className="mt-2 text-sm !text-white !bg-blue-600 hover:!bg-blue-700 px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:!ring-blue-400"
+            className={`mt-2 text-sm px-4 py-2 rounded-md w-full transition-all duration-150 focus:outline-none focus:ring-2 ${
+              hasBeenSearched
+                ? "!bg-gray-500 !text-white hover:!bg-gray-600 focus:!ring-gray-400 opacity-75"
+                : "!text-white !bg-blue-600 hover:!bg-blue-700 focus:!ring-blue-400"
+            }`}
           >
-            Find Users in This Mosque
+            {hasBeenSearched ? "✓ Users Searched" : "Find Users in This Mosque"}
           </button>
         </div>
       );
     },
-    [currentUser, handleAttachToggle] // Add handleSearchInMosque to dependencies when you create it
+    [currentUser, handleAttachToggle, handleSearchInMosque, searchedMosqueIds]
   );
 
   // Map load handlers

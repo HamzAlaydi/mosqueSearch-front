@@ -207,16 +207,50 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
             isListView ? "w-full h-full" : "w-full h-48"
           } ${!hasPhotoAccess ? "blur-sm" : ""}`}
         />
-
-        <div className="absolute top-2 left-2 flex items-center gap-2 z-10">
-          {flagUrl && (
-            <img
-              src={flagUrl}
-              alt={`${match.citizenship} flag`}
-              className="w-5 h-4 rounded-sm"
-            />
-          )}
+        <div className="absolute top-2 left-2 flex items-center gap-2 z-10 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1">
+          <div className="flex items-center gap-1">
+            {flagUrl && (
+              <img
+                src={flagUrl}
+                alt={`${match.citizenship} flag`}
+                className="w-5 h-4 rounded-sm"
+              />
+            )}
+            {originFlagUrl && (
+              <img
+                src={originFlagUrl}
+                alt={`${match.originCountry} flag`}
+                className="w-5 h-4 rounded-sm"
+              />
+            )}
+            <div className="flex items-center gap-1 text-xs text-gray-700">
+              {match.citizenship && <span>{match.citizenship}</span>}
+              {match.originCountry &&
+                match.citizenship !== match.originCountry && (
+                  <span>{match.originCountry}</span>
+                )}
+            </div>
+          </div>
         </div>
+        // Modified name row:
+        <h3 className="font-semibold text-lg flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
+            <span className="font-normal">{match.age}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm font-normal">
+            {match.maritalStatus && (
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                {match.maritalStatus}
+              </span>
+            )}
+            {match.religiousness && (
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                {match.religiousness}
+              </span>
+            )}
+          </div>
+        </h3>
         <div className="absolute top-2 right-2 z-10">
           <button
             onClick={handleInterestClick}
@@ -233,9 +267,23 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
       </div>
 
       <div className={`p-4 ${isListView ? "w-2/3" : ""}`}>
-        <h3 className="font-semibold text-lg flex items-center gap-2">
-          {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
-          <span className="font-normal">{match.age}</span>
+        <h3 className="font-semibold text-lg flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
+            <span className="font-normal">{match.age}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm font-normal">
+            {match.maritalStatus && (
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                {match.maritalStatus}
+              </span>
+            )}
+            {match.religiousness && (
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                {match.religiousness}
+              </span>
+            )}
+          </div>
         </h3>
 
         <div className="flex items-center text-sm text-gray-600 mb-2">
