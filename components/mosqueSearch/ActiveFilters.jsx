@@ -1,4 +1,6 @@
-import { X } from "lucide-react";
+// Replace the existing FilterTag component
+
+import { X, MapPin } from "lucide-react";
 
 const FilterTag = ({
   category,
@@ -8,10 +10,46 @@ const FilterTag = ({
   isDefault = false,
 }) => {
   let finalDisplayValue = displayValue || value;
-  const baseClasses = "rounded-full px-3 py-1 flex items-center gap-1 text-sm";
-  const defaultMosqueClasses = isDefault
-    ? "bg-blue-100 text-blue-800 border border-blue-200"
-    : "bg-gray-100";
+  const baseClasses =
+    "rounded-full px-3 py-1.5 flex items-center gap-2 text-sm font-medium transition-all duration-200";
+
+  // Special styling for mosque filters
+  if (category === "selectedMosques") {
+    const mosqueClasses = isDefault
+      ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-800 border border-blue-200 shadow-sm"
+      : "bg-gradient-to-r from-gray-50 to-slate-50 text-gray-800 border border-gray-200 shadow-sm hover:shadow-md";
+
+    return (
+      <div className={`${baseClasses} ${mosqueClasses}`}>
+        <div className="flex items-center gap-1.5">
+          {isDefault && (
+            <div className="flex items-center gap-1">
+              <div
+                className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+                title="Your attached mosque"
+              />
+              <MapPin size={14} className="text-blue-600" />
+            </div>
+          )}
+          {!isDefault && <MapPin size={14} className="text-gray-600" />}
+          <span className="font-semibold">{finalDisplayValue}</span>
+        </div>
+        <button
+          onClick={() => removeFilter(category, value)}
+          className={`ml-1 p-0.5 rounded-full hover:bg-white/50 transition-colors ${
+            isDefault
+              ? "text-blue-600 hover:text-blue-800"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  // Default styling for other filters
+  const defaultClasses = "bg-gray-100 text-gray-800 hover:bg-gray-200";
 
   // Format display values based on category
   if (
@@ -45,29 +83,19 @@ const FilterTag = ({
   } else if (category === "distance") {
     finalDisplayValue = `Within ${value} miles`;
   }
-  // For 'selectedMosques', 'finalDisplayValue' will already be the mosque name passed via 'displayValue' prop.
 
   return (
-    <div className={`${baseClasses} ${defaultMosqueClasses}`}>
-      {isDefault && (
-        <span
-          className="w-2 h-2 bg-blue-500 rounded-full mr-1"
-          title="Your attached mosque"
-        />
-      )}
-      {finalDisplayValue}
+    <div className={`${baseClasses} ${defaultClasses}`}>
+      <span>{finalDisplayValue}</span>
       <button
         onClick={() => removeFilter(category, value)}
-        className={`ml-1 hover:text-gray-700 ${
-          isDefault ? "text-blue-600" : "text-gray-500"
-        }`}
+        className="ml-1 text-gray-500 hover:text-gray-700 p-0.5 rounded-full hover:bg-gray-300 transition-colors"
       >
-        <X size={16} />
+        <X size={14} />
       </button>
     </div>
   );
 };
-
 export default function ActiveFilters({
   activeFilters,
   removeFilter,

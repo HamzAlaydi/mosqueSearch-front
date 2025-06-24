@@ -248,6 +248,43 @@ export const fetchUserInterests = createAsyncThunk(
     }
   }
 );
+export const saveMosqueFilters = createAsyncThunk(
+  "matches/saveMosqueFilters",
+  async (selectedMosques, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${rootRoute}/matches/save-mosques`,
+        { selectedMosques },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return selectedMosques;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to save mosque selection"
+      );
+    }
+  }
+);
+
+export const loadMosqueFilters = createAsyncThunk(
+  "matches/loadMosqueFilters",
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${rootRoute}/matches/saved-mosques`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data.savedMosques || [];
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to load saved mosques"
+      );
+    }
+  }
+);
 
 const initialState = {
   matches: [], // The currently displayed matches (can be professional or mosque-based)
@@ -256,6 +293,7 @@ const initialState = {
   selectedMatch: null,
   loading: false,
   error: null,
+  hasSavedFilters: false,
   activeFilters: {
     prayer: [],
     facilities: [],
@@ -652,6 +690,18 @@ const matchSlice = createSlice({
         ) {
           state.activeFilters.selectedMosques = defaultMosques;
           state.mosqueMatches = []; // Clear to trigger fresh fetch
+          state.matches = [];
+        }
+      })
+      .addCase(saveMosqueFilters.fulfilled, (state, action) => {
+        state.hasSavedFilters = true;
+      })
+      .addCase(loadMosqueFilters.fulfilled, (state, action) => {
+        const savedMosques = action.payload;
+        state.activeFilters.selectedMosques = savedMosques;
+        state.hasSavedFilters = savedMosques.length > 0;
+        state.mosqueMatches = [];
+        if (state.searchMode === "mosque") {
           state.matches = [];
         }
       });

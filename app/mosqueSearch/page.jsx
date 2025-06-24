@@ -24,6 +24,7 @@ import {
   checkSavedFilters,
 } from "../../redux/match/matchSlice";
 import "./mosqueSearchPage.css";
+import toast from "react-hot-toast";
 
 // Helper function to ensure mosque data is safe to use
 const getSafeMosqueData = (mosque) => ({
@@ -454,6 +455,54 @@ export default function MatchSearchPage() {
   const toggleListingsView = () =>
     setListingsView(listingsView === "grid" ? "list" : "grid");
 
+  const handleSaveMosqueSelection = useCallback(async () => {
+    if (activeFilters.selectedMosques.length > 0) {
+      try {
+        await dispatch(
+          saveMosqueFilters(activeFilters.selectedMosques)
+        ).unwrap();
+        toast.success(
+          `Successfully saved ${activeFilters.selectedMosques.length} mosque${
+            activeFilters.selectedMosques.length > 1 ? "s" : ""
+          }`,
+          {
+            duration: 3000,
+            position: "bottom-right",
+            icon: "✅",
+          }
+        );
+      } catch (error) {
+        toast.error("Failed to save mosque selection", {
+          duration: 4000,
+          position: "bottom-right",
+          icon: "❌",
+        });
+      }
+    }
+  }, [dispatch, activeFilters.selectedMosques]);
+
+  const handleLoadSavedMosques = useCallback(async () => {
+    try {
+      const result = await dispatch(loadMosqueFilters()).unwrap();
+      toast.success(
+        `Successfully loaded ${result.length} saved mosque${
+          result.length > 1 ? "s" : ""
+        }`,
+        {
+          duration: 3000,
+          position: "bottom-right",
+          icon: "📋",
+        }
+      );
+    } catch (error) {
+      toast.error("Failed to load saved mosques", {
+        duration: 4000,
+        position: "bottom-right",
+        icon: "❌",
+      });
+    }
+  }, [dispatch]);
+
   return (
     <div className="bg-white min-h-screen">
       {/* Main Navigation Header */}
@@ -585,6 +634,51 @@ export default function MatchSearchPage() {
               </div>
             </div>
 
+            {searchMode === "mosque" && (
+              <div className="flex gap-2 mt-2">
+                {activeFilters.selectedMosques.length > 0 && (
+                  <button
+                    onClick={handleSaveMosqueSelection}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:border-emerald-300 transition-all duration-200 shadow-sm"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    Save Selection
+                  </button>
+                )}
+
+                <button
+                  onClick={handleLoadSavedMosques}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                    />
+                  </svg>
+                  Load Saved
+                </button>
+              </div>
+            )}
             {/* Active Filters Display */}
             <ActiveFilters
               activeFilters={activeFilters}
@@ -608,7 +702,6 @@ export default function MatchSearchPage() {
           </div>
 
           {/* Mosque Listings Cards */}
-          {console.log({ matches })}
 
           <MatchListings
             listingsView={listingsView}
