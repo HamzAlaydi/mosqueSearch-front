@@ -14,7 +14,7 @@ const SuccessMessage = ({
           </div>
           <h3>Verify Your Email</h3>
           <p>{message}</p>
-          <button className="auth-button" onClick={onRedirect}>
+          <button className="auth-button mt-6" onClick={onRedirect}>
             {buttonText}
           </button>
         </div>

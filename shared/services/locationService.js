@@ -21,6 +21,11 @@ export const createLocationSearchFunction = () => {
           data.map((item) => ({
             value: item.place_id,
             label: item.display_name,
+            location: {
+              lat: parseFloat(item.lat),
+              lng: parseFloat(item.lon),
+            },
+            placeId: item.place_id,
           }))
         );
       })
@@ -53,6 +58,11 @@ export const fetchCountries = async (searchTerm = "") => {
     return data.map((item) => ({
       value: item.place_id,
       label: item.display_name,
+      location: {
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon),
+      },
+      placeId: item.place_id,
       // Store the raw data in case we need it later
       rawData: item,
     }));

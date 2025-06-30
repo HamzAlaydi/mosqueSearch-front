@@ -9,9 +9,11 @@ import {
   Circle,
 } from "@react-google-maps/api";
 import { MarkerClustererF } from "@react-google-maps/api";
-import { GOOGLE_API } from "@/shared/constants/backendLink"; // Your Google API key
+import { GOOGLE_API, rootRoute } from "@/shared/constants/backendLink"; // Your Google API key
 import { useSelector, useDispatch, shallowEqual } from "react-redux";
 import { fetchUserProfile, updateUserProfile } from "@/redux/user/userSlice";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 // Constants - Simplified for better performance
 const MAP_CONTAINER_STYLE = {
@@ -427,95 +429,79 @@ export default function OptimizedMosqueMap({
       const isAlreadyAttached =
         attachedMosqueIds.has(mosque.id) || attachedMosqueIds.has(mosque._id);
 
-      let updatedAttachedMosques;
-
-      if (isAlreadyAttached) {
-        // Detach the mosque
-        updatedAttachedMosques = (currentUser.attachedMosques || []).filter(
-          // Filter using both id and _id to ensure removal regardless of how it was stored
-          (m) =>
-            m.id !== mosque.id &&
-            m.id !== mosque._id &&
-            m._id !== mosque.id &&
-            m._id !== mosque._id
-        );
-
-        setFeedbackMessage({
-          type: "loading",
-          message: "Detaching from mosque...",
-        });
-      } else {
-        // If the mosque is NOT already attached, construct the new list including it
-        const mosqueDataForAttachment = {
-          // Prefer _id if available, otherwise use id
-          id: mosque._id || mosque.id,
-          _id: mosque._id || mosque.id, // Store both if possible, or pick one consistently
-          name: mosque.name,
-          address: mosque.address,
-          // Store location in GeoJSON format if possible
-          location: mosque.location
-            ? {
-                type: "Point",
-                coordinates: [mosque.location.lng, mosque.location.lat],
-              }
-            : null,
-          // Include femaleArea if it exists
-          ...(typeof mosque.femaleArea !== "undefined" && {
-            femaleArea: mosque.femaleArea,
-          }),
-          // Include facilities if it exists
-          ...(Array.isArray(mosque.facilities) && {
-            facilities: mosque.facilities,
-          }),
-        };
-
-        // Construct the new array by ensuring the current mosque isn't already in the list
-        // This is the key change to prevent duplicates
-        updatedAttachedMosques = [
-          ...(currentUser.attachedMosques || []).filter(
-            // Filter out the mosque if it somehow exists in the current list already
-            (m) =>
-              m.id !== mosqueDataForAttachment.id &&
-              m.id !== mosqueDataForAttachment._id &&
-              m._id !== mosqueDataForAttachment.id &&
-              m._id !== mosqueDataForAttachment._id
-          ),
-          mosqueDataForAttachment, // Add the mosque
-        ];
-
-        setFeedbackMessage({
-          type: "loading",
-          message: "Attaching to mosque...",
-        });
-      }
+      setFeedbackMessage({
+        type: "loading",
+        message: isAlreadyAttached
+          ? "Detaching from mosque..."
+          : "Attaching to mosque...",
+      });
 
       try {
-        // Dispatch the update user profile action with the potentially updated list
-        await dispatch(
-          updateUserProfile({ attachedMosques: updatedAttachedMosques })
-        ).unwrap();
+        // Get auth token from localStorage directly
+        const token = localStorage.getItem("token");
 
-        setFeedbackMessage({
-          type: "success",
-          message: isAlreadyAttached // Use the initial check result for the message
-            ? "Successfully detached from mosque!"
-            : "Successfully attached to mosque!",
-        });
-
-        // Re-fetch user profile to ensure attachedMosques are up-to-date in the state
-        // This is important to refresh the attachedMosqueIds memoized set
-        if (currentUser?._id || currentUser?.id) {
-          dispatch(fetchUserProfile(currentUser._id || currentUser.id));
+        if (!token) {
+          throw new Error("Authentication token not found");
         }
 
-        setTimeout(() => setFeedbackMessage(null), 3000);
-        handleInfoWindowClose(); // Close InfoWindow after action
+        // Use the mosque's externalId (numeric id from allMosquesInLondon) or _id (for database mosques)
+        const mosqueIdentifier = mosque.externalId || mosque.id || mosque._id;
+
+        console.log("Sending mosque attachment request:", {
+          mosqueId: mosqueIdentifier,
+          mosqueData: {
+            name: mosque.name,
+            address: mosque.address,
+            location: mosque.location,
+            externalId: mosque.id || mosque.externalId,
+          },
+        });
+
+        // Use the new mosque attachment API
+        const response = await axios.post(
+          `${rootRoute}/mosque-attachments/request`,
+          {
+            mosqueId: mosqueIdentifier,
+            mosqueData: {
+              name: mosque.name,
+              address: mosque.address,
+              location: mosque.location,
+              externalId: mosque.id || mosque.externalId,
+            },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          setFeedbackMessage({
+            type: "success",
+            message: response.data.message,
+          });
+
+          // Re-fetch user profile to ensure attachedMosques are up-to-date in the state
+          if (currentUser?._id || currentUser?.id) {
+            dispatch(fetchUserProfile(currentUser._id || currentUser.id));
+          }
+
+          setTimeout(() => setFeedbackMessage(null), 3000);
+          handleInfoWindowClose(); // Close InfoWindow after action
+        } else {
+          throw new Error(
+            response.data.message || "Failed to update mosque attachment"
+          );
+        }
       } catch (error) {
         console.error("Failed to update mosque attachment:", error);
 
         setFeedbackMessage({
           type: "error",
           message:
+            error.response?.data?.message ||
             error.message ||
             "Failed to update mosque attachment. Please try again.",
         });
@@ -523,7 +509,7 @@ export default function OptimizedMosqueMap({
         setTimeout(() => setFeedbackMessage(null), 3000);
       }
     },
-    [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose] // Include attachedMosqueIds in dependencies
+    [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose]
   );
 
   const handleSearchInMosque = useCallback(

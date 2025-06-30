@@ -24,14 +24,23 @@ const LocationSelect = ({
       defaultOptions
       loadOptions={loadOptions}
       value={selectedValue}
-      onChange={(option) => onChange(name, option?.label || "")}
+      onChange={(option) => {
+        // Pass the location details to the onChange callback
+        const locationDetails = option
+          ? {
+              location: option.location || null,
+              placeId: option.placeId || null,
+            }
+          : null;
+        onChange(name, option?.label || "", locationDetails);
+      }}
       placeholder={placeholder}
       className={className}
       classNamePrefix="react-select"
       aria-required={isRequired}
-      noOptionsMessage={({ inputValue }) => 
-        inputValue.length < 3 
-          ? "Type at least 3 characters to search" 
+      noOptionsMessage={({ inputValue }) =>
+        inputValue.length < 3
+          ? "Type at least 3 characters to search"
           : "No locations found"
       }
       loadingMessage={() => "Searching..."}

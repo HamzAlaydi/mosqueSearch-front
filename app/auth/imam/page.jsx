@@ -42,11 +42,11 @@ const ImamSignup = () => {
 
       // Create mosque details object
       const mosqueData = {
-        name: finalData.imamName,
+        name: `${finalData.firstName} ${finalData.lastName}`,
         address: finalData.mosqueAddress,
         location: finalData.mosqueLocation || { lat: 0, lng: 0 },
         imam: {
-          name: finalData.imamName,
+          name: `${finalData.firstName} ${finalData.lastName}`,
           email: finalData.email,
           phone: finalData.phone,
           languages: finalData.languages.map((lang) => lang.value),
@@ -56,24 +56,40 @@ const ImamSignup = () => {
 
       const formDataToSend = new FormData();
 
-      // Add all form values
-      Object.keys(finalData).forEach((key) => {
-        if (key === "languages") {
-          // Convert languages array to JSON string
-          formDataToSend.append(
-            key,
-            JSON.stringify(finalData[key].map((lang) => lang.value))
-          );
-        } else if (key === "attachedMosques" && finalData[key]) {
-          // Convert attached mosques array to JSON string before sending
-          formDataToSend.append(key, JSON.stringify(finalData[key]));
-        } else if (
-          key !== "confirmPassword" &&
-          key !== "terms" &&
-          typeof finalData[key] !== "undefined" &&
-          finalData[key] !== null
-        ) {
-          formDataToSend.append(key, finalData[key]);
+      // Only send the necessary fields for imam signup
+      const requiredFields = [
+        "firstName",
+        "lastName",
+        "email",
+        "password",
+        "phone",
+        "mosqueAddress",
+        "message",
+        "languages",
+        "role",
+        "distance",
+        "attachedMosques",
+        "mosqueLocation",
+      ];
+
+      // Add only the required fields
+      requiredFields.forEach((key) => {
+        if (finalData[key] !== undefined && finalData[key] !== null) {
+          if (key === "languages") {
+            // Convert languages array to JSON string
+            formDataToSend.append(
+              key,
+              JSON.stringify(finalData[key].map((lang) => lang.value))
+            );
+          } else if (key === "attachedMosques" && finalData[key]) {
+            // Convert attached mosques array to JSON string before sending
+            formDataToSend.append(key, JSON.stringify(finalData[key]));
+          } else if (key === "mosqueLocation" && finalData[key]) {
+            // Convert mosque location to JSON string
+            formDataToSend.append(key, JSON.stringify(finalData[key]));
+          } else {
+            formDataToSend.append(key, finalData[key]);
+          }
         }
       });
 

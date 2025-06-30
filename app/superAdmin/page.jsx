@@ -2,10 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminUsers } from "@/shared/constants/adminUsers";
+import { useDispatch, useSelector } from "react-redux";
 import { toast, Toaster } from "react-hot-toast";
 import DataTable from "@/components/common/DataTable";
-import ConfirmationDialog from "@/components/common/ConfirmationModal";
+import ConfirmationModal from "@/components/common/ConfirmationModal";
+import MosqueSelectionModal from "@/components/superadmin/MosqueSelectionModal";
 import {
   Paper,
   Box,
@@ -15,9 +16,29 @@ import {
   Divider,
   IconButton,
   Tooltip,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
 } from "@mui/material";
 import { Edit, Check, Close } from "@mui/icons-material";
 import Spinner from "@/components/common/Spinner";
+import {
+  fetchImamRequests,
+  approveImamRequest,
+  denyImamRequest,
+  clearError,
+  clearSuccess,
+} from "@/redux/superadmin/superAdminSlice";
+import axios from "axios";
+import { rootRoute } from "@/shared/constants/backendLink";
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -33,9 +54,102 @@ function TabPanel({ children, value, index, ...other }) {
   );
 }
 
+const EditImamStatusModal = ({ open, onClose, imam, onSave }) => {
+  const [status, setStatus] = useState(imam?.status || "pending");
+  const [deniedReason, setDeniedReason] = useState(imam?.deniedReason || "");
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await onSave({ status, deniedReason });
+      onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStatus(imam?.status || "pending");
+    setDeniedReason(imam?.deniedReason || "");
+    onClose();
+  };
+
+  if (!open || !imam) return null;
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Edit Imam Status</DialogTitle>
+      <DialogContent>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            <strong>Imam:</strong> {imam.name}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            <strong>Email:</strong> {imam.email}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            <strong>Current Status:</strong>{" "}
+            {imam.status.charAt(0).toUpperCase() + imam.status.slice(1)}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="status-select-label">New Status</InputLabel>
+          <Select
+            labelId="status-select-label"
+            value={status}
+            label="New Status"
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <MenuItem value="approved">Approved</MenuItem>
+            <MenuItem value="denied">Denied</MenuItem>
+            <MenuItem value="pending">Pending</MenuItem>
+          </Select>
+        </FormControl>
+
+        {status === "denied" && (
+          <TextField
+            fullWidth
+            label="Denial Reason"
+            value={deniedReason}
+            onChange={(e) => setDeniedReason(e.target.value)}
+            placeholder="Reason for denial"
+            multiline
+            rows={3}
+            sx={{ mb: 2 }}
+          />
+        )}
+
+        {status === "approved" && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Imam will be automatically assigned to their selected mosques when
+            approved.
+          </Alert>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>Cancel</Button>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          color="primary"
+          disabled={loading || (status === "denied" && !deniedReason.trim())}
+        >
+          {loading ? "Saving..." : "Save Changes"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const SuperAdmin = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { imamRequests, loading, error, success } = useSelector(
+    (state) => state.superadmin
+  );
   const [tabValue, setTabValue] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -43,74 +157,96 @@ const SuperAdmin = () => {
     message: "",
     onConfirm: null,
   });
+  const [editModal, setEditModal] = useState({ open: false, imam: null });
 
   useEffect(() => {
-    // Simulate loading data from API
-    const loadUsers = async () => {
-      setLoading(true);
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        setUsers(adminUsers);
-      } catch (error) {
-        console.error("Error loading users:", error);
-        toast.error("Failed to load imam requests");
-      } finally {
-        setLoading(false);
-      }
-    };
+    dispatch(fetchImamRequests());
+  }, [dispatch]);
 
-    loadUsers();
-  }, []);
+  // Handle success and error messages
+  useEffect(() => {
+    if (success) {
+      toast.success(success);
+      dispatch(clearSuccess());
+    }
+    if (error) {
+      toast.error(error);
+      dispatch(clearError());
+    }
+  }, [success, error, dispatch]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
 
-  const handleAccept = (userId) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.id === userId ? { ...user, status: "approved" } : user
-      )
-    );
-    toast.success("Imam request approved successfully!");
+  const handleApprove = (imamId) => {
+    const imam = imamRequests.find((req) => req.id === imamId);
+    setConfirmDialog({
+      open: true,
+      title: "Approve Imam Request",
+      message: `Are you sure you want to approve ${imam.name}'s request? They will be automatically assigned to their selected mosques.`,
+      onConfirm: () => {
+        dispatch(approveImamRequest({ imamId }));
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handleDeny = (userId) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.id === userId ? { ...user, status: "denied" } : user
-      )
-    );
-    toast.error("Imam request denied");
+    const user = imamRequests.find((u) => u.id === userId);
+    setConfirmDialog({
+      open: true,
+      title: "Deny Imam Request",
+      message: `Are you sure you want to deny ${user.name}'s request?`,
+      onConfirm: () => {
+        dispatch(
+          denyImamRequest({
+            imamId: userId,
+            reason: "Request denied by super admin",
+          })
+        );
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+      },
+    });
   };
 
   const handleEdit = (userId) => {
-    // Implement edit functionality
-    toast.info(`Edit imam with ID: ${userId}`);
+    const imam = imamRequests.find((u) => u.id === userId);
+    setEditModal({ open: true, imam });
+  };
+
+  const handleSaveEdit = async ({ status, deniedReason }) => {
+    const imamId = editModal.imam.id;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `${rootRoute}/superadmin/imam-status/${imamId}`,
+        {
+          status,
+          deniedReason,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      toast.success("Imam status updated");
+      dispatch(fetchImamRequests());
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message || "Failed to update imam status"
+      );
+    }
   };
 
   const openConfirmDialog = (action, userId) => {
-    const user = users.find((u) => u.id === userId);
+    const user = imamRequests.find((u) => u.id === userId);
     if (action === "accept") {
-      setConfirmDialog({
-        open: true,
-        title: "Approve Imam Request",
-        message: `Are you sure you want to approve ${user.name}'s request for ${user.mosqueName}?`,
-        onConfirm: () => {
-          handleAccept(userId);
-          setConfirmDialog((prev) => ({ ...prev, open: false }));
-        },
-      });
+      handleApprove(userId);
     } else if (action === "deny") {
-      setConfirmDialog({
-        open: true,
-        title: "Deny Imam Request",
-        message: `Are you sure you want to deny ${user.name}'s request for ${user.mosqueName}?`,
-        onConfirm: () => {
-          handleDeny(userId);
-          setConfirmDialog((prev) => ({ ...prev, open: false }));
-        },
-      });
+      handleDeny(userId);
     } else if (action === "edit") {
       handleEdit(userId);
     }
@@ -120,21 +256,41 @@ const SuperAdmin = () => {
     {
       id: "name",
       label: "Imam",
+      width: "150px",
       render: (row) => (
         <DataTable.Avatar src={row.profilePicture} name={row.name} />
       ),
     },
-    { id: "email", label: "Email" },
-    { id: "phone", label: "Phone" },
-    { id: "mosqueName", label: "Mosque" },
-    { id: "address", label: "Address", width: "200px" },
+    { id: "email", label: "Email", width: "180px" },
+    { id: "phone", label: "Phone", width: "120px" },
+    { id: "mosqueName", label: "Mosque", width: "150px" },
     {
-      id: "message",
-      label: "Message",
+      id: "address",
+      label: "Address",
+      width: "150px",
       render: (row) => (
         <Box
           sx={{
-            maxWidth: "200px",
+            maxWidth: "150px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            fontSize: "0.875rem",
+          }}
+          title={row.address}
+        >
+          {row.address}
+        </Box>
+      ),
+    },
+    {
+      id: "message",
+      label: "Message",
+      width: "150px",
+      render: (row) => (
+        <Box
+          sx={{
+            maxWidth: "150px",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -160,6 +316,7 @@ const SuperAdmin = () => {
     {
       id: "status",
       label: "Status",
+      width: "100px",
       render: (row) => (
         <DataTable.StatusChip
           label={row.status.charAt(0).toUpperCase() + row.status.slice(1)}
@@ -170,6 +327,7 @@ const SuperAdmin = () => {
     {
       id: "actions",
       label: "Actions",
+      width: "100px",
       align: "right",
       render: (row) => (
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
@@ -241,14 +399,21 @@ const SuperAdmin = () => {
                 <Divider sx={{ my: 2 }} />
 
                 <TabPanel value={tabValue} index={0}>
-                  <DataTable
-                    columns={imamRequestColumns}
-                    data={users}
-                    searchFields={["name", "email", "mosqueName"]}
-                    searchPlaceholder="Search by name, email, mosque..."
-                    initialRowsPerPage={5}
-                    noDataMessage="No imam requests found"
-                  />
+                  {imamRequests.length === 0 ? (
+                    <Alert severity="info">
+                      No imam requests found. All requests have been processed
+                      or no new requests are pending.
+                    </Alert>
+                  ) : (
+                    <DataTable
+                      columns={imamRequestColumns}
+                      data={imamRequests}
+                      searchFields={["name", "email", "mosqueName"]}
+                      searchPlaceholder="Search by name, email, mosque..."
+                      initialRowsPerPage={5}
+                      noDataMessage="No imam requests found"
+                    />
+                  )}
                 </TabPanel>
 
                 <TabPanel value={tabValue} index={1}>
@@ -309,15 +474,21 @@ const SuperAdmin = () => {
           )}
 
           {/* Confirmation Dialog */}
-          <ConfirmationDialog
-            open={confirmDialog.open}
+          <ConfirmationModal
+            isOpen={confirmDialog.open}
             title={confirmDialog.title}
             message={confirmDialog.message}
             onConfirm={confirmDialog.onConfirm}
-            onCancel={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+          />
+
+          <EditImamStatusModal
+            open={editModal.open}
+            imam={editModal.imam}
+            onClose={() => setEditModal({ open: false, imam: null })}
+            onSave={handleSaveEdit}
           />
         </div>
-        <Toaster position="top-right" />
       </div>
     </div>
   );

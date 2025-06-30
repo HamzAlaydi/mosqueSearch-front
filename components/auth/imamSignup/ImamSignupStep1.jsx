@@ -6,14 +6,14 @@ import LanguageSelect from "@/components/common/LanguageSelect";
 
 // Step 1 Validation schema
 const imamSignupStep1Schema = Yup.object().shape({
-  imamName: Yup.string().required("Name is required"),
+  firstName: Yup.string().required("First name is required"),
+  lastName: Yup.string().required("Last name is required"),
   email: Yup.string()
     .email("Please enter a valid email address")
     .required("Email address is required"),
   phone: Yup.string()
     .required("Phone number is required")
     .matches(/^[0-9+\s()-]{8,20}$/, "Please enter a valid phone number"),
-  mosqueAddress: Yup.string().required("Mosque address is required"),
   message: Yup.string().max(500, "Message cannot exceed 500 characters"),
   languages: Yup.array()
     .min(1, "Please select at least one language")
@@ -31,10 +31,10 @@ const imamSignupStep1Schema = Yup.object().shape({
 
 const ImamSignupStep1 = ({ onSubmit, formData }) => {
   const initialValues = {
-    imamName: formData.imamName || "",
+    firstName: formData.firstName || "",
+    lastName: formData.lastName || "",
     email: formData.email || "",
     phone: formData.phone || "",
-    mosqueAddress: formData.mosqueAddress || "",
     message: formData.message || "",
     languages: formData.languages || [],
     password: formData.password || "",
@@ -51,20 +51,38 @@ const ImamSignupStep1 = ({ onSubmit, formData }) => {
     >
       {({ setFieldValue, values, isSubmitting }) => (
         <Form className="auth-form">
-          <div className="form-group">
-            <label htmlFor="imamName">Full Name*</label>
-            <Field
-              type="text"
-              name="imamName"
-              id="imamName"
-              className="form-input"
-              placeholder="Enter your full name"
-            />
-            <ErrorMessage
-              name="imamName"
-              component="div"
-              className="error-message"
-            />
+          {/* First Name and Last Name in the same row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-group">
+              <label htmlFor="firstName">First Name*</label>
+              <Field
+                type="text"
+                name="firstName"
+                id="firstName"
+                className="form-input"
+                placeholder="Enter your first name"
+              />
+              <ErrorMessage
+                name="firstName"
+                component="div"
+                className="error-message"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="lastName">Last Name*</label>
+              <Field
+                type="text"
+                name="lastName"
+                id="lastName"
+                className="form-input"
+                placeholder="Enter your last name"
+              />
+              <ErrorMessage
+                name="lastName"
+                component="div"
+                className="error-message"
+              />
+            </div>
           </div>
 
           <div className="form-group">
@@ -94,25 +112,6 @@ const ImamSignupStep1 = ({ onSubmit, formData }) => {
             />
             <ErrorMessage
               name="phone"
-              component="div"
-              className="error-message"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Mosque Address*</label>
-            <LocationSelect
-              name="mosqueAddress"
-              value={values.mosqueAddress}
-              onChange={(name, value, details) => {
-                setFieldValue(name, value);
-                setFieldValue("mosqueLocation", details?.location || null);
-              }}
-              placeholder="Enter mosque address"
-              isRequired={true}
-            />
-            <ErrorMessage
-              name="mosqueAddress"
               component="div"
               className="error-message"
             />
@@ -183,28 +182,26 @@ const ImamSignupStep1 = ({ onSubmit, formData }) => {
               id="terms"
               className="form-checkbox"
             />
-            <label htmlFor="terms">
+            <label htmlFor="terms" className="form-checkbox-label">
               I agree to the{" "}
-              <Link href="/terms" className="auth-link">
-                Terms & Conditions
+              <Link href="/terms" className="text-blue-600 hover:underline">
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-blue-600 hover:underline">
+                Privacy Policy
               </Link>
             </label>
+            <ErrorMessage
+              name="terms"
+              component="div"
+              className="error-message"
+            />
           </div>
-          <ErrorMessage
-            name="terms"
-            component="div"
-            className="error-message"
-          />
 
-          <div className="form-navigation">
-            <button
-              type="submit"
-              className="auth-button"
-              disabled={isSubmitting}
-            >
-              Next
-            </button>
-          </div>
+          <button type="submit" className="auth-button" disabled={isSubmitting}>
+            {isSubmitting ? "Processing..." : "Next"}
+          </button>
         </Form>
       )}
     </Formik>

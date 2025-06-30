@@ -18,13 +18,27 @@ const Login = () => {
 
   const [login, { isLoading }] = useLoginMutation();
   const router = useRouter();
-  const { token } = useSelector((state) => state.auth);
+  const { token, user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
-  useEffect(() => {
-    if (token) {
-      router.push("/mosqueSearch");
+
+  // Function to get redirect path based on user role
+  const getRedirectPath = (userRole) => {
+    switch (userRole) {
+      case "imam":
+        return "/imam";
+      case "superadmin":
+        return "/superAdmin";
+      default:
+        return "/mosqueSearch";
     }
-  }, [token, router]);
+  };
+
+  useEffect(() => {
+    if (token && user) {
+      const redirectPath = getRedirectPath(user.role);
+      router.push(redirectPath);
+    }
+  }, [token, user, router]);
 
   return (
     <div className="auth-container">
@@ -42,7 +56,10 @@ const Login = () => {
               const data = await login(values).unwrap();
               dispatch(setCredentials(data));
               document.cookie = `token=${data.token}; path=/;`;
-              router.push("/mosqueSearch");
+
+              // Redirect based on user role
+              const redirectPath = getRedirectPath(data.user.role);
+              router.push(redirectPath);
             } catch (error) {
               const errorMessage =
                 error?.data?.message || "Invalid credentials";

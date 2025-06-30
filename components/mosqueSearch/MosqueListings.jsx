@@ -39,7 +39,7 @@ export default function MosqueListings({
             ...mosque,
             prayerTimes: mosque.prayerTimes || {},
             facilities: mosque.facilities || [],
-            image: mosque.image ||"https://picsum.photos/400/300?random=1",
+            image: mosque.image || "https://picsum.photos/400/300?random=1",
           }}
           listView={listingsView === "list"}
           onClick={handleMarkerClick}

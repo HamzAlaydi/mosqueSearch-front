@@ -9,6 +9,7 @@ import userReducer from "./user/userSlice";
 import notificationReducer from "./notification/notificationSlice";
 import chatReducer from "./chat/chatSlice";
 import blockReducer from "./block/blockSlice";
+import superAdminReducer from "./superadmin/superAdminSlice";
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +20,7 @@ export const store = configureStore({
     chat: chatReducer,
     notifications: notificationReducer,
     block: blockReducer,
+    superadmin: superAdminReducer,
     [authAPI.reducerPath]: authAPI.reducer,
   },
   middleware: (getDefaultMiddleware) =>
