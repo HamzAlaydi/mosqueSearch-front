@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { logoutUser } from "@/redux/auth/authSlice";
 import { useDispatch } from "react-redux";
 import { HeaderNotifications } from "./NotificationSystem";
+import "./Navbar.css";
 
 export default function Navbar() {
   const dispatch = useDispatch();

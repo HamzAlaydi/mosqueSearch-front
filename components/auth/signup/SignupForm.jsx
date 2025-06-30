@@ -24,6 +24,7 @@ import SignupStep9 from "./SignupStep9";
 import ProgressBar from "@/shared/ui/ProgressBar";
 import Link from "next/link";
 import { rootRoute } from "@/shared/constants/backendLink";
+import "../auth.css";
 
 const SignupForm = () => {
   const dispatch = useDispatch();

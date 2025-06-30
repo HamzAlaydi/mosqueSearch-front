@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import "./AvatarUpload.css";
 
 const AvatarUpload = ({ field, form, preview }) => {
   const [previewUrl, setPreviewUrl] = useState(preview || "");

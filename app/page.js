@@ -18,6 +18,8 @@ import {
   MessageCircle,
   UserCheck,
 } from "lucide-react";
+import "./homepage.css";
+
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState(false);

@@ -8,18 +8,27 @@ import {
   InfoWindow,
   Circle,
 } from "@react-google-maps/api";
-import { MarkerClustererF } from "@react-google-maps/api"; // Import MarkerClustererF
-import { Loader2, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
+import { MarkerClustererF } from "@react-google-maps/api";
+import {
+  Loader2,
+  Maximize2,
+  Minimize2,
+  ArrowLeft,
+  MapPin,
+  Users,
+  CheckCircle,
+  XCircle,
+  Clock,
+} from "lucide-react";
 import { createPortal } from "react-dom";
-import { allMosquesInLondon } from "@/shared/allMosquesInLondon"; // Import the mosque data
+import { allMosquesInLondon } from "@/shared/allMosquesInLondon";
 import { GOOGLE_API } from "@/shared/constants/backendLink";
 
 // Constants
 const DEG2RAD = Math.PI / 180;
 const MILES_TO_METERS = 1609.34;
-const DEFAULT_CENTER = { lat: 100.5074, lng: 500.1278 }; // London
+const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // London
 const INFOWINDOW_PAN_PIXEL_OFFSET_Y = 250; // Pixels to pan up for InfoWindow visibility
-
 
 const MAP_CONTAINER_STYLE_DEFAULT = {
   width: "100%",
@@ -60,34 +69,35 @@ const MAP_OPTIONS = {
 };
 
 const CIRCLE_OPTIONS = {
-  strokeColor: "#4f46e5", // Indigo
+  strokeColor: "#2563EB",
   strokeOpacity: 0.8,
   strokeWeight: 2,
-  fillColor: "#4f46e5",
+  fillColor: "#2563EB",
   fillOpacity: 0.1,
   clickable: false,
+  zIndex: 1,
 };
 
 const CLUSTER_OPTIONS = {
-  gridSize: 60, // Group markers within this pixel grid size
-  maxZoom: 14, // Stop clustering at this zoom level
-  minimumClusterSize: 2, // Minimum number of markers to form a cluster
-  // You can add styles here or use a custom render function
+  gridSize: 50,
+  maxZoom: 15,
+  minimumClusterSize: 3,
   styles: [
     {
       textColor: "white",
       url:
         "data:image/svg+xml;utf-8," +
         encodeURIComponent(`
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="20" fill="#4f46e5" fill-opacity="0.7"/>
-            </svg>
-          `),
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="20" fill="#2563EB" fillOpacity="0.8"/>
+          </svg>
+        `),
       height: 40,
       width: 40,
-      anchorText: [0, 5], // Adjust text vertical alignment
+      anchorText: [0, 5],
     },
   ],
+  clickable: true,
 };
 
 // Create a flag to track if script has been loaded - global across component instances
@@ -101,12 +111,14 @@ const MapContainer = ({
   toggleMosqueAttachment, // function to handle attach/detach
   setError, // function to set error message in parent
   googleMapsApiKey, // Your Google API key
+  existingRequests = [], // array of existing imam mosque requests
 }) => {
   const [map, setMap] = useState(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [selectedMosque, setSelectedMosque] = useState(null);
   const [hoveredMosqueId, setHoveredMosqueId] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [infoWindowOpen, setInfoWindowOpen] = useState(false);
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null); // Store map instance in a ref for persistence
 
@@ -137,6 +149,25 @@ const MapContainer = ({
   const attachedMosqueIds = useMemo(() => {
     return new Set(attachedMosques?.map((m) => m.id).filter(Boolean) || []);
   }, [attachedMosques]);
+
+  // Get request status for a mosque
+  const getMosqueRequestStatus = useCallback(
+    (mosque) => {
+      if (!existingRequests || existingRequests.length === 0) return null;
+
+      // Find request for this mosque
+      const request = existingRequests.find((req) => {
+        // Compare as strings to avoid type mismatch
+        return (
+          req.mosqueId?.externalId !== undefined &&
+          String(req.mosqueId.externalId) === String(mosque.id)
+        );
+      });
+
+      return request ? request.status : null;
+    },
+    [existingRequests]
+  );
 
   // Calculate distance between two points in miles
   const calculateDistance = useCallback((lat1, lon1, lat2, lon2) => {
@@ -225,149 +256,131 @@ const MapContainer = ({
     return processed;
   }, [userLocation, distance, attachedMosqueIds, calculateDistance]); // Add calculateDistance to dependencies
 
-  // Fit map to bounds when filtered mosques change or map loads
-  const fitMapToBounds = useCallback(() => {
-    const currentMap = mapInstanceRef.current;
-    if (!currentMap || !isMapLoaded || !userLocation) return;
+  // Create professional mosque marker icons
+  const createMarkerIcon = useCallback(
+    (mosque, isHovered, isSelected) => {
+      const isAttached = mosque.isAttached;
+      const hasFemaleArea = mosque.hasFemaleArea;
+      const requestStatus = getMosqueRequestStatus(mosque);
 
-    const bounds = new window.google.maps.LatLngBounds();
+      // Determine base color based on request status
+      let baseColor;
+      if (requestStatus === "approved") {
+        baseColor = "#10B981"; // Green for approved
+      } else if (requestStatus === "denied") {
+        baseColor = "#EF4444"; // Red for denied
+      } else if (requestStatus === "pending") {
+        baseColor = "#F59E0B"; // Orange for pending
+      } else if (isAttached) {
+        baseColor = "#F59E0B"; // Gold/Orange for attached (legacy)
+      } else if (hasFemaleArea) {
+        baseColor = "#8B5CF6"; // Purple for female area
+      } else {
+        baseColor = "#2563EB"; // Blue for regular/no request
+      }
 
-    // Extend bounds for all filtered mosques
-    filteredMosques.forEach((mosque) => {
-      bounds.extend(
-        new window.google.maps.LatLng(mosque.location.lat, mosque.location.lng)
-      );
-    });
+      // Determine hover color
+      let hoverColor;
+      if (requestStatus === "approved") {
+        hoverColor = "#059669"; // Darker green
+      } else if (requestStatus === "denied") {
+        hoverColor = "#DC2626"; // Darker red
+      } else if (requestStatus === "pending") {
+        hoverColor = "#D97706"; // Darker orange
+      } else if (isAttached) {
+        hoverColor = "#D97706"; // Darker orange
+      } else if (hasFemaleArea) {
+        hoverColor = "#7C3AED"; // Darker purple
+      } else {
+        hoverColor = "#1D4ED8"; // Darker blue
+      }
 
-    // Also extend bounds for the user's location
-    bounds.extend(
-      new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
-    );
+      const selectedColor = "#10B981"; // Green for selected
 
-    // Handle cases with 0 or 1 mosque + user location
-    if (filteredMosques.length === 0) {
-      // If no mosques found, just center on user and show the circle
-      currentMap.setCenter(userLocation);
-      currentMap.setZoom(12); // Default zoom
-    } else if (filteredMosques.length === 1) {
-      // If only one mosque, include it and the user in the bounds
-      bounds.extend(
-        new window.google.maps.LatLng(
-          filteredMosques[0].location.lat,
-          filteredMosques[0].location.lng
-        )
-      );
-      currentMap.fitBounds(bounds, { padding: 100 }); // Add more padding for a single marker + user location
-      const listener = window.google.maps.event.addListenerOnce(
-        currentMap,
-        "bounds_changed",
-        () => {
-          if (currentMap.getZoom() > 16) currentMap.setZoom(16); // Prevent zooming in too close
-        }
-      );
-    } else {
-      // Fit bounds for multiple mosques and user location
-      currentMap.fitBounds(bounds, { padding: 50 }); // Add some padding
-      // Optional: Limit max zoom after fitting bounds if it zoomed in too much
-      const listener = window.google.maps.event.addListenerOnce(
-        currentMap,
-        "bounds_changed",
-        () => {
-          if (currentMap.getZoom() > 15) currentMap.setZoom(15); // Prevent zooming in too close on dense clusters/markers
-        }
-      );
-    }
-  }, [filteredMosques, userLocation, isMapLoaded]); // Dependencies include map and data
+      const currentColor = isSelected
+        ? selectedColor
+        : isHovered
+        ? hoverColor
+        : baseColor;
 
-  // Map load handler
-  const onMapLoad = useCallback((mapInstance) => {
-    mapInstanceRef.current = mapInstance; // Store in ref for persistence
-    setMap(mapInstance);
-    setIsMapLoaded(true);
-  }, []);
+      const iconSize = isHovered || isSelected ? 44 : 40;
+      const mosqueSize = isHovered || isSelected ? 24 : 20;
 
-  // Trigger map fitting when filtered mosques or map state changes
-  useEffect(() => {
-    if (isMapLoaded && mapInstanceRef.current) {
-      fitMapToBounds();
-    }
-  }, [isMapLoaded, fitMapToBounds, userLocation, filteredMosques.length]); // Re-fit when data or user location changes
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // No need to explicitly clean up Google Maps as useLoadScript handles it
-      mapInstanceRef.current = null;
-      setIsMapLoaded(false);
-    };
-  }, []);
-
-  // Create marker icon based on attachment status (and hover)
-  const createMosqueIcon = useCallback(
-    (mosque, isHovered) => {
-      // Use attachedMosqueIds set for lookup directly
-      const isAttached = attachedMosqueIds.has(mosque.id);
-
-      const baseColor = isAttached ? "#10B981" : "#EF4444"; // Green for attached, Red for unattached
-      const hoverColor = isAttached ? "#059669" : "#DC2626"; // Darker shades on hover
-
-      const currentColor = isHovered ? hoverColor : baseColor;
-      const iconSize = isHovered ? 40 : 36;
-
-      // SVG icon (can be the same as the first component's if preferred)
       const svgContent = `
-      <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M24 48C24 48 40 32 40 19C40 10.1634 32.8366 3 24 3C15.1634 3 8 10.1634 8 19C8 32 24 48 24 48Z" fill="${currentColor}" stroke="white" stroke-width="2"/>
-        <circle cx="24" cy="19" r="7" fill="white"/>
+        <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background circle -->
+          <circle cx="24" cy="24" r="22" fill="${currentColor}" stroke="white" stroke-width="2"/>
+          
+          <!-- Mosque icon -->
+          <g transform="translate(${24 - mosqueSize / 2}, ${
+        24 - mosqueSize / 2
+      })">
+            <!-- Main building -->
+            <rect x="4" y="12" width="12" height="8" fill="white" rx="1"/>
+            
+            <!-- Dome -->
+            <path d="M6 12 C6 9, 8 8, 10 8 C12 8, 14 9, 14 12" fill="white"/>
+            
+            <!-- Minaret left -->
+            <rect x="1" y="6" width="2" height="12" fill="white" rx="1"/>
+            <circle cx="2" cy="6" r="1" fill="white"/>
+            
+            <!-- Minaret right -->
+            <rect x="17" y="6" width="2" height="12" fill="white" rx="1"/>
+            <circle cx="18" cy="6" r="1" fill="white"/>
+            
+            <!-- Door -->
+            <rect x="8.5" y="16" width="3" height="4" fill="${currentColor}" rx="0.5"/>
+            
+            <!-- Windows -->
+            <rect x="6" y="14" width="1.5" height="1.5" fill="${currentColor}" rx="0.2"/>
+            <rect x="12.5" y="14" width="1.5" height="1.5" fill="${currentColor}" rx="0.2"/>
+          </g>
+          
           ${
-            mosque.hasFemaleArea // Use the processed flag
-              ? `<circle cx="24" cy="19" r="3" fill="${currentColor}"/>` // Indicate female area with base color dot
+            hasFemaleArea
+              ? `<circle cx="38" cy="10" r="4" fill="#8B5CF6" stroke="white" stroke-width="1"/>`
               : ""
           }
           ${
-            isAttached // Indicate attached status with a star or similar
-              ? `<path d="M24 24 L20 30 L28 30 L24 24 Z" fill="white"/>` // Simple triangle for attached
+            isAttached
+              ? `<circle cx="38" cy="38" r="4" fill="#F59E0B" stroke="white" stroke-width="1"/>`
               : ""
           }
-      </svg>
-    `;
+        </svg>
+      `;
 
       return {
         url: `data:image/svg+xml;utf-8,${encodeURIComponent(svgContent)}`,
         scaledSize: new window.google.maps.Size(iconSize, iconSize),
-        anchor: new window.google.maps.Point(iconSize / 2, iconSize), // Anchor at the bottom center
-        zIndex: isHovered ? 1000 : isAttached ? 10 : 5,
+        anchor: new window.google.maps.Point(iconSize / 2, iconSize / 2),
+        zIndex: isHovered || isSelected ? 1000 : isAttached ? 10 : 5,
       };
     },
-    [attachedMosqueIds]
-  ); // Depends only on attachment state for the base color
+    [getMosqueRequestStatus]
+  );
 
   // Handle marker click
   const handleMarkerClick = useCallback(
     (mosque) => {
-      // Close current InfoWindow if clicking the same marker
       if (selectedMosque?.id === mosque.id) {
         setSelectedMosque(null);
-      } else {
-        setSelectedMosque(mosque);
-        // Pan the map slightly downwards to better center the InfoWindow content
-        // The InfoWindow opens above the marker, so panning down brings the content towards the center.
-        if (mapInstanceRef.current && mosque.location) {
-          // Use panTo initially to center the marker
-          mapInstanceRef.current.panTo({
-            lat: mosque.location.lat,
-            lng: mosque.location.lng,
-          });
-          // Use a timeout to allow the panTo animation to start before panning by pixels
-          // This value might need fine-tuning based on animation speed/complexity and InfoWindow height
-          setTimeout(() => {
-            mapInstanceRef.current.panBy(0, INFOWINDOW_PAN_PIXEL_OFFSET_Y);
-          }, 200); // Small delay (e.g., 200ms)
-        }
+        setInfoWindowOpen(false);
+        return;
       }
-      setHoveredMosqueId(null); // Clear hover state on click
+
+      setSelectedMosque(mosque);
+      setInfoWindowOpen(true);
+
+      // Simple pan to marker without complex offset calculations
+      if (mapInstanceRef.current && mosque.location) {
+        mapInstanceRef.current.panTo({
+          lat: mosque.location.lat,
+          lng: mosque.location.lng,
+        });
+      }
     },
-    [selectedMosque] // Dependencies include selectedMosque to toggle
+    [selectedMosque]
   );
 
   // Handle mosque attachment/detachment toggle
@@ -400,6 +413,8 @@ const MapContainer = ({
   // Handle InfoWindow close
   const handleInfoWindowClose = useCallback(() => {
     setSelectedMosque(null);
+    setInfoWindowOpen(false);
+    setHoveredMosqueId(null);
   }, []);
 
   // Fullscreen toggle logic
@@ -472,7 +487,34 @@ const MapContainer = ({
 
       // Refit map bounds after a delay to let it resize
       setTimeout(() => {
-        fitMapToBounds();
+        if (mapInstanceRef.current && isMapLoaded && userLocation) {
+          const currentMap = mapInstanceRef.current;
+          const bounds = new window.google.maps.LatLngBounds();
+
+          // Extend bounds for all filtered mosques
+          filteredMosques.forEach((mosque) => {
+            bounds.extend(
+              new window.google.maps.LatLng(
+                mosque.location.lat,
+                mosque.location.lng
+              )
+            );
+          });
+
+          // Also extend bounds for the user's location
+          bounds.extend(
+            new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
+          );
+
+          if (filteredMosques.length === 0) {
+            currentMap.setCenter(userLocation);
+            currentMap.setZoom(12);
+          } else if (filteredMosques.length === 1) {
+            currentMap.fitBounds(bounds, { padding: 100 });
+          } else {
+            currentMap.fitBounds(bounds, { padding: 50 });
+          }
+        }
       }, 100);
     }
 
@@ -485,7 +527,13 @@ const MapContainer = ({
         window.google.maps.event.trigger(mapInstanceRef.current, "resize");
       }
     }, 200);
-  }, [isFullScreen, filteredMosques.length, distance, fitMapToBounds]);
+  }, [
+    isFullScreen,
+    filteredMosques.length,
+    distance,
+    isMapLoaded,
+    userLocation,
+  ]);
 
   // Render the full-screen modal portal
   const renderFullScreenModal = () => {
@@ -526,6 +574,262 @@ const MapContainer = ({
       document.body // Render into the body
     );
   };
+
+  // Map load handler
+  const onMapLoad = useCallback((mapInstance) => {
+    mapInstanceRef.current = mapInstance; // Store in ref for persistence
+    setMap(mapInstance);
+    setIsMapLoaded(true);
+  }, []);
+
+  // Trigger map fitting when filtered mosques or map state changes
+  useEffect(() => {
+    if (isMapLoaded && mapInstanceRef.current && userLocation) {
+      const currentMap = mapInstanceRef.current;
+      const bounds = new window.google.maps.LatLngBounds();
+
+      // Extend bounds for all filtered mosques
+      filteredMosques.forEach((mosque) => {
+        bounds.extend(
+          new window.google.maps.LatLng(
+            mosque.location.lat,
+            mosque.location.lng
+          )
+        );
+      });
+
+      // Also extend bounds for the user's location
+      bounds.extend(
+        new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
+      );
+
+      // Handle cases with 0 or 1 mosque + user location
+      if (filteredMosques.length === 0) {
+        // If no mosques found, just center on user and show the circle
+        currentMap.setCenter(userLocation);
+        currentMap.setZoom(12); // Default zoom
+      } else if (filteredMosques.length === 1) {
+        // If only one mosque, include it and the user in the bounds
+        bounds.extend(
+          new window.google.maps.LatLng(
+            filteredMosques[0].location.lat,
+            filteredMosques[0].location.lng
+          )
+        );
+        currentMap.fitBounds(bounds, { padding: 100 }); // Add more padding for a single marker + user location
+        const listener = window.google.maps.event.addListenerOnce(
+          currentMap,
+          "bounds_changed",
+          () => {
+            if (currentMap.getZoom() > 16) currentMap.setZoom(16); // Prevent zooming in too close
+          }
+        );
+      } else {
+        // Fit bounds for multiple mosques and user location
+        currentMap.fitBounds(bounds, { padding: 50 }); // Add some padding
+        // Optional: Limit max zoom after fitting bounds if it zoomed in too much
+        const listener = window.google.maps.event.addListenerOnce(
+          currentMap,
+          "bounds_changed",
+          () => {
+            if (currentMap.getZoom() > 15) currentMap.setZoom(15); // Prevent zooming in too close on dense clusters/markers
+          }
+        );
+      }
+    }
+  }, [isMapLoaded, userLocation, filteredMosques.length]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // No need to explicitly clean up Google Maps as useLoadScript handles it
+      mapInstanceRef.current = null;
+      setIsMapLoaded(false);
+    };
+  }, []);
+
+  // Handle "Show all" button click
+  const handleShowAllClick = useCallback(() => {
+    if (mapInstanceRef.current && isMapLoaded && userLocation) {
+      const currentMap = mapInstanceRef.current;
+      const bounds = new window.google.maps.LatLngBounds();
+
+      // Extend bounds for all filtered mosques
+      filteredMosques.forEach((mosque) => {
+        bounds.extend(
+          new window.google.maps.LatLng(
+            mosque.location.lat,
+            mosque.location.lng
+          )
+        );
+      });
+
+      // Also extend bounds for the user's location
+      bounds.extend(
+        new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
+      );
+
+      // Handle cases with 0 or 1 mosque + user location
+      if (filteredMosques.length === 0) {
+        // If no mosques found, just center on user and show the circle
+        currentMap.setCenter(userLocation);
+        currentMap.setZoom(12); // Default zoom
+      } else if (filteredMosques.length === 1) {
+        // If only one mosque, include it and the user in the bounds
+        bounds.extend(
+          new window.google.maps.LatLng(
+            filteredMosques[0].location.lat,
+            filteredMosques[0].location.lng
+          )
+        );
+        currentMap.fitBounds(bounds, { padding: 100 }); // Add more padding for a single marker + user location
+        const listener = window.google.maps.event.addListenerOnce(
+          currentMap,
+          "bounds_changed",
+          () => {
+            if (currentMap.getZoom() > 16) currentMap.setZoom(16); // Prevent zooming in too close
+          }
+        );
+      } else {
+        // Fit bounds for multiple mosques and user location
+        currentMap.fitBounds(bounds, { padding: 50 }); // Add some padding
+        // Optional: Limit max zoom after fitting bounds if it zoomed in too much
+        const listener = window.google.maps.event.addListenerOnce(
+          currentMap,
+          "bounds_changed",
+          () => {
+            if (currentMap.getZoom() > 15) currentMap.setZoom(15); // Prevent zooming in too close on dense clusters/markers
+          }
+        );
+      }
+    }
+  }, [filteredMosques, userLocation, isMapLoaded]);
+
+  // Render cluster marker
+  const renderClusterMarker = (clusterer) => {
+    const count = clusterer.getCount();
+    const size = Math.min(60, 30 + count / 5);
+    const svgContent = `
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="${size / 2}" cy="${size / 2}" r="${
+      size / 2
+    }" fill="#2563EB" fillOpacity="0.8"/>
+        <text x="${size / 2}" y="${
+      size / 2
+    }" text-anchor="middle" dy=".3em" fill="white" font-size="${
+      size / 3
+    }" font-family="sans-serif">${count}</text>
+      </svg>
+    `;
+
+    return new window.google.maps.Marker({
+      position: clusterer.getPosition(),
+      icon: {
+        url: `data:image/svg+xml;utf-8,${encodeURIComponent(svgContent)}`,
+        scaledSize: new window.google.maps.Size(size, size),
+        anchor: new window.google.maps.Point(size / 2, size / 2),
+      },
+      zIndex: 100,
+    });
+  };
+
+  // Render InfoWindow content
+  const renderInfoWindowContent = useCallback(
+    (mosque) => {
+      const isAttached = mosque.isAttached;
+      const requestStatus = getMosqueRequestStatus(mosque);
+
+      // Determine button text and behavior based on request status
+      let buttonText = "Add to Selection";
+      let buttonClass =
+        "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 text-white";
+      let buttonDisabled = false;
+
+      if (requestStatus === "approved") {
+        buttonText = "Approved ✓";
+        buttonClass = "bg-green-600 text-white cursor-not-allowed opacity-75";
+        buttonDisabled = true;
+      } else if (requestStatus === "denied") {
+        buttonText = "Denied ✗";
+        buttonClass = "bg-red-600 text-white cursor-not-allowed opacity-75";
+        buttonDisabled = true;
+      } else if (requestStatus === "pending") {
+        buttonText = "Request Pending...";
+        buttonClass = "bg-orange-600 text-white cursor-not-allowed opacity-75";
+        buttonDisabled = true;
+      } else if (isAttached) {
+        buttonText = "Remove from Selection";
+        buttonClass =
+          "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white";
+      }
+
+      return (
+        <div className="p-3 max-w-xs font-sans text-gray-800">
+          <h3 className="font-semibold text-lg mb-1 text-gray-900">
+            {mosque.name}
+          </h3>
+          <p className="text-sm text-gray-600 mb-3">{mosque.address}</p>
+
+          {/* Facilities badges */}
+          <div className="flex flex-wrap gap-1 mb-3">
+            {mosque.hasFemaleArea && (
+              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full font-medium">
+                <Users className="inline h-3 w-3 mr-1" />
+                Female Prayer Area
+              </span>
+            )}
+            {requestStatus === "approved" && (
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                <CheckCircle className="inline h-3 w-3 mr-1" />
+                Request Approved
+              </span>
+            )}
+            {requestStatus === "denied" && (
+              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
+                <XCircle className="inline h-3 w-3 mr-1" />
+                Request Denied
+              </span>
+            )}
+            {requestStatus === "pending" && (
+              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-medium">
+                <Clock className="inline h-3 w-3 mr-1" />
+                Request Pending
+              </span>
+            )}
+            {!requestStatus && isAttached && (
+              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                <CheckCircle className="inline h-3 w-3 mr-1" />
+                Selected
+              </span>
+            )}
+          </div>
+
+          {/* Distance info */}
+          {mosque.distance && (
+            <p className="text-xs text-gray-500 mb-3">
+              <MapPin className="inline h-3 w-3 mr-1" />
+              {mosque.distance.toFixed(1)} miles away
+            </p>
+          )}
+
+          {/* Toggle Button */}
+          <button
+            onClick={() => {
+              if (!buttonDisabled) {
+                toggleMosqueAttachment(mosque);
+                handleInfoWindowClose();
+              }
+            }}
+            disabled={buttonDisabled}
+            className={`w-full text-sm px-4 py-2 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-opacity-50 ${buttonClass}`}
+          >
+            {buttonText}
+          </button>
+        </div>
+      );
+    },
+    [toggleMosqueAttachment, handleInfoWindowClose, getMosqueRequestStatus]
+  );
 
   // Show loading state while the script is loading
   if (!isLoaded) {
@@ -599,7 +903,10 @@ const MapContainer = ({
 
           {/* Render Markers with Clustering */}
           {isMapLoaded && filteredMosques.length > 0 && (
-            <MarkerClustererF options={CLUSTER_OPTIONS}>
+            <MarkerClustererF
+              options={CLUSTER_OPTIONS}
+              render={renderClusterMarker}
+            >
               {(clusterer) =>
                 filteredMosques.map((mosque) => {
                   const isCurrentlySelected = selectedMosque?.id === mosque.id;
@@ -612,7 +919,7 @@ const MapContainer = ({
                       onClick={() => handleMarkerClick(mosque)}
                       onMouseOver={() => setHoveredMosqueId(mosque.id)}
                       onMouseOut={() => setHoveredMosqueId(null)}
-                      icon={createMosqueIcon(
+                      icon={createMarkerIcon(
                         mosque,
                         isCurrentlyHovered || isCurrentlySelected
                       )}
@@ -626,121 +933,19 @@ const MapContainer = ({
           )}
 
           {/* Info window for selected mosque */}
-          {selectedMosque && (
+          {infoWindowOpen && selectedMosque && (
             <InfoWindow
               position={selectedMosque.location}
               onCloseClick={handleInfoWindowClose}
               options={{
-                // Adjust pixelOffset based on marker icon anchor and height
-                // Marker anchor is bottom-center (size/2, size).
-                // InfoWindow tip should be above the marker.
-                // A POSITIVE Y offset moves the InfoWindow UP relative to the anchor.
-                // A value of (marker_height + buffer) will place the tip just above the marker.
-                pixelOffset: new window.google.maps.Size(
-                  0,
-                  (selectedMosque.isHovered ? 40 : 36) + 5 // Positive Y offset to move InfoWindow UP
-                ),
-                // Setting a min/max width can help control the popup size
-                minWidth: 200,
-                maxWidth: 300,
-                // disableAutoPan is not a direct option here, manual panBy is used
+                pixelOffset: new window.google.maps.Size(20, -60),
+                minWidth: 300,
+                maxWidth: 450,
+                disableAutoPan: false,
               }}
             >
-              {/*
-                Wrap InfoWindow content in a div with a solid background.
-                Add max-height (increased) and overflow-y-auto to make content scrollable.
-              */}
-              <div
-                className="bg-white p-4 rounded-lg shadow-md max-w-xs w-full text-gray-800 font-sans flex flex-col items-start max-h-80 overflow-y-auto relative"
-                style={{ boxSizing: "border-box", width: "100%" }}
-              >
-                {" "}
-                {/* Increased max-h to max-h-80 (320px) */}
-                <h3 className="font-bold text-lg mb-1 leading-tight">
-                  {selectedMosque.name}
-                </h3>
-                {/* Added description if available */}
-                {selectedMosque.description &&
-                  selectedMosque.description.trim() !== "" && (
-                    <p className="text-sm text-gray-700 mb-2 leading-snug">
-                      {selectedMosque.description}
-                    </p>
-                  )}
-                {/* Added address if available and different from description */}
-                {selectedMosque.address &&
-                  (selectedMosque.description === undefined ||
-                    selectedMosque.address !==
-                      selectedMosque.description.trim()) && (
-                    <p className="text-sm text-gray-600 mb-2 leading-snug">
-                      {selectedMosque.address}
-                    </p>
-                  )}
-                {/* Facilities badges (if available in data and processed) */}
-                {(selectedMosque.hasFemaleArea ||
-                  selectedMosque.isAttached) && (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {selectedMosque.hasFemaleArea && (
-                      <span className="text-xs font-medium bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full">
-                        Female Prayer Area
-                      </span>
-                    )}
-                    {selectedMosque.isAttached && (
-                      <span className="text-xs font-medium bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full">
-                        Your Mosque
-                      </span>
-                    )}
-                  </div>
-                )}
-                {/* Distance */}
-                {typeof selectedMosque.distance === "number" && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    <strong>Distance:</strong>{" "}
-                    {selectedMosque.distance.toFixed(1)} miles away
-                  </p>
-                )}
-                {/* Rating (if available) */}
-                {selectedMosque.rating && (
-                  <div className="flex items-center mt-1">
-                    <strong className="text-sm text-gray-600 mr-1">
-                      Rating:
-                    </strong>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <svg
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < Math.floor(selectedMosque.rating)
-                              ? "text-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                    </div>
-                    {selectedMosque.user_ratings_total !== undefined && (
-                      <span className="ml-1 text-sm text-gray-600">
-                        {selectedMosque.rating.toFixed(1)} (
-                        {selectedMosque.user_ratings_total})
-                      </span>
-                    )}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleToggleAttachmentClick(selectedMosque)}
-                  className={`mt-3 text-sm text-primary px-4 py-2 rounded-md w-full text-center transition-colors font-semibold flex-shrink-0 ${
-                    selectedMosque.isAttached
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  {selectedMosque.isAttached
-                    ? "Detach from Mosque"
-                    : "Attach to Mosque"}
-                </button>
+              <div className="bg-white rounded-lg shadow-lg">
+                {renderInfoWindowContent(selectedMosque)}
               </div>
             </InfoWindow>
           )}
@@ -776,17 +981,31 @@ const MapContainer = ({
       {/* Count and Legend */}
       {!isFullScreen &&
         isMapLoaded && ( // Hide legend in fullscreen to save space
-          <div className="absolute bottom-2 right-2 z-10 bg-white p-2 rounded-lg shadow-md text-xs flex items-center gap-3">
-            <p className="font-semibold text-gray-700">
+          <div className="absolute bottom-2 right-2 z-10 bg-white p-3 rounded-lg shadow-md text-xs">
+            <p className="font-semibold text-gray-700 mb-2">
               Found {filteredMosques.length} mosques within {distance} miles
             </p>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-green-600"></div>
-              <span>Attached</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                <span>No Request</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                <span>Approved</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-red-600"></div>
+                <span>Denied</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-orange-600"></div>
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+                <span>Female Area</span>
+              </div>
             </div>
           </div>
         )}
@@ -796,7 +1015,7 @@ const MapContainer = ({
         {filteredMosques.length > 0 && isMapLoaded && (
           <button
             type="button"
-            onClick={fitMapToBounds}
+            onClick={handleShowAllClick}
             className="bg-white p-2 rounded-lg shadow-md text-xs text-blue-600 flex items-center font-semibold hover:bg-gray-50 transition-colors"
             aria-label="Fit map to show all mosques"
           >

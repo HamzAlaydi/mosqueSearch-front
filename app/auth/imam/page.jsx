@@ -7,6 +7,7 @@ import { useSignupMutation } from "@/redux/auth/authAPI";
 import Link from "next/link";
 import ProgressBar from "@/shared/ui/ProgressBar";
 import { rootRoute } from "@/shared/constants/backendLink";
+import "@/components/auth/auth.css";
 
 // Import Step Components
 import ImamSignupStep1 from "@/components/auth/imamSignup/ImamSignupStep1";

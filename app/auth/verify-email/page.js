@@ -6,6 +6,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import "@/components/auth/auth.css";
 
 const VerifyEmail = () => {
   const searchParams = useSearchParams();

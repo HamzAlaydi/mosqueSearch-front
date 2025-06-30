@@ -1,4 +1,5 @@
 import "./globals.css";
+import "@/shared/styles/utilities.css";
 import { ReduxProvider } from "@/redux/Provider";
 import ClientLayout from "@/components/ClientLayout"; // Adjust path if needed
 import { Toaster } from "react-hot-toast";

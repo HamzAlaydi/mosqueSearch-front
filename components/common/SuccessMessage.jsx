@@ -1,4 +1,5 @@
 import React from "react";
+import "@/components/auth/auth.css";
 
 const SuccessMessage = ({
   message,
