@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/mosqueSearch/Header";
 import FilterModal from "../../components/mosqueSearch/FilterModal";
@@ -114,42 +114,80 @@ export default function MatchSearchPage() {
   // Use the selectedMosque from Redux activeFilters directly
   const selectedMosqueForSearch = activeFilters.selectedMosque;
 
+  // Create stable selectedMosque dependency
+  const selectedMosqueId = selectedMosqueForSearch?.id || null;
+
+  // Create individual stable filter dependencies to prevent infinite loops
+  const distance = activeFilters.distance;
+  const prayer = activeFilters.prayer?.join(",") || "";
+  const facilities = activeFilters.facilities?.join(",") || "";
+  const rating = activeFilters.rating;
+  const religiousness = activeFilters.religiousness?.join(",") || "";
+  const maritalStatus = activeFilters.maritalStatus?.join(",") || "";
+  const ageRange = `${activeFilters.ageRange?.min || 18}-${
+    activeFilters.ageRange?.max || 65
+  }`;
+  const hasChildren = activeFilters.hasChildren?.join(",") || "";
+  const childrenDesire = activeFilters.childrenDesire?.join(",") || "";
+  const educationLevel = activeFilters.educationLevel?.join(",") || "";
+  const profession = activeFilters.profession?.join(",") || "";
+  const willingToRelocate = activeFilters.willingToRelocate;
+
+  // Create stable map center dependency to prevent infinite loops
+  const mapCenterString = useMemo(() => {
+    return `${mapCenter.lat.toFixed(6)},${mapCenter.lng.toFixed(6)}`;
+  }, [mapCenter.lat, mapCenter.lng]);
+
   // Effect to dispatch fetchMatches when filters or mapCenter change in professional mode
   useEffect(() => {
+    console.log("Professional mode useEffect triggered:", {
+      searchMode,
+      selectedMosqueId,
+      isFetching: isFetchingProfessionalRef.current,
+      distance,
+      prayer,
+      facilities,
+      rating,
+      mapCenterString,
+    });
+
     // Only fetch professional matches if in professional mode AND no specific mosque is selected
-    // professionalMatches.length === 0 added to prevent refetching if already populated
     if (
       searchMode === "professional" &&
-      !selectedMosqueForSearch &&
-      professionalMatches.length === 0 &&
-      !loading
+      !selectedMosqueId &&
+      !isFetchingProfessionalRef.current
     ) {
       console.log("Dispatching fetchMatches for professional mode...");
-      dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
-      console.log(
-        dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }))
-      );
-      console.log("Dispatching fetchMatches for professional mode...");
+      isFetchingProfessionalRef.current = true;
+      dispatch(
+        fetchMatches({ filters: activeFilters, center: mapCenter })
+      ).finally(() => {
+        isFetchingProfessionalRef.current = false;
+      });
     }
   }, [
     dispatch,
-    activeFilters,
-    mapCenter,
+    distance,
+    prayer,
+    facilities,
+    rating,
+    religiousness,
+    maritalStatus,
+    ageRange,
+    hasChildren,
+    childrenDesire,
+    educationLevel,
+    profession,
+    willingToRelocate,
+    mapCenterString,
     searchMode,
-    selectedMosqueForSearch,
-    professionalMatches.length,
-    loading,
+    selectedMosqueId,
   ]);
 
   // Effect to dispatch fetchMatchesByMosque when selectedMosqueForSearch changes
   // This will be triggered by handleSearchInMosque and selectedMosque being set in redux
   useEffect(() => {
-    if (
-      searchMode === "mosque" &&
-      selectedMosqueForSearch &&
-      !mosqueMatches.length &&
-      !loading
-    ) {
+    if (searchMode === "mosque" && selectedMosqueForSearch && !loading) {
       console.log(
         "Dispatching fetchMatchesByMosque because a mosque is selected and in mosque mode..."
       );
@@ -160,13 +198,7 @@ export default function MatchSearchPage() {
         })
       );
     }
-  }, [
-    dispatch,
-    searchMode,
-    selectedMosqueForSearch,
-    mosqueMatches.length,
-    loading,
-  ]);
+  }, [dispatch, searchMode, selectedMosqueForSearch, loading]);
 
   // Calculate distance radius in meters based on activeFilters.distance
   const distanceRadiusMeters = useMemo(() => {
@@ -299,23 +331,13 @@ export default function MatchSearchPage() {
       // If no mosques left, switch back to professional mode
       if (updatedMosques.length === 0) {
         dispatch(setSearchMode("professional"));
-        // Clear mosque matches and load professional matches
+        // Clear mosque matches - the useEffect will handle fetching professional matches
         dispatch(clearMatches());
-        dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
       } else {
-        // Still have mosques selected, refetch matches for remaining mosques
-        // Clear current matches first
+        // Still have mosques selected, clear current matches
+        // Clear the fetched mosques ref so useEffect can handle remaining mosques
+        fetchedMosquesRef.current.clear();
         dispatch(clearMatches());
-
-        // Fetch matches for each remaining mosque
-        updatedMosques.forEach((mosque) => {
-          dispatch(
-            fetchMatchesByMosque({
-              mosqueId: mosque.id,
-              mosqueName: mosque.name,
-            })
-          );
-        });
       }
     }
     // Special handling for single selectedMosque (keeping your existing logic)
@@ -324,9 +346,8 @@ export default function MatchSearchPage() {
       dispatch(updateFilters({ category: "selectedMosque", value: null }));
       dispatch(setSearchMode("professional"));
 
-      // Clear mosque matches and fetch professional matches
+      // Clear mosque matches - the useEffect will handle fetching professional matches
       dispatch(clearMatches());
-      dispatch(fetchMatches({ filters: activeFilters, center: mapCenter }));
     }
     // Handle other filter categories normally
     else {
@@ -416,31 +437,57 @@ export default function MatchSearchPage() {
     }
   }, [searchMode, dispatch, activeFilters.selectedMosques.length]);
 
+  // Use a ref to track which mosques we've already fetched for
+  const fetchedMosquesRef = useRef(new Set());
+
+  // Use a ref to track if we're currently fetching professional matches
+  const isFetchingProfessionalRef = useRef(false);
+
+  // Clear fetched mosques when search mode changes
+  useEffect(() => {
+    fetchedMosquesRef.current.clear();
+  }, [searchMode]);
+
+  // Create a stable string of mosque IDs for dependency comparison
+  const mosqueIdsString = useMemo(() => {
+    return activeFilters.selectedMosques
+      .map((mosque) => mosque.id)
+      .sort()
+      .join(",");
+  }, [activeFilters.selectedMosques]);
+
   useEffect(() => {
     // Fetch matches for all selected mosques in mosque mode
     if (
       searchMode === "mosque" &&
       activeFilters.selectedMosques.length > 0 &&
-      mosqueMatches.length === 0 &&
       !loading
     ) {
-      console.log("Fetching matches for selected mosques...");
-      activeFilters.selectedMosques.forEach((mosque) => {
-        dispatch(
-          fetchMatchesByMosque({
-            mosqueId: mosque.id,
-            mosqueName: mosque.name,
-          })
-        );
-      });
+      // Get mosque IDs that we haven't fetched yet
+      const mosqueIds = activeFilters.selectedMosques.map(
+        (mosque) => mosque.id
+      );
+      const newMosqueIds = mosqueIds.filter(
+        (id) => !fetchedMosquesRef.current.has(id)
+      );
+
+      if (newMosqueIds.length > 0) {
+        console.log("Fetching matches for selected mosques...");
+        activeFilters.selectedMosques.forEach((mosque) => {
+          if (newMosqueIds.includes(mosque.id)) {
+            dispatch(
+              fetchMatchesByMosque({
+                mosqueId: mosque.id,
+                mosqueName: mosque.name,
+              })
+            );
+            // Mark this mosque as fetched
+            fetchedMosquesRef.current.add(mosque.id);
+          }
+        });
+      }
     }
-  }, [
-    dispatch,
-    searchMode,
-    activeFilters.selectedMosques,
-    mosqueMatches.length,
-    loading,
-  ]);
+  }, [dispatch, searchMode, mosqueIdsString, loading]);
   const clearMosqueSearch = useCallback(() => {
     // When clearing a specific mosque search, we set selectedMosque back to null
     dispatch(updateFilters({ category: "selectedMosque", value: null }));

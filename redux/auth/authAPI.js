@@ -33,12 +33,20 @@ export const authAPI = createApi({
       },
     }),
     signup: builder.mutation({
-      query: ({ url, body }) => ({
-        url,
-        method: "POST",
-        body,
-        formData: true,
-      }),
+      query: ({ url, body, headers }) => {
+        // Check if body is FormData
+        const isFormData = body instanceof FormData;
+
+        return {
+          url,
+          method: "POST",
+          body,
+          // Use provided headers or set default based on body type
+          headers:
+            headers ||
+            (isFormData ? {} : { "Content-Type": "application/json" }),
+        };
+      },
     }),
     logout: builder.mutation({
       query: () => ({

@@ -51,6 +51,9 @@ const CIRCLE_OPTIONS = {
 
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // London as fallback
 
+// Static libraries array to prevent infinite re-renders
+const GOOGLE_MAPS_LIBRARIES = ["geometry"];
+
 export default function OptimizedMosqueMap({
   filteredMosques,
   mapCenter,
@@ -674,7 +677,7 @@ export default function OptimizedMosqueMap({
       <div style={{ width: "100%", height: "100%" }}>
         <LoadScript
           googleMapsApiKey={GOOGLE_API}
-          libraries={["geometry"]} // geometry library is needed for computeDistanceBetween
+          libraries={GOOGLE_MAPS_LIBRARIES}
           loadingElement={
             <div className="h-full w-full flex items-center justify-center bg-gray-100">
               <div className="text-blue-600 font-semibold flex items-center">

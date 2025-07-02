@@ -24,6 +24,9 @@ import { createPortal } from "react-dom";
 import { allMosquesInLondon } from "@/shared/allMosquesInLondon";
 import { GOOGLE_API } from "@/shared/constants/backendLink";
 
+// Static libraries array to prevent infinite re-renders
+const GOOGLE_MAPS_LIBRARIES = ["geometry"];
+
 // Constants
 const DEG2RAD = Math.PI / 180;
 const MILES_TO_METERS = 1609.34;
@@ -125,7 +128,7 @@ const MapContainer = ({
   // Use the useLoadScript hook instead of LoadScript component
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_API || "",
-    libraries: ["geometry"],
+    libraries: GOOGLE_MAPS_LIBRARIES,
     // Prevent script reloading on component remount
     preventGoogleFontsLoading: true,
   });

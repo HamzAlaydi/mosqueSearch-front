@@ -111,32 +111,145 @@ export const submitRegistration = createAsyncThunk(
         },
       }));
 
-      const payloadToSend = {
-        ...finalData,
-        wali: waliData, // Nest wali data
-        attachedMosques: formattedMosques,
-      };
+      // Check if we have a profile picture
+      const hasProfilePicture = finalData.profilePicture instanceof File;
 
-      // Remove unnecessary fields
-      delete payloadToSend.waliName;
-      delete payloadToSend.waliPhone;
-      delete payloadToSend.waliEmail;
-      delete payloadToSend.profilePicturePreview;
+      if (hasProfilePicture) {
+        // Use FormData for file upload
+        const formData = new FormData();
 
-      const response = await dispatch(
-        authAPI.endpoints.signup.initiate({
-          url: `${rootRoute}/auth/register`,
-          body: payloadToSend,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-      ).unwrap();
+        // Add all text fields to FormData
+        Object.keys(finalData).forEach((key) => {
+          if (key === "profilePicture" && finalData[key] instanceof File) {
+            // Handle file upload
+            console.log("Adding profile picture to FormData:", finalData[key]);
+            formData.append("profilePicture", finalData[key]);
+          } else if (key === "attachedMosques") {
+            // Handle array data
+            formData.append(
+              "attachedMosques",
+              JSON.stringify(formattedMosques)
+            );
+          } else if (
+            key !== "profilePicturePreview" &&
+            key !== "waliName" &&
+            key !== "waliPhone" &&
+            key !== "waliEmail"
+          ) {
+            // Handle all other fields
+            if (typeof finalData[key] === "object") {
+              formData.append(key, JSON.stringify(finalData[key]));
+            } else {
+              // Special handling for specific fields
+              if (key === "terms") {
+                // Terms must be boolean for backend validation
+                formData.append(
+                  key,
+                  finalData[key] === true || finalData[key] === "true"
+                );
+              } else if (typeof finalData[key] === "boolean") {
+                // Other boolean values as strings
+                formData.append(key, finalData[key].toString());
+              } else {
+                formData.append(key, finalData[key]);
+              }
+            }
+          }
+        });
 
-      return { message: response?.message || "Signup successful" };
+        // Add wali data as nested object structure (as backend expects)
+        if (finalData.waliName || finalData.waliPhone || finalData.waliEmail) {
+          const waliObject = {
+            name: finalData.waliName || "",
+            phone: finalData.waliPhone || "",
+            email: finalData.waliEmail || "",
+          };
+          formData.append("wali", JSON.stringify(waliObject));
+        }
+
+        // Debug: Log FormData contents
+        console.log("FormData contents:");
+        for (let [key, value] of formData.entries()) {
+          console.log(key, value);
+        }
+
+        // Log the final data structure being sent
+        console.log("Final data structure:", {
+          firstName: finalData.firstName,
+          lastName: finalData.lastName,
+          email: finalData.email,
+          password: finalData.password,
+          gender: finalData.gender,
+          role: finalData.role,
+          terms: finalData.terms,
+          wali: finalData.waliName
+            ? {
+                name: finalData.waliName,
+                phone: finalData.waliPhone,
+                email: finalData.waliEmail,
+              }
+            : null,
+        });
+
+        console.log("Sending signup request with FormData...");
+        const response = await dispatch(
+          authAPI.endpoints.signup.initiate({
+            url: `${rootRoute}/auth/register`,
+            body: formData,
+          })
+        ).unwrap();
+
+        console.log("Signup response:", response);
+        return { message: response?.message || "Signup successful" };
+      } else {
+        // Use JSON for non-file uploads
+        const payloadToSend = {
+          ...finalData,
+          attachedMosques: formattedMosques,
+        };
+
+        // Add wali data as nested object structure (as backend expects)
+        if (finalData.waliName || finalData.waliPhone || finalData.waliEmail) {
+          payloadToSend.wali = {
+            name: finalData.waliName || "",
+            phone: finalData.waliPhone || "",
+            email: finalData.waliEmail || "",
+          };
+        }
+
+        // Remove unnecessary fields
+        delete payloadToSend.waliName;
+        delete payloadToSend.waliPhone;
+        delete payloadToSend.waliEmail;
+        delete payloadToSend.profilePicturePreview;
+
+        console.log("Sending signup request with JSON...");
+        const response = await dispatch(
+          authAPI.endpoints.signup.initiate({
+            url: `${rootRoute}/auth/register`,
+            body: payloadToSend,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+        ).unwrap();
+
+        console.log("Signup response:", response);
+        return { message: response?.message || "Signup successful" };
+      }
     } catch (error) {
+      console.error("Signup error details:", {
+        error: error,
+        status: error?.status,
+        data: error?.data,
+        message: error?.message,
+      });
       return {
-        error: error?.data?.errors || error?.data?.message || "Signup failed",
+        error:
+          error?.data?.errors ||
+          error?.data?.message ||
+          error?.message ||
+          "Signup failed",
       };
     }
   }
