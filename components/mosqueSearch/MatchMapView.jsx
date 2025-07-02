@@ -102,82 +102,72 @@ export default function OptimizedMosqueMap({
     return distanceMiles * 1609.34; // Convert miles to meters
   }, [activeFilters?.distance]);
 
-  // Create a set of attached mosque IDs for quick lookup
+  // Create a set of attached mosque IDs for quick lookup (normalize to string)
   const attachedMosqueIds = useMemo(() => {
-    return new Set(
-      currentUser?.attachedMosques?.map((m) => m.id || m._id).filter(Boolean) ||
-        []
-    );
+    const ids = (currentUser?.attachedMosques || [])
+      .map((m) => String(m.id || m._id || m.externalId))
+      .filter(Boolean);
+    console.log("Current user:", currentUser);
+    console.log("Attached mosque IDs:", ids);
+    return new Set(ids);
   }, [currentUser?.attachedMosques]);
 
-  // Process mosque data for display
+  // Process mosque data for display (normalize IDs to string)
   const processedMosques = useMemo(() => {
     try {
-      // Pick the source data based on current filter
       let sourceMosques = showAttachedMosques
         ? currentUser?.attachedMosques || []
-        : allMosques; // Default to allMosques if not showing attached
-
-      // Apply standard filtering if not showing attached mosques and filteredMosques is available
+        : allMosques;
       if (!showAttachedMosques && filteredMosques?.length > 0) {
         sourceMosques = filteredMosques;
       } else if (!showAttachedMosques && !filteredMosques?.length) {
-        // If not showing attached and no filtered mosques, use all mosques
         sourceMosques = allMosques;
       }
-
-      // Process each mosque to ensure it has the required properties
-      return (
-        sourceMosques
-          .map((mosque) => {
-            // Handle both {lat, lng} and GeoJSON formats
-            let lat = 0;
-            let lng = 0;
-
-            if (mosque.location) {
-              if (
-                typeof mosque.location.lat === "number" &&
-                typeof mosque.location.lng === "number"
-              ) {
-                lat = mosque.location.lat;
-                lng = mosque.location.lng;
-              } else if (
-                mosque.location.type === "Point" &&
-                Array.isArray(mosque.location.coordinates) &&
-                mosque.location.coordinates.length >= 2
-              ) {
-                lng = mosque.location.coordinates[0];
-                lat = mosque.location.coordinates[1];
-              }
-            }
-
-            return {
-              ...mosque,
-              // Ensure a unique ID for map keys and lookups
-              id:
-                mosque._id ||
-                mosque.id ||
-                Math.random().toString(36).substr(2, 9),
-              location: { lat, lng },
-              hasFemaleArea:
-                mosque.facilities?.includes("Female Prayer Area") ||
-                mosque.femaleArea || // Assuming 'femaleArea' might be a boolean flag
-                false,
-              isAttached:
-                attachedMosqueIds.has(mosque._id) ||
-                attachedMosqueIds.has(mosque.id),
-            };
-          })
-          // Filter out mosques with invalid or missing location data
-          .filter(
-            (mosque) =>
-              mosque.location &&
+      return sourceMosques
+        .map((mosque) => {
+          let lat = 0;
+          let lng = 0;
+          if (mosque.location) {
+            if (
               typeof mosque.location.lat === "number" &&
-              typeof mosque.location.lng === "number" &&
-              !isNaN(mosque.location.lat) && // Ensure coordinates are not NaN
-              !isNaN(mosque.location.lng)
-          )
-      );
+              typeof mosque.location.lng === "number"
+            ) {
+              lat = mosque.location.lat;
+              lng = mosque.location.lng;
+            } else if (
+              mosque.location.type === "Point" &&
+              Array.isArray(mosque.location.coordinates) &&
+              mosque.location.coordinates.length >= 2
+            ) {
+              lng = mosque.location.coordinates[0];
+              lat = mosque.location.coordinates[1];
+            }
+          }
+          const normalizedId = String(
+            mosque._id ||
+              mosque.id ||
+              mosque.externalId ||
+              Math.random().toString(36).substr(2, 9)
+          );
+          return {
+            ...mosque,
+            id: normalizedId,
+            location: { lat, lng },
+            hasFemaleArea:
+              mosque.facilities?.includes("Female Prayer Area") ||
+              mosque.femaleArea ||
+              false,
+            isAttached: attachedMosqueIds.has(normalizedId),
+          };
+        })
+        .filter(
+          (mosque) =>
+            mosque.location &&
+            typeof mosque.location.lat === "number" &&
+            typeof mosque.location.lng === "number" &&
+            !isNaN(mosque.location.lat) &&
+            !isNaN(mosque.location.lng)
+        );
     } catch (error) {
       console.error("Error processing mosque data:", error);
       return [];
@@ -672,6 +662,11 @@ export default function OptimizedMosqueMap({
       zIndex: 100, // Keep clusters on top
     });
   };
+
+  // Add debug log for currentUser
+  useEffect(() => {
+    console.log("Current user in map:", currentUser);
+  }, [currentUser]);
 
   return (
     <div className="sticky top-20 h-[calc(100vh-100px)] shadow-inner relative flex-grow">

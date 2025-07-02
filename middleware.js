@@ -8,7 +8,11 @@ export function middleware(request) {
     "/auth/login",
     "/auth/signup",
     "/auth/imam",
-    "/",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/auth/verify-email",
+    "/auth/resend-verification",
+    "/auth/after-signup-handler",
     "/_next",
     "/favicon.ico",
     "/images",
@@ -20,6 +24,11 @@ export function middleware(request) {
       pathname === publicPath ||
       (publicPath !== "/" && pathname.startsWith(publicPath))
   );
+
+  // Allow access to homepage regardless of authentication
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
 
   if (isPublicPath) {
     return NextResponse.next();
@@ -39,5 +48,8 @@ export const config = {
     "/mosqueSearch/:path*",
     "/profile/:path*",
     "/superAdmin/:path*",
+    "/messages",
+    "/test-protected",
+    "/",
   ],
 };

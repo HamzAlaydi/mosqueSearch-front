@@ -393,6 +393,7 @@ export default function EditProfile() {
   const [profileImage, setProfileImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [activeTab, setActiveTab] = useState("personal");
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   // Options for select inputs
   const educationOptions = [
@@ -522,18 +523,22 @@ export default function EditProfile() {
 
   useEffect(() => {
     const userString = localStorage.getItem("user");
-    if (!currentUser && userString) {
+    if (userString) {
       try {
         const user = JSON.parse(userString);
         const userId = user.id; // or user._id based on your backend
-        if (userId) {
+        if (userId && !currentUser) {
+          setHasAttemptedFetch(true);
           dispatch(fetchMyProfile(userId));
         }
       } catch (e) {
         console.error("Failed to parse user from localStorage", e);
+        setHasAttemptedFetch(true);
       }
+    } else {
+      setHasAttemptedFetch(true);
     }
-  }, [dispatch, currentUser]);
+  }, [dispatch]);
   useEffect(() => {
     if (activeTab === "management" && currentUser) {
       // Fetch blocked users
@@ -771,7 +776,29 @@ export default function EditProfile() {
     }
   };
 
-  if (!currentUser) {
+  console.log("Own profile page state:", {
+    loading,
+    currentUser,
+    error,
+    hasAttemptedFetch,
+  });
+  console.log("Current user details:", {
+    hasCurrentUser: !!currentUser,
+    currentUserId: currentUser?._id,
+    currentUserProfilePicture: currentUser?.profilePicture,
+  });
+
+  // Loading state for profile data fetch
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Only show "not logged in" if we've attempted to fetch and there's no currentUser
+  if (hasAttemptedFetch && !currentUser) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
         <div className="text-center">
@@ -791,8 +818,8 @@ export default function EditProfile() {
     );
   }
 
-  // Loading state for profile data fetch
-  if (loading) {
+  // Don't render profile content if currentUser is null
+  if (!currentUser) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>

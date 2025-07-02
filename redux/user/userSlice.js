@@ -218,14 +218,14 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchUserProfile.fulfilled, (state, action) => {
-        state.loading = false; // Make sure this line exists
+        state.loading = false;
         state.currentUser = action.payload;
         state.error = null;
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
         state.loading = false; // Make sure this line exists
-        state.error = action.error; // Or action.payload if you return errors in payload
-        state.currentUser = null; // Clear user if profile fails
+        state.error = action.payload; // Use payload instead of error
+        state.viewingUser = null; // Clear viewingUser if profile fails
       })
       .addCase(fetchMyProfile.pending, (state) => {
         state.loading = true; // Make sure this line exists
@@ -238,7 +238,7 @@ const userSlice = createSlice({
       })
       .addCase(fetchMyProfile.rejected, (state, action) => {
         state.loading = false; // Make sure this line exists
-        state.error = action.error; // Or action.payload if you return errors in payload
+        state.error = action.payload; // Use payload instead of error
         state.currentUser = null; // Clear user if profile fails
       })
 

@@ -155,12 +155,13 @@ export default function UserProfile() {
   const params = useParams();
   const userId = params?.id;
 
-  const { currentUser, loading, error } = useSelector((state) => ({
+  const { currentUser, viewingUser, loading, error } = useSelector((state) => ({
     currentUser: state.user.currentUser,
+    viewingUser: state.user.viewingUser,
     loading: state.user.loading,
     error: state.user.error,
   }));
-  console.log({ loading });
+  console.log({ loading, error, currentUser, viewingUser, userId });
 
   const { userInterests, loading: interestsLoading } = useSelector(
     (state) => state.matches
@@ -168,6 +169,19 @@ export default function UserProfile() {
   const [activeTab, setActiveTab] = useState("about");
   const [interestLoading, setInterestLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+
+  // Determine if we're viewing our own profile or someone else's
+  const isOwnProfile = currentUser?._id === userId;
+  const profileUser = isOwnProfile ? currentUser : viewingUser;
+  console.log({ isOwnProfile, profileUser, currentUser, viewingUser, userId });
+  console.log({ loading, interestsLoading, error });
+  console.log("Profile user details:", {
+    hasProfileUser: !!profileUser,
+    profileUserId: profileUser?._id,
+    profileUserBirthDate: profileUser?.birthDate,
+  });
+
   const getLoggedInUserId = () => {
     try {
       const userData = JSON.parse(localStorage.getItem("user"));
@@ -178,50 +192,51 @@ export default function UserProfile() {
     }
   };
 
-  const isPhotoApproved = (currentUser) => {
+  const isPhotoApproved = (user) => {
     const loggedInUserId = getLoggedInUserId();
-    console.log({ currentUser });
+    console.log({ user });
     console.log({ loggedInUserId });
 
-    return currentUser?.approvedPhotosFor?.includes(loggedInUserId);
+    return user?.approvedPhotosFor?.includes(loggedInUserId);
   };
 
-  const isWaliApproved = (currentUser) => {
+  const isWaliApproved = (user) => {
     const loggedInUserId = getLoggedInUserId();
-    return currentUser?.approvedWaliFor?.includes(loggedInUserId);
+    return user?.approvedWaliFor?.includes(loggedInUserId);
   };
 
   // Fetch profile data and user interests
   useEffect(() => {
     if (userId) {
+      setHasAttemptedFetch(true);
       dispatch(fetchUserProfile(userId));
       dispatch(fetchUserInterests());
     }
     return () => dispatch(clearViewingUser());
   }, [dispatch, userId]);
 
-  // Check interest status whenever userInterests or currentUser changes
+  // Check interest status whenever userInterests or profileUser changes
   useEffect(() => {
-    if (currentUser?._id && userInterests) {
+    if (profileUser?._id && userInterests) {
       const interested = userInterests.some(
-        (user) => user._id === currentUser._id
+        (user) => user._id === profileUser._id
       );
       setIsInterested(interested);
     } else {
       setIsInterested(false);
     }
-  }, [userInterests, currentUser]);
+  }, [userInterests, profileUser]);
 
   // Flag hooks
-  const citizenshipFlag = currentUser?.citizenship
-    ? countryFlags[currentUser.citizenship.toUpperCase()]
+  const citizenshipFlag = profileUser?.citizenship
+    ? countryFlags[profileUser.citizenship.toUpperCase()]
     : null;
 
-  const originCountryFlag = currentUser?.originCountry
-    ? countryFlags[currentUser.originCountry.toUpperCase()]
+  const originCountryFlag = profileUser?.originCountry
+    ? countryFlags[profileUser.originCountry.toUpperCase()]
     : null;
   const handleInterestToggle = async () => {
-    if (!currentUser?._id || interestLoading) return;
+    if (!profileUser?._id || interestLoading) return;
 
     const previousState = isInterested;
     setIsInterested(!previousState); // Optimistic update
@@ -229,10 +244,10 @@ export default function UserProfile() {
 
     try {
       if (previousState) {
-        await dispatch(removeInterest(currentUser._id)).unwrap();
+        await dispatch(removeInterest(profileUser._id)).unwrap();
         toast.success("Removed from your interests");
       } else {
-        await dispatch(addInterest(currentUser._id)).unwrap();
+        await dispatch(addInterest(profileUser._id)).unwrap();
         toast.success("Added to your interests");
       }
       // Refresh interests list after successful operation
@@ -248,8 +263,8 @@ export default function UserProfile() {
   // Add these handler functions after the existing handlers
   const handleRequestPhoto = async () => {
     try {
-      await dispatch(requestPhotoAccess(currentUser._id)).unwrap();
-      toast.success(`Photo request sent to ${currentUser.firstName || "User"}`);
+      await dispatch(requestPhotoAccess(profileUser._id)).unwrap();
+      toast.success(`Photo request sent to ${profileUser.firstName || "User"}`);
     } catch (error) {
       console.error("Failed to request photo access:", error);
       toast.error("Failed to send photo request");
@@ -258,19 +273,20 @@ export default function UserProfile() {
 
   const handleRequestWali = async () => {
     try {
-      await dispatch(requestWaliAccess(currentUser._id)).unwrap();
-      toast.success(`Wali request sent to ${currentUser.firstName || "User"}`);
+      await dispatch(requestWaliAccess(profileUser._id)).unwrap();
+      toast.success(`Wali request sent to ${profileUser.firstName || "User"}`);
     } catch (error) {
       console.error("Failed to request wali access:", error);
       toast.error("Failed to send wali request");
     }
   };
   const handleSendMessage = () => {
-    if (currentUser?._id) {
-      router.push(`/messages/${currentUser._id}`);
+    if (profileUser?._id) {
+      router.push(`/messages/${profileUser._id}`);
     }
   };
 
+  // Show loading state first
   if (loading || interestsLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
@@ -279,7 +295,14 @@ export default function UserProfile() {
     );
   }
 
-  if (userId && !loading && (error || !currentUser?._id)) {
+  // Only show "not found" if we've attempted to fetch and we're not loading and we have an error or no profileUser
+  if (hasAttemptedFetch && !loading && userId && (error || !profileUser?._id)) {
+    console.log("Showing not found because:", {
+      error,
+      profileUser: profileUser?._id,
+      userId,
+      hasAttemptedFetch,
+    });
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 px-6">
         <div className="flex flex-col items-center justify-center max-w-lg mx-auto bg-white rounded-lg shadow-md border border-gray-200 p-8">
@@ -319,7 +342,16 @@ export default function UserProfile() {
     );
   }
 
-  const age = calculateAge(currentUser.birthDate);
+  // Don't render profile content if profileUser is null
+  if (!profileUser) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+      </div>
+    );
+  }
+
+  const age = calculateAge(profileUser.birthDate);
 
   return (
     <div className="bg-gray-100 min-h-screen pb-12">
@@ -344,26 +376,26 @@ export default function UserProfile() {
                   <div className="relative w-full h-full">
                     <Image
                       src={
-                        isPhotoApproved(currentUser)
-                          ? currentUser.profilePicture?.startsWith("http")
-                            ? currentUser.profilePicture
-                            : getAvatar(currentUser.gender)
-                          : currentUser.blurredProfilePicture ||
-                            getAvatar(currentUser.gender)
+                        isPhotoApproved(profileUser)
+                          ? profileUser.profilePicture?.startsWith("http")
+                            ? profileUser.profilePicture
+                            : getAvatar(profileUser.gender)
+                          : profileUser.blurredProfilePicture ||
+                            getAvatar(profileUser.gender)
                       }
-                      alt={`${currentUser?.firstName || "User"}'s profile`}
+                      alt={`${profileUser?.firstName || "User"}'s profile`}
                       fill
                       className={`h-full w-full object-cover transition-all duration-300 ${
-                        !isPhotoApproved(currentUser)
+                        !isPhotoApproved(profileUser)
                           ? "filter blur-md brightness-75"
                           : ""
                       }`}
                       onError={(e) => {
-                        e.target.src = getAvatar(currentUser.gender);
+                        e.target.src = getAvatar(profileUser.gender);
                       }}
                     />
 
-                    {!isPhotoApproved(currentUser) && (
+                    {!isPhotoApproved(profileUser) && (
                       <>
                         {/* Visual blur overlay (non-interactive) */}
                         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30 rounded-full pointer-events-none z-10" />
@@ -404,19 +436,19 @@ export default function UserProfile() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between">
                   <div className="text-center md:text-left mb-6 md:mb-0">
                     <h1 className="text-3xl font-bold text-gray-900">
-                      {currentUser.firstName} {currentUser.lastName}
+                      {profileUser.firstName} {profileUser.lastName}
                       {age !== "Not specified" && `, ${age}`}
                     </h1>
 
-                    {currentUser.currentLocation && (
+                    {profileUser.currentLocation && (
                       <p className="text-gray-600 mt-2 flex items-center justify-center md:justify-start">
                         <MapPin size={18} className="mr-2 text-gray-400" />
-                        {currentUser.currentLocation}
+                        {profileUser.currentLocation}
                       </p>
                     )}
-                    {currentUser.tagLine && (
+                    {profileUser.tagLine && (
                       <p className="text-primary-dark font-medium mt-3 text-lg italic">
-                        "{currentUser.tagLine}"
+                        "{profileUser.tagLine}"
                       </p>
                     )}
                   </div>
@@ -451,7 +483,7 @@ export default function UserProfile() {
                     </button>
                     <button
                       onClick={handleSendMessage}
-                      disabled={!currentUser?._id}
+                      disabled={!profileUser?._id}
                       className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <MessageCircle size={20} />
@@ -464,32 +496,32 @@ export default function UserProfile() {
 
             {/* Quick Info Tags */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8 border-t border-gray-100 pt-6">
-              {currentUser.religiousness && (
+              {profileUser.religiousness && (
                 <ProfileTag
                   icon={<Book size={24} />}
                   label="Religion"
-                  value={formatValue(currentUser.religiousness)}
+                  value={formatValue(profileUser.religiousness)}
                 />
               )}
-              {currentUser.maritalStatus && (
+              {profileUser.maritalStatus && (
                 <ProfileTag
                   icon={<Heart size={24} />}
                   label="Status"
-                  value={formatValue(currentUser.maritalStatus)}
+                  value={formatValue(profileUser.maritalStatus)}
                 />
               )}
-              {currentUser.educationLevel && (
+              {profileUser.educationLevel && (
                 <ProfileTag
                   icon={<Book size={24} />}
                   label="Education"
-                  value={formatValue(currentUser.educationLevel)}
+                  value={formatValue(profileUser.educationLevel)}
                 />
               )}
-              {currentUser.profession && (
+              {profileUser.profession && (
                 <ProfileTag
                   icon={<Briefcase size={24} />}
                   label="Profession"
-                  value={formatValue(currentUser.profession)}
+                  value={formatValue(profileUser.profession)}
                 />
               )}
             </div>
@@ -524,14 +556,14 @@ export default function UserProfile() {
                 {/* About Me */}
                 <ProfileSection title="About Me" icon={<User size={20} />}>
                   <div className="text-gray-700 leading-relaxed">
-                    {currentUser.about || "No information provided yet."}
+                    {profileUser.about || "No information provided yet."}
                   </div>
                 </ProfileSection>
 
                 {/* Looking For */}
                 <ProfileSection title="Looking For" icon={<Heart size={20} />}>
                   <div className="text-gray-700 leading-relaxed">
-                    {currentUser.lookingFor || "No preferences specified yet."}
+                    {profileUser.lookingFor || "No preferences specified yet."}
                   </div>
                 </ProfileSection>
 
@@ -550,79 +582,79 @@ export default function UserProfile() {
                     <ProfileTag
                       icon={<MapPin size={18} />}
                       label="Current Location"
-                      value={currentUser.currentLocation}
+                      value={profileUser.currentLocation}
                     />
                     <ProfileTag
                       icon={<Flag size={18} />}
                       label="Citizenship"
-                      value={formatValue(currentUser.citizenship)}
+                      value={formatValue(profileUser.citizenship)}
                       flagUrl={citizenshipFlag}
                     />
                     <ProfileTag
                       icon={<Flag size={18} />}
                       label="Origin Country"
-                      value={formatValue(currentUser.originCountry)}
+                      value={formatValue(profileUser.originCountry)}
                       flagUrl={originCountryFlag}
                     />
                     <ProfileTag
                       icon={<Book size={18} />}
                       label="Languages"
                       value={[
-                        currentUser.firstLanguage,
-                        currentUser.secondLanguage,
-                        ...(currentUser.languages || []),
+                        profileUser.firstLanguage,
+                        profileUser.secondLanguage,
+                        ...(profileUser.languages || []),
                       ]
                         .filter(Boolean)
                         .map(formatValue)
                         .join(", ")}
                     />
-                    {currentUser.maritalStatus && (
+                    {profileUser.maritalStatus && (
                       <ProfileTag
                         icon={<Heart size={18} />}
                         label="Marital Status"
-                        value={formatValue(currentUser.maritalStatus)}
+                        value={formatValue(profileUser.maritalStatus)}
                       />
                     )}
-                    {currentUser.hasChildren !== undefined && (
+                    {profileUser.hasChildren !== undefined && (
                       <ProfileTag
                         icon={<UserCheck size={18} />}
                         label="Has Children"
-                        value={currentUser.hasChildren ? "Yes" : "No"}
+                        value={profileUser.hasChildren ? "Yes" : "No"}
                       />
                     )}
-                    {currentUser.childrenDesire && (
+                    {profileUser.childrenDesire && (
                       <ProfileTag
                         icon={<Heart size={18} />}
                         label="Children Desire"
-                        value={formatValue(currentUser.childrenDesire)}
+                        value={formatValue(profileUser.childrenDesire)}
                       />
                     )}
-                    {currentUser.livingArrangement && (
+                    {profileUser.livingArrangement && (
                       <ProfileTag
                         icon={<User size={18} />}
                         label="Living Arrangement"
-                        value={formatValue(currentUser.livingArrangement)}
+                        value={formatValue(profileUser.livingArrangement)}
                       />
                     )}
-                    {currentUser.marriageWithin && (
+                    {profileUser.marriageWithin && (
                       <ProfileTag
                         icon={<Calendar size={18} />}
                         label="Marriage Timeline"
-                        value={formatValue(currentUser.marriageWithin)}
+                        value={formatValue(profileUser.marriageWithin)}
                       />
                     )}
-                    {currentUser.income && (
+                    {profileUser.income && (
                       <ProfileTag
                         icon={<Briefcase size={18} />}
                         label="Income Range"
-                        value={formatValue(currentUser.income)}
+                        value={formatValue(profileUser.income)}
                       />
                     )}
-                    {currentUser.willingToRelocate !== undefined && (
+                    {profileUser.willingToRelocate !== undefined && (
                       <ProfileTag
                         icon={<Info size={18} />}
                         label="Willing to Relocate"
-                        value={currentUser.willingToRelocate ? "Yes" : "No"}
+                        value={profileUser.willingToRelocate ? "Yes" : "No"}
                       />
                     )}
                   </div>
@@ -635,76 +667,76 @@ export default function UserProfile() {
                   initiallyExpanded={false}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentUser.religiousness && (
+                    {profileUser.religiousness && (
                       <ProfileTag
                         icon={<Book size={18} />}
                         label="Religiousness"
-                        value={formatValue(currentUser.religiousness)}
+                        value={formatValue(profileUser.religiousness)}
                       />
                     )}
-                    {currentUser.sector && (
+                    {profileUser.sector && (
                       <ProfileTag
                         icon={<Book size={18} />}
                         label="Islamic Sector"
-                        value={formatValue(currentUser.sector)}
+                        value={formatValue(profileUser.sector)}
                       />
                     )}
-                    {currentUser.prayerFrequency && (
+                    {profileUser.prayerFrequency && (
                       <ProfileTag
                         icon={<Book size={18} />}
                         label="Prayer Frequency"
-                        value={formatValue(currentUser.prayerFrequency)}
+                        value={formatValue(profileUser.prayerFrequency)}
                       />
                     )}
-                    {currentUser.quranReading && (
+                    {profileUser.quranReading && (
                       <ProfileTag
                         icon={<Book size={18} />}
                         label="Quran Reading"
-                        value={formatValue(currentUser.quranReading)}
+                        value={formatValue(profileUser.quranReading)}
                       />
                     )}
-                    {currentUser.keepsHalal !== undefined && (
+                    {profileUser.keepsHalal !== undefined && (
                       <ProfileTag
                         icon={<Info size={18} />}
                         label="Keeps Halal"
-                        value={currentUser.keepsHalal ? "Yes" : "No"}
+                        value={profileUser.keepsHalal ? "Yes" : "No"}
                       />
                     )}
-                    {currentUser.isRevert !== undefined && (
+                    {profileUser.isRevert !== undefined && (
                       <ProfileTag
                         icon={<User size={18} />}
                         label="Revert"
-                        value={currentUser.isRevert ? "Yes" : "No"}
+                        value={profileUser.isRevert ? "Yes" : "No"}
                       />
                     )}
-                    {currentUser.wearsHijab !== undefined && (
+                    {profileUser.wearsHijab !== undefined && (
                       <ProfileTag
                         icon={<Info size={18} />}
                         label="Wears Hijab"
-                        value={currentUser.wearsHijab ? "Yes" : "No"}
+                        value={profileUser.wearsHijab ? "Yes" : "No"}
                       />
                     )}
-                    {currentUser.smokes !== undefined && (
+                    {profileUser.smokes !== undefined && (
                       <ProfileTag
                         icon={<Info size={18} />}
                         label="Smokes"
-                        value={currentUser.smokes ? "Yes" : "No"}
+                        value={profileUser.smokes ? "Yes" : "No"}
                       />
                     )}
-                    {currentUser.drinks !== undefined && (
+                    {profileUser.drinks !== undefined && (
                       <ProfileTag
                         icon={<Info size={18} />}
                         label="Drinks Alcohol"
-                        value={currentUser.drinks ? "Yes" : "No"}
+                        value={profileUser.drinks ? "Yes" : "No"}
                       />
                     )}
-                    {currentUser.phoneUsage && (
+                    {profileUser.phoneUsage && (
                       <ProfileTag
                         icon={<Phone size={18} />}
                         label="Phone Usage"
                         value={
-                          currentUser.phoneUsage
-                            ? `${formatValue(currentUser.phoneUsage)}/day`
+                          profileUser.phoneUsage
+                            ? `${formatValue(profileUser.phoneUsage)}/day`
                             : "Not specified"
                         }
                       />
@@ -717,13 +749,13 @@ export default function UserProfile() {
             {activeTab === "mosques" && (
               <ProfileSection
                 title={`Connected Mosques (${
-                  currentUser.attachedMosques?.length || 0
+                  profileUser.attachedMosques?.length || 0
                 })`}
                 icon={<Building size={20} />}
               >
-                {currentUser.attachedMosques?.length > 0 ? (
+                {profileUser.attachedMosques?.length > 0 ? (
                   <div className="space-y-4">
-                    {currentUser.attachedMosques.map((mosque) => (
+                    {profileUser.attachedMosques.map((mosque) => (
                       <div
                         key={mosque._id}
                         className="border border-gray-200 rounded-lg p-4 hover:border-primary transition duration-200 flex items-center justify-between"
@@ -811,20 +843,20 @@ export default function UserProfile() {
 
           {/* Right Column (Wali Contact) */}
           <div className="space-y-6">
-            {currentUser.wali && (
+            {profileUser.wali && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
                   <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
                     Wali Contact
-                    {!isWaliApproved(currentUser, "LOGGED_IN_USER_ID") && (
+                    {!isWaliApproved(profileUser) && (
                       <Lock size={16} className="text-gray-400" />
                     )}
                   </h3>
                 </div>
                 <div className="p-6">
-                  {isWaliApproved(currentUser, "LOGGED_IN_USER_ID") ? (
+                  {isWaliApproved(profileUser) ? (
                     <div className="space-y-4">
-                      {currentUser.wali.name && (
+                      {profileUser.wali.name && (
                         <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <UserCheck size={20} className="text-primary mt-1" />
                           <div>
@@ -832,12 +864,12 @@ export default function UserProfile() {
                               Name
                             </div>
                             <div className="font-medium text-gray-800">
-                              {currentUser.wali.name}
+                              {profileUser.wali.name}
                             </div>
                           </div>
                         </div>
                       )}
-                      {currentUser.wali.email && (
+                      {profileUser.wali.email && (
                         <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <Mail size={20} className="text-primary mt-1" />
                           <div>
@@ -845,12 +877,12 @@ export default function UserProfile() {
                               Email
                             </div>
                             <div className="font-medium text-gray-800">
-                              {currentUser.wali.email}
+                              {profileUser.wali.email}
                             </div>
                           </div>
                         </div>
                       )}
-                      {currentUser.wali.phone && (
+                      {profileUser.wali.phone && (
                         <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <Phone size={20} className="text-primary mt-1" />
                           <div>
@@ -858,7 +890,7 @@ export default function UserProfile() {
                               Phone
                             </div>
                             <div className="font-medium text-gray-800">
-                              {currentUser.wali.phone}
+                              {profileUser.wali.phone}
                             </div>
                           </div>
                         </div>

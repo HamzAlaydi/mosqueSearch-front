@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -114,6 +114,9 @@ export default function Header({
   const [isInterestsModalOpen, setIsInterestsModalOpen] = useState(false);
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const userMenuRef = useRef(null);
+  const locationDropdownRef = useRef(null);
+  const distanceInfoRef = useRef(null);
 
   // Get current user from Redux
   const { currentUser } = useSelector((state) => state.user);
@@ -123,6 +126,65 @@ export default function Header({
     }
     // No need to clean up as disconnectSocket will be called on logout
   }, [currentUser?._id]);
+
+  // Handle click outside to close user menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    // Only add event listener when menu is open
+    if (showUserMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    // Cleanup function
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showUserMenu]);
+
+  // Handle click outside to close location dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        locationDropdownRef.current &&
+        !locationDropdownRef.current.contains(event.target)
+      ) {
+        setLocationDropdownOpen(false);
+      }
+    };
+
+    if (locationDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [locationDropdownOpen]);
+
+  // Handle click outside to close distance info tooltip
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        distanceInfoRef.current &&
+        !distanceInfoRef.current.contains(event.target)
+      ) {
+        setShowDistanceInfo(false);
+      }
+    };
+
+    if (showDistanceInfo) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDistanceInfo]);
   // Simulate notification data - in a real app, these would come from the backend
   useEffect(() => {
     if (!currentUser?._id) return;
@@ -190,6 +252,11 @@ export default function Header({
   const handleLogout = () => {
     dispatch(logoutUser());
     router.push("/auth/login"); // redirect to login or home after logout
+  };
+
+  const toggleUserMenu = (e) => {
+    e.stopPropagation(); // Prevent the click from bubbling up
+    setShowUserMenu(!showUserMenu);
   };
 
   const handleNotificationClick = (notification) => {
@@ -276,7 +343,10 @@ export default function Header({
             onSubmit={handleSearchSubmit}
             className="flex items-center border border-gray-300 rounded-full shadow-sm hover:shadow-md transition duration-200 group max-w-xs w-full"
           >
-            <div className="flex-grow pl-4 pr-2 relative">
+            <div
+              className="flex-grow pl-4 pr-2 relative"
+              ref={locationDropdownRef}
+            >
               <div className="flex items-center gap-2">
                 <MapPin size={16} className="text-primary" />
                 <input
@@ -286,15 +356,15 @@ export default function Header({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setLocationDropdownOpen(true)}
-                  onBlur={() =>
-                    setTimeout(() => setLocationDropdownOpen(false), 200)
-                  }
                 />
               </div>
 
               {/* Location Dropdown */}
               {locationDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div
+                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="p-2">
                     <p className="text-xs text-gray-500 px-2 py-1">
                       Popular locations
@@ -322,21 +392,30 @@ export default function Header({
           </form>
 
           {/* Distance Range Filter */}
-          <div className="border border-gray-300 rounded-full px-3 py-2 flex items-center shadow-sm relative">
+          <div
+            className="border border-gray-300 rounded-full px-3 py-2 flex items-center shadow-sm relative"
+            ref={distanceInfoRef}
+          >
             <DistanceFilter
               value={activeFilters?.distance || 10}
               onChange={handleDistanceChange}
             />
             <button
               className="ml-2 text-gray-400 hover:text-gray-600"
-              onClick={() => setShowDistanceInfo(!showDistanceInfo)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDistanceInfo(!showDistanceInfo);
+              }}
             >
               <Info size={14} />
             </button>
 
             {/* Distance Info Tooltip */}
             {showDistanceInfo && (
-              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 w-48">
+              <div
+                className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 w-48"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <p className="text-xs text-gray-600">
                   Adjust the distance to see mosques within your preferred
                   radius. The map will show a circle representing this area.
@@ -403,10 +482,10 @@ export default function Header({
             Switch to Quran App
           </button>
 
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
               className="flex items-center gap-2 border border-gray-300 rounded-full p-2 hover:shadow-md transition"
-              onClick={() => setShowUserMenu(!showUserMenu)}
+              onClick={toggleUserMenu}
             >
               <Menu size={18} className="text-gray-600" />
               <div className="bg-gray-200 rounded-full p-1">
@@ -416,7 +495,10 @@ export default function Header({
 
             {/* User Menu Dropdown */}
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-40">
+              <div
+                className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-40"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="py-2">
                   <a
                     href="/profile"

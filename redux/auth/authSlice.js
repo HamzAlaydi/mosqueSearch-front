@@ -25,6 +25,8 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user)); // Store user data in localStorage
+        // Set the token cookie with proper attributes
+        document.cookie = `token=${token}; path=/; max-age=86400; samesite=strict`;
       }
     },
     logoutUser: (state) => {
@@ -35,8 +37,12 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        // Clear the token cookie
         document.cookie =
           "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+        // Also clear with secure and sameSite attributes if needed
+        document.cookie =
+          "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=strict";
       }
     },
     setUser: (state, action) => {
