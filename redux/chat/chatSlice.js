@@ -102,9 +102,7 @@ export const deleteMessage = createAsyncThunk(
 export const findOrCreateConversation = createAsyncThunk(
   "chat/findOrCreateConversation",
   async (userId, { getState, rejectWithValue }) => {
-    console.log("userId");
-    console.log(userId);
-    console.log("userId");
+    console.log("Finding or creating conversation for userId:", userId);
 
     try {
       const state = getState();
@@ -115,13 +113,41 @@ export const findOrCreateConversation = createAsyncThunk(
 
       if (existingChat) {
         // Chat already exists, return the existing chat ID
+        console.log("Found existing chat:", existingChat._id);
         return { chatId: existingChat._id, isNew: false };
       } else {
-        // Need to create a new conversation by sending a message or fetching chat
-        // For now, we'll just set the active chat and let the message sending create it
-        return { chatId: userId, isNew: true };
+        // For new chats, we need to fetch user information to display in the header
+        // We'll create a temporary chat entry with user info
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(`${rootRoute}/users/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const userData = response.data;
+          console.log("Fetched user data for new chat:", userData);
+
+          // Return the userId as chatId and include user data for immediate display
+          return {
+            chatId: userId,
+            isNew: true,
+            userData: {
+              _id: userData._id,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              profilePicture: userData.profilePicture,
+              gender: userData.gender,
+              approvedPhotosFor: userData.approvedPhotosFor || [],
+            },
+          };
+        } catch (userError) {
+          console.error("Failed to fetch user data:", userError);
+          // If we can't fetch user data, still return the chatId but without user data
+          return { chatId: userId, isNew: true };
+        }
       }
     } catch (error) {
+      console.error("findOrCreateConversation error:", error);
       return rejectWithValue("Failed to find or create conversation");
     }
   }
@@ -671,8 +697,28 @@ const chatSlice = createSlice({
       })
       .addCase(findOrCreateConversation.fulfilled, (state, action) => {
         state.loading.findingChat = false;
-        const { chatId } = action.payload;
+        const { chatId, isNew, userData } = action.payload;
         state.activeChat = chatId;
+
+        // If this is a new chat and we have user data, create a temporary chat entry
+        if (isNew && userData) {
+          // Create a temporary chat entry for immediate display
+          const tempChat = {
+            _id: chatId,
+            participants: [userData],
+            lastMessage: null,
+            unreadCount: 0,
+            isTemporary: true, // Flag to indicate this is a temporary chat
+          };
+
+          // Add to chat list if it doesn't exist
+          const existingChatIndex = state.chatList.findIndex(
+            (chat) => chat._id === chatId
+          );
+          if (existingChatIndex === -1) {
+            state.chatList.unshift(tempChat);
+          }
+        }
       })
       .addCase(findOrCreateConversation.rejected, (state, action) => {
         state.loading.findingChat = false;

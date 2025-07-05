@@ -4,11 +4,11 @@ import {
   useResendVerificationMutation,
 } from "@/redux/auth/authAPI";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import "@/components/auth/auth.css";
 
-const VerifyEmail = () => {
+const VerifyEmailContent = () => {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const email = searchParams.get("email");
@@ -98,6 +98,30 @@ const VerifyEmail = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const VerifyEmail = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="auth-container">
+          <div className="auth-card">
+            <div className="auth-header">
+              <h1>Email Verification</h1>
+            </div>
+            <div className="verification-message">
+              <div className="loading-icon">
+                <i className="fas fa-spinner fa-spin"></i>
+              </div>
+              <p>Loading...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 };
 

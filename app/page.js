@@ -115,7 +115,7 @@ export default function HomePage() {
     },
     {
       quote:
-        "MosqueMatch connected me with someone from my local community who I might never have met otherwise. We're now happily married, alhamdulillah.",
+        "MosqueMatch connected me with someone from my local community who I might never have met otherwise. We&apos;re now happily married, alhamdulillah.",
       author: "Ahmed K.",
       role: "Medical Professional",
     },
@@ -227,7 +227,7 @@ export default function HomePage() {
                 <i className="fas fa-handshake"></i>
               </div>
               <h3>Wali</h3>
-              <p>Talk to your partner's Wali to get his approval</p>
+              <p>Talk to your partner&apos;s Wali to get his approval</p>
             </div>
           </div>
         </div>
@@ -258,7 +258,7 @@ export default function HomePage() {
               <div className="testimonial-content">
                 <p className="testimonial-text">
                   Mosquematch, I discovered my soulmate, a beacon of light in a
-                  digital realm. Our hearts synchronized, and with Allah's
+                  digital realm. Our hearts synchronized, and with Allah&apos;s
                   blessings, we embarked on an eternal journey of love, faith,
                   and happiness.
                 </p>
@@ -270,8 +270,8 @@ export default function HomePage() {
               <div className="testimonial-content">
                 <p className="testimonial-text">
                   Discovered my missing puzzle piece. Our hearts recognized each
-                  other's essence, and in the journey of love and devotion, we
-                  found solace, joy, and a lifelong partnership. Mosquematch,
+                  other&apos;s essence, and in the journey of love and devotion,
+                  we found solace, joy, and a lifelong partnership. Mosquematch,
                   the divine matchmaker.
                 </p>
                 <p className="testimonial-author">- Ahmed</p>

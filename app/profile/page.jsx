@@ -257,10 +257,10 @@ const UserCard = ({
     <button
       onClick={() => onAction(user._id)}
       disabled={isLoading}
-      className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all flex-shrink-0 ${
+      className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors duration-200 flex-shrink-0 shadow-sm ${
         actionType === "block" || actionType === "revoke"
-          ? "bg-red-50 text-red-600 hover:bg-red-100 focus:ring-2 focus:ring-red-200"
-          : "bg-green-50 text-green-600 hover:bg-green-100 focus:ring-2 focus:ring-green-200"
+          ? "bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-300"
+          : "bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-300"
       } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none`}
     >
       {isLoading ? <Loader size={16} className="animate-spin" /> : actionIcon}
@@ -538,7 +538,7 @@ export default function EditProfile() {
     } else {
       setHasAttemptedFetch(true);
     }
-  }, [dispatch]);
+  }, [dispatch, currentUser]);
   useEffect(() => {
     if (activeTab === "management" && currentUser) {
       // Fetch blocked users
@@ -653,11 +653,33 @@ export default function EditProfile() {
   // Handle profile image change
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+    console.log("File selected:", file);
+
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select a valid image file");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error("Image size must be less than 5MB");
+        return;
+      }
+
+      console.log("File validation passed:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+
       setProfileImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result);
+        console.log("Preview image set");
       };
       reader.readAsDataURL(file);
     }
@@ -665,17 +687,44 @@ export default function EditProfile() {
 
   // Handle profile image upload
   const handleImageUpload = async () => {
-    if (!profileImage) return;
+    if (!profileImage) {
+      toast.error("Please select an image first");
+      return;
+    }
+
+    console.log("Starting profile picture upload:", {
+      fileName: profileImage.name,
+      fileSize: profileImage.size,
+      fileType: profileImage.type,
+    });
 
     const uploadFormData = new FormData();
     uploadFormData.append("profilePicture", profileImage);
 
     try {
-      await dispatch(updateProfilePicture(uploadFormData)).unwrap();
+      console.log("Dispatching updateProfilePicture action...");
+      const result = await dispatch(
+        updateProfilePicture(uploadFormData)
+      ).unwrap();
+
+      console.log("Profile picture upload successful:", result);
       setProfileImage(null);
       setPreviewImage(null); // Clear preview after successful upload
+
+      // Refresh the user profile to get the updated profile picture
+      const userString = localStorage.getItem("user");
+      if (userString) {
+        const user = JSON.parse(userString);
+        console.log("Refreshing user profile...");
+        dispatch(fetchMyProfile(user.id));
+      }
+
+      toast.success("Profile picture updated successfully!");
     } catch (err) {
       console.error("Failed to upload image:", err);
+      toast.error(
+        err.message || "Failed to upload profile picture. Please try again."
+      );
     }
   };
 
@@ -883,11 +932,11 @@ export default function EditProfile() {
 
                 {/* Image Upload Controls */}
                 {profileImage && (
-                  <div className="mt-3 flex flex-col items-center">
+                  <div className="mt-3 flex flex-col items-center gap-2">
                     <button
                       onClick={handleImageUpload}
                       disabled={pictureLoading}
-                      className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       {pictureLoading ? (
                         <Loader size={16} className="animate-spin" />
@@ -895,6 +944,16 @@ export default function EditProfile() {
                         <Save size={16} />
                       )}
                       Save Photo
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProfileImage(null);
+                        setPreviewImage(null);
+                      }}
+                      disabled={pictureLoading}
+                      className="text-gray-600 text-sm hover:text-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded-md hover:bg-gray-100"
+                    >
+                      Cancel
                     </button>
                   </div>
                 )}
@@ -913,7 +972,7 @@ export default function EditProfile() {
                     <button
                       onClick={handleUnblurRequest}
                       disabled={unblurRequest.loading}
-                      className="mt-3 text-primary text-sm font-medium hover:text-primary-dark transition w-full text-center flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-3 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors duration-200 w-full text-center flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 rounded-lg shadow-sm"
                     >
                       {unblurRequest.loading ? (
                         <Loader size={14} className="animate-spin" />
@@ -1438,7 +1497,7 @@ export default function EditProfile() {
               <button
                 type="submit"
                 disabled={loading || pictureLoading}
-                className="bg-primary text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-primary-dark transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto shadow-md"
               >
                 {loading ? (
                   <Loader size={24} className="animate-spin" />

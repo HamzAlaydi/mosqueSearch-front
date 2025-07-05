@@ -80,6 +80,7 @@ export default function OptimizedMosqueMap({
   const [feedbackMessage, setFeedbackMessage] = useState(null);
   const [showAttachedMosques, setShowAttachedMosques] = useState(false); // State to toggle showing only attached mosques
   const [searchedMosqueIds, setSearchedMosqueIds] = useState(new Set());
+  const [loadError, setLoadError] = useState(null);
   const mapRef = useRef(null);
 
   // Fetch user profile on component mount
@@ -591,6 +592,16 @@ export default function OptimizedMosqueMap({
     setIsLoaded(false);
   }, []);
 
+  // Script loading handlers
+  const onScriptLoad = useCallback(() => {
+    setLoadError(null);
+  }, []);
+
+  const onScriptError = useCallback((error) => {
+    console.error("Google Maps script loading error:", error);
+    setLoadError(error);
+  }, []);
+
   // Update map when data changes or filters are applied
   useEffect(() => {
     if (isLoaded && map) {
@@ -671,6 +682,30 @@ export default function OptimizedMosqueMap({
     console.log("Current user in map:", currentUser);
   }, [currentUser]);
 
+  // Show error state if script failed to load
+  if (loadError) {
+    return (
+      <div className="sticky top-20 h-[calc(100vh-100px)] shadow-inner relative flex-grow">
+        <div className="h-full w-full flex items-center justify-center bg-gray-100">
+          <div className="text-center p-6">
+            <div className="text-red-600 font-semibold mb-2">
+              Map Loading Error
+            </div>
+            <div className="text-gray-600 text-sm mb-4">
+              Failed to load Google Maps. Please refresh the page to try again.
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="sticky top-20 h-[calc(100vh-100px)] shadow-inner relative flex-grow">
       {/* Map container */}
@@ -678,6 +713,8 @@ export default function OptimizedMosqueMap({
         <LoadScript
           googleMapsApiKey={GOOGLE_API}
           libraries={GOOGLE_MAPS_LIBRARIES}
+          onLoad={onScriptLoad}
+          onError={onScriptError}
           loadingElement={
             <div className="h-full w-full flex items-center justify-center bg-gray-100">
               <div className="text-blue-600 font-semibold flex items-center">

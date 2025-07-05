@@ -164,12 +164,25 @@ export const fetchMatchesByMosque = createAsyncThunk(
   async ({ mosqueId, mosqueName }, { getState, rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${rootRoute}/matches/mosque/${mosqueId}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const state = getState();
+      const activeFilters = state.matches.activeFilters;
+
+      // Build query string from all filter parameters (same as professional mode)
+      const queryString = buildFilterQueryString({
+        ...activeFilters,
+        page: 1,
+        limit: 10,
       });
+
+      const response = await fetch(
+        `${rootRoute}/matches/mosque/${mosqueId}?${queryString}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch matches by mosque");

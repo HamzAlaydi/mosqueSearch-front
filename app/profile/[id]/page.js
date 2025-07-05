@@ -39,6 +39,9 @@ import {
   requestPhotoAccess,
   getCurrentUser,
   requestWaliAccess,
+  findOrCreateConversation,
+  setActiveChat,
+  fetchChatList,
 } from "@/redux/chat/chatSlice";
 import { fetchUserProfile, clearViewingUser } from "@/redux/user/userSlice";
 import { useParams, useRouter } from "next/navigation";
@@ -280,9 +283,22 @@ export default function UserProfile() {
       toast.error("Failed to send wali request");
     }
   };
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (profileUser?._id) {
-      router.push(`/messages/${profileUser._id}`);
+      try {
+        console.log("Clicking message for user:", profileUser._id);
+        const result = await dispatch(
+          findOrCreateConversation(profileUser._id)
+        ).unwrap();
+        console.log("findOrCreateConversation result:", result);
+        dispatch(setActiveChat(result.chatId));
+        await dispatch(fetchChatList()).unwrap();
+        router.push("/messages");
+        toast.success(`Opening chat with ${profileUser.firstName || "User"}`);
+      } catch (error) {
+        console.error("Failed to open chat:", error);
+        toast.error("Failed to open chat");
+      }
     }
   };
 
@@ -317,8 +333,8 @@ export default function UserProfile() {
           </h2>
 
           <p className="text-gray-600 text-center mb-6">
-            We couldn't retrieve the requested profile information. Please try
-            again later.
+            We couldn&apos;t retrieve the requested profile information. Please
+            try again later.
           </p>
 
           <div className="flex gap-4">
@@ -331,7 +347,7 @@ export default function UserProfile() {
 
             <Link
               href="/mosqueSearch"
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors font-medium text-sm flex items-center"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium text-sm flex items-center shadow-sm"
             >
               <Search size={16} className="mr-2" />
               Browse Matches
@@ -448,7 +464,7 @@ export default function UserProfile() {
                     )}
                     {profileUser.tagLine && (
                       <p className="text-primary-dark font-medium mt-3 text-lg italic">
-                        "{profileUser.tagLine}"
+                        &ldquo;{profileUser.tagLine}&rdquo;
                       </p>
                     )}
                   </div>
@@ -458,10 +474,10 @@ export default function UserProfile() {
                     <button
                       onClick={handleInterestToggle}
                       disabled={interestLoading}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 font-semibold text-sm transition duration-300 shadow-sm ${
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 font-semibold text-sm transition-colors duration-200 shadow-sm ${
                         isInterested
-                          ? "bg-red-50 text-red-600 border-red-300 hover:bg-red-100"
-                          : "border-gray-300 text-gray-700 hover:border-primary hover:text-primary hover:bg-gray-50"
+                          ? "bg-red-600 text-white border-red-600 hover:bg-red-700"
+                          : "border-gray-300 text-gray-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50"
                       }`}
                     >
                       {interestLoading ? (
@@ -484,7 +500,7 @@ export default function UserProfile() {
                     <button
                       onClick={handleSendMessage}
                       disabled={!profileUser?._id}
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <MessageCircle size={20} />
                       <span>Message</span>
@@ -913,7 +929,7 @@ export default function UserProfile() {
                       </p>
                       <button
                         onClick={handleRequestWali}
-                        className="bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition duration-200 flex items-center justify-center gap-2"
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition duration-200 flex items-center justify-center gap-2 shadow-sm"
                       >
                         <Mail size={18} />
                         Request Wali Contact

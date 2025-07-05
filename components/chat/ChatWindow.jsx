@@ -1,7 +1,7 @@
 "use client";
 // @/components/ChatWindow.jsx
-import React from "react";
-import { useSelector } from "react-redux";
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import Image from "next/image";
 import {
   Send,
@@ -23,6 +23,8 @@ import {
 import { getAvatar } from "@/shared/helper/defaultData";
 import EmojiPicker from "emoji-picker-react";
 import RequestMessageItem from "./PhotoRequestMessage";
+import axios from "axios";
+import { rootRoute } from "@/shared/constants/backendLink";
 // REMOVED: import PhotoRequestMessage from "@/components/chat/PhotoRequestMessage";
 
 const ChatWindow = ({
@@ -39,19 +41,57 @@ const ChatWindow = ({
   setSelectedMessage,
   handleDeleteMessage,
 }) => {
+  const dispatch = useDispatch();
   const activeChat = useSelector(selectActiveChat);
   const messages = useSelector((state) => selectMessages(state, activeChat));
   const onlineUsers = useSelector(selectOnlineUsers);
   const typingUsers = useSelector(selectTypingUsers);
   const loading = useSelector(selectChatLoading);
   const chatList = useSelector(selectChatList);
+  const [fallbackUserData, setFallbackUserData] = useState(null);
 
   const activeChatData = chatList.find((chat) => chat._id === activeChat);
+
+  // Get participant data with fallback
+  const participant = activeChatData?.participants?.[0] || fallbackUserData;
+
   const isUserOnline =
-    activeChat && activeChatData?.participants[0]?._id
-      ? onlineUsers.includes(activeChatData.participants[0]._id)
-      : false; // Added null check for participants[0]
+    activeChat && participant?._id
+      ? onlineUsers.includes(participant._id)
+      : false;
   const isUserTyping = typingUsers[activeChat]?.isTyping;
+
+  // Fallback: Fetch user data if not available in chat list
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (
+        activeChat &&
+        !activeChatData?.participants?.[0] &&
+        !fallbackUserData
+      ) {
+        try {
+          const token = localStorage.getItem("token");
+          const response = await axios.get(`${rootRoute}/users/${activeChat}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const userData = response.data;
+          setFallbackUserData({
+            _id: userData._id,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profilePicture: userData.profilePicture,
+            gender: userData.gender,
+            approvedPhotosFor: userData.approvedPhotosFor || [],
+          });
+        } catch (error) {
+          console.error("Failed to fetch user data for chat:", error);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [activeChat, activeChatData, fallbackUserData]);
 
   if (!activeChat) {
     return (
@@ -81,18 +121,15 @@ const ChatWindow = ({
               width={64}
               height={64}
               src={
-                activeChatData?.participants[0]?.profilePicture ||
-                getAvatar(activeChatData?.participants[0]?.gender)
+                participant?.profilePicture || getAvatar(participant?.gender)
               }
-              alt={`${activeChatData?.participants[0]?.firstName || ""} ${
-                activeChatData?.participants[0]?.lastName || ""
+              alt={`${participant?.firstName || "User"} ${
+                participant?.lastName || ""
               }`.trim()}
               className={`w-8 h-8 rounded-full object-cover ${
-                activeChatData?.participants[0]?.profilePicture &&
-                activeChatData?.participants[0]?.approvedPhotosFor &&
-                !activeChatData.participants[0].approvedPhotosFor.includes(
-                  currentUser.id
-                )
+                participant?.profilePicture &&
+                participant?.approvedPhotosFor &&
+                !participant.approvedPhotosFor.includes(currentUser.id)
                   ? "blur-sm"
                   : ""
               }`}
@@ -104,9 +141,11 @@ const ChatWindow = ({
           </div>
           <div>
             <h2 className="font-medium text-gray-900">
-              {`${activeChatData?.participants[0]?.firstName || ""} ${
-                activeChatData?.participants[0]?.lastName || ""
-              }`.trim()}
+              {participant
+                ? `${participant.firstName || ""} ${
+                    participant.lastName || ""
+                  }`.trim() || "User"
+                : "Loading..."}
             </h2>
             <p className="text-sm text-gray-500">
               {isUserTyping ? (
@@ -123,10 +162,9 @@ const ChatWindow = ({
         <div className="flex items-center space-x-2">
           {/* Example of a button to send a photo request - keep if needed */}
           <button
-            onClick={() =>
-              handlePhotoRequest(activeChatData?.participants[0]?._id)
-            }
+            onClick={() => handlePhotoRequest(participant?._id)}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            disabled={!participant?._id}
           >
             <Phone className="w-5 h-5" />{" "}
             {/* This might be a placeholder for photo request */}

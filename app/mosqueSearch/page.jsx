@@ -17,7 +17,7 @@ import {
   fetchMatchesByMosque,
   clearMatches,
   setSearchMode,
-  initializeUserMosques, // Renamed import
+  initializeUserMosques,
   saveMosqueFilters,
   loadMosqueFilters,
   clearSavedMosqueFilters,
@@ -199,6 +199,39 @@ export default function MatchSearchPage() {
       );
     }
   }, [dispatch, searchMode, selectedMosqueForSearch, loading]);
+
+  // Effect to re-fetch mosque matches when filters change in mosque mode
+  useEffect(() => {
+    if (
+      searchMode === "mosque" &&
+      selectedMosqueForSearch &&
+      !loading &&
+      !isFetchingProfessionalRef.current
+    ) {
+      console.log("Re-fetching mosque matches due to filter changes...");
+      dispatch(
+        fetchMatchesByMosque({
+          mosqueId: selectedMosqueForSearch.id,
+          mosqueName: selectedMosqueForSearch.name,
+        })
+      );
+    }
+  }, [
+    dispatch,
+    searchMode,
+    selectedMosqueForSearch,
+    loading,
+    // Filter dependencies for mosque mode
+    distance,
+    religiousness,
+    maritalStatus,
+    ageRange,
+    hasChildren,
+    childrenDesire,
+    educationLevel,
+    profession,
+    willingToRelocate,
+  ]);
 
   // Calculate distance radius in meters based on activeFilters.distance
   const distanceRadiusMeters = useMemo(() => {
@@ -448,6 +481,25 @@ export default function MatchSearchPage() {
     fetchedMosquesRef.current.clear();
   }, [searchMode]);
 
+  // Clear fetched mosques when filters change in mosque mode
+  useEffect(() => {
+    if (searchMode === "mosque") {
+      fetchedMosquesRef.current.clear();
+    }
+  }, [
+    searchMode,
+    // Filter dependencies for mosque mode
+    distance,
+    religiousness,
+    maritalStatus,
+    ageRange,
+    hasChildren,
+    childrenDesire,
+    educationLevel,
+    profession,
+    willingToRelocate,
+  ]);
+
   // Create a stable string of mosque IDs for dependency comparison
   const mosqueIdsString = useMemo(() => {
     return activeFilters.selectedMosques
@@ -487,7 +539,22 @@ export default function MatchSearchPage() {
         });
       }
     }
-  }, [dispatch, searchMode, mosqueIdsString, loading]);
+  }, [
+    dispatch,
+    searchMode,
+    mosqueIdsString,
+    loading,
+    // Filter dependencies for mosque mode
+    distance,
+    religiousness,
+    maritalStatus,
+    ageRange,
+    hasChildren,
+    childrenDesire,
+    educationLevel,
+    profession,
+    willingToRelocate,
+  ]);
   const clearMosqueSearch = useCallback(() => {
     // When clearing a specific mosque search, we set selectedMosque back to null
     dispatch(updateFilters({ category: "selectedMosque", value: null }));
