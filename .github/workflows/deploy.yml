@@ -19,7 +19,17 @@ jobs:
 
       - name: Install & Build Frontend (Next.js)
         run: |
-          npm ci
+          # Remove existing node modules and lock file
+          rm -rf node_modules
+          rm -f package-lock.json
+
+          # Install dependencies with legacy peer deps
+          npm install --legacy-peer-deps
+
+          # Update lock file
+          npm install --package-lock-only
+
+          # Build the project
           npm run build
 
       - name: Deploy to EC2
