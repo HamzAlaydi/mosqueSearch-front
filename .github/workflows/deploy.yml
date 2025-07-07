@@ -19,22 +19,18 @@ jobs:
 
       - name: Install & Build Frontend (Next.js)
         run: |
-          rm -rf node_modules
-          rm -f package-lock.json
-
           npm install --legacy-peer-deps
           npm run build
 
       - name: Deploy to EC2
         run: |
-          scp -o StrictHostKeyChecking=no -i key.pem -r .next public package.json package-lock.json node_modules ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/mosqueSearch-front
-
-      - name: Restart Frontend on EC2 with PM2
+          scp -o StrictHostKeyChecking=no -i key.pem -r .next public package.json package-lock.json ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/mosqueSearch-front
+          pm2 start npm --name "mosque-frontend" -- start -p 3000
+      - name: Restart Frontend on EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /var/www/mosqueSearch-front
-            npm install --production
+            npm ci --only=production
             pm2 delete mosque-frontend || true
-            pm2 start "npx next start -p 3000" --name mosque-frontend
-            pm2 save
+            pm2 start npm --name "mosque-frontend" -- start -p 3000
           EOF
