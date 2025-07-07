@@ -28,6 +28,10 @@ const Login = () => {
         return "/imam";
       case "superadmin":
         return "/superAdmin";
+      case "female":
+        return "/mosqueSearch";
+      case "male":
+        return "/mosqueSearch";
       default:
         return "/mosqueSearch";
     }
