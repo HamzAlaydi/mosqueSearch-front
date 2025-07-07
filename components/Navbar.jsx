@@ -27,6 +27,7 @@ export default function Navbar() {
   };
 
   const isAuthPage =
+    pathname === "/" ||
     pathname === "/auth/login" ||
     pathname === "/auth/signup" ||
     pathname === "/auth/imam";

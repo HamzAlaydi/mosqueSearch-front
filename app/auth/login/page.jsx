@@ -33,13 +33,6 @@ const Login = () => {
     }
   };
 
-  useEffect(() => {
-    if (token && user) {
-      const redirectPath = getRedirectPath(user.role);
-      router.push(redirectPath);
-    }
-  }, [token, user, router]);
-
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -54,7 +47,6 @@ const Login = () => {
           onSubmit={async (values, { setSubmitting, setErrors }) => {
             try {
               const data = await login(values).unwrap();
-              dispatch(setCredentials(data));
               document.cookie = `token=${data.token}; path=/;`;
 
               // Redirect based on user role
