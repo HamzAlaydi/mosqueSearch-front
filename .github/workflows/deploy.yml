@@ -1,0 +1,47 @@
+name: Deploy to EC2 mosque-match
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH Key
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: Build Frontend (Next.js)
+        working-directory: ./mosqueSearch-front
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Backend Dependencies
+        working-directory: ./backend-mosque-match
+        run: |
+          npm ci
+
+      - name: Deploy Frontend to EC2
+        run: |
+          scp -i key.pem -r ./mosqueSearch-front/.next ./mosqueSearch-front/public ./mosqueSearch-front/package.json ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/mosqueSearch-front
+
+      - name: Deploy Backend to EC2
+        run: |
+          scp -i key.pem -r ./backend-mosque-match/* ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/backend-mosque-match
+
+      - name: Restart Apps on EC2
+        run: |
+          ssh -i key.pem ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /var/www/mosqueSearch-front
+            pm2 restart mosque-frontend || pm2 start npm --name "mosque-frontend" -- start
+
+            cd /var/www/backend-mosque-match
+            pm2 restart mosque-backend || pm2 start server.js --name "mosque-backend"
+          EOF
