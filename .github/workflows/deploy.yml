@@ -1,4 +1,4 @@
-name: Deploy to EC2 mosque-match
+name: Deploy Frontend to EC2 mosque-match
 
 on:
   push:
@@ -17,31 +17,18 @@ jobs:
           echo "${{ secrets.SSH_KEY }}" > key.pem
           chmod 600 key.pem
 
-      - name: Build Frontend (Next.js)
-        working-directory: ./mosqueSearch-front
+      - name: Install & Build Frontend (Next.js)
         run: |
           npm ci
           npm run build
 
-      - name: Install Backend Dependencies
-        working-directory: ./backend-mosque-match
+      - name: Deploy to EC2
         run: |
-          npm ci
+          scp -i key.pem -r .next public package.json ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/mosqueSearch-front
 
-      - name: Deploy Frontend to EC2
-        run: |
-          scp -i key.pem -r ./mosqueSearch-front/.next ./mosqueSearch-front/public ./mosqueSearch-front/package.json ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/mosqueSearch-front
-
-      - name: Deploy Backend to EC2
-        run: |
-          scp -i key.pem -r ./backend-mosque-match/* ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/backend-mosque-match
-
-      - name: Restart Apps on EC2
+      - name: Restart Frontend on EC2
         run: |
           ssh -i key.pem ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /var/www/mosqueSearch-front
             pm2 restart mosque-frontend || pm2 start npm --name "mosque-frontend" -- start
-
-            cd /var/www/backend-mosque-match
-            pm2 restart mosque-backend || pm2 start server.js --name "mosque-backend"
           EOF
