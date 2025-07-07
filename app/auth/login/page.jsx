@@ -49,9 +49,11 @@ const Login = () => {
               const data = await login(values).unwrap();
               document.cookie = `token=${data.token}; path=/;`;
 
-              // Redirect based on user role
-              const redirectPath = getRedirectPath(data.user.role);
-              router.push(redirectPath);
+              // Add a short delay to ensure state/cookies are set before navigation
+              setTimeout(() => {
+                const redirectPath = getRedirectPath(data.user.role);
+                router.push(redirectPath);
+              }, 300);
             } catch (error) {
               const errorMessage =
                 error?.data?.message || "Invalid credentials";
