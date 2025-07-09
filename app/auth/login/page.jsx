@@ -29,20 +29,13 @@ const Login = () => {
       case "superadmin":
         return "/superAdmin";
       case "female":
+        return "/mosqueSearch";
       case "male":
         return "/mosqueSearch";
       default:
         return "/mosqueSearch";
     }
   };
-
-  // Remove useEffect-based navigation for login
-  // useEffect(() => {
-  //   if (token && user) {
-  //     const redirectPath = getRedirectPath(user.role);
-  //     router.push(redirectPath);
-  //   }
-  // }, [token, user, router]);
 
   return (
     <div className="auth-container">
@@ -58,14 +51,25 @@ const Login = () => {
           onSubmit={async (values, { setSubmitting, setErrors }) => {
             try {
               const data = await login(values).unwrap();
-              // Store in localStorage
-              localStorage.setItem("token", data.token);
-              localStorage.setItem("user", JSON.stringify(data.user));
+
+              // Set credentials in Redux store
+              dispatch(setCredentials(data));
+
+              // Set cookie
               document.cookie = `token=${data.token}; path=/;`;
 
-              // Redirect immediately (client-side)
+              // Get redirect path based on user role
               const redirectPath = getRedirectPath(data.user.role);
-              router.replace(redirectPath); // Use replace to avoid back navigation issues
+
+              // For female/male roles, use a longer delay to ensure state propagation
+              const delay =
+                data.user.role === "female" || data.user.role === "male"
+                  ? 500
+                  : 300;
+
+              setTimeout(() => {
+                router.push(redirectPath);
+              }, delay);
             } catch (error) {
               const errorMessage =
                 error?.data?.message || "Invalid credentials";
