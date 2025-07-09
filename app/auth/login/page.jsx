@@ -41,7 +41,7 @@ const Login = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Welcome Back Ha,za</h1>
+          <h1>Welcome Back</h1>
           <p>Sign in to your MosqueMatch account</p>
         </div>
 

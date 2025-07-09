@@ -2,29 +2,50 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setCredentials } from "@/redux/auth/authSlice";
 
 const AuthWrapper = ({ children }) => {
   const router = useRouter();
-  const { isAuthenticated, token } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { isAuthenticated, token, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Check if user is authenticated
-    if (!isAuthenticated && !token) {
-      // Also check localStorage as a fallback
+    // If Redux is empty but localStorage has token/user, sync Redux
+    if (
+      (!isAuthenticated || !token || !user) &&
+      typeof window !== "undefined"
+    ) {
       const localToken = localStorage.getItem("token");
-      if (!localToken) {
-        router.push("/auth/login");
+      const localUser = localStorage.getItem("user");
+      if (localToken && localUser) {
+        dispatch(
+          setCredentials({ token: localToken, user: JSON.parse(localUser) })
+        );
       }
+    }
+  }, [isAuthenticated, token, user, dispatch]);
+
+  useEffect(() => {
+    // If after sync, still no token, redirect to login
+    if (
+      typeof window !== "undefined" &&
+      !isAuthenticated &&
+      !token &&
+      !localStorage.getItem("token")
+    ) {
+      router.push("/auth/login");
     }
   }, [isAuthenticated, token, router]);
 
   // Show loading or nothing while checking authentication
-  if (!isAuthenticated && !token && typeof window !== "undefined") {
-    const localToken = localStorage.getItem("token");
-    if (!localToken) {
-      return null; // Don't render anything while redirecting
-    }
+  if (
+    typeof window !== "undefined" &&
+    (!isAuthenticated || !token || !user) &&
+    localStorage.getItem("token")
+  ) {
+    // Show a loading spinner or nothing while syncing
+    return null;
   }
 
   return children;
