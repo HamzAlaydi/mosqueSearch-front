@@ -302,7 +302,7 @@ export const loadMosqueFilters = createAsyncThunk(
 const initialState = {
   matches: [], // The currently displayed matches (can be professional or mosque-based)
   professionalMatches: [], // Stores professional search results
-  mosqueMatches: [], // Stores aggregated results for selected mosques
+  MosqueZawajes: [], // Stores aggregated results for selected mosques
   selectedMatch: null,
   loading: false,
   error: null,
@@ -384,7 +384,7 @@ const matchSlice = createSlice({
           state.activeFilters.selectedMosques.splice(existingMosqueIndex, 1);
         }
         // When selected mosques change, clear current mosque matches to trigger refetch for all selected.
-        state.mosqueMatches = [];
+        state.MosqueZawajes = [];
         if (state.searchMode === "mosque") {
           state.matches = [];
         }
@@ -413,12 +413,12 @@ const matchSlice = createSlice({
           state.activeFilters.selectedMosques.filter(
             (mosque) => mosque.id !== value
           );
-        // Remove from mosqueMatches too - filter out matches from this mosque
-        state.mosqueMatches = state.mosqueMatches.filter(
+        // Remove from MosqueZawajes too - filter out matches from this mosque
+        state.MosqueZawajes = state.MosqueZawajes.filter(
           (match) => !match.mosqueId || match.mosqueId !== value
         );
         if (state.searchMode === "mosque") {
-          state.matches = [...state.mosqueMatches];
+          state.matches = [...state.MosqueZawajes];
         }
       } else if (
         [
@@ -457,7 +457,7 @@ const matchSlice = createSlice({
       state.hasMore = true;
       state.matches = []; // Clear displayed matches
       state.professionalMatches = []; // Clear stored professional matches
-      state.mosqueMatches = []; // Clear stored mosque matches
+      state.MosqueZawajes = []; // Clear stored mosque matches
       state.activeFilters.selectedMosques = []; // Ensure selectedMosques is cleared
     },
     clearMatches: (state) => {
@@ -466,7 +466,7 @@ const matchSlice = createSlice({
       state.page = 1;
       state.hasMore = true;
       state.professionalMatches = []; // Also clear professional matches when explicitly clearing all
-      state.mosqueMatches = []; // Also clear mosque matches
+      state.MosqueZawajes = []; // Also clear mosque matches
     },
     addInterestLocal: (state, action) => {
       // Assuming payload is the full user object, not just ID
@@ -488,16 +488,16 @@ const matchSlice = createSlice({
       if (newMode === "professional") {
         state.matches = [...state.professionalMatches];
         state.activeFilters.selectedMosques = [];
-        state.mosqueMatches = [];
+        state.MosqueZawajes = [];
       } else {
         // newMode === 'mosque'
         // When switching to mosque mode, if there are already selected mosques, display their matches.
         // Otherwise, clear matches to show a blank slate for new mosque selection.
         if (
           state.activeFilters.selectedMosques.length > 0 &&
-          state.mosqueMatches.length > 0
+          state.MosqueZawajes.length > 0
         ) {
-          state.matches = [...state.mosqueMatches];
+          state.matches = [...state.MosqueZawajes];
         } else {
           state.matches = [];
         }
@@ -506,7 +506,7 @@ const matchSlice = createSlice({
     initializeDefaultMosques: (state, action) => {
       const defaultMosques = action.payload;
       state.activeFilters.selectedMosques = defaultMosques;
-      state.mosqueMatches = []; // Clear to force fresh fetch
+      state.MosqueZawajes = []; // Clear to force fresh fetch
       if (state.searchMode === "mosque") {
         state.matches = [];
       }
@@ -568,7 +568,7 @@ const matchSlice = createSlice({
       .addCase(fetchMatchesByMosque.pending, (state) => {
         state.loading = true;
         state.error = null;
-        // Don't clear matches or mosqueMatches here, as we are accumulating.
+        // Don't clear matches or MosqueZawajes here, as we are accumulating.
         // Clearing will happen via `updateFilters` or `removeFilter`
         // before this thunk is dispatched if a mosque selection changes.
       })
@@ -594,19 +594,19 @@ const matchSlice = createSlice({
           });
         }
 
-        // Accumulate matches into mosqueMatches, avoiding duplicates based on _id
-        const existingIdsInMosqueMatches = new Set(
-          state.mosqueMatches.map((m) => m._id)
+        // Accumulate matches into MosqueZawajes, avoiding duplicates based on _id
+        const existingIdsInMosqueZawajes = new Set(
+          state.MosqueZawajes.map((m) => m._id)
         );
         const uniqueNewMatches = newMatches.filter(
-          (m) => !existingIdsInMosqueMatches.has(m._id)
+          (m) => !existingIdsInMosqueZawajes.has(m._id)
         );
 
-        state.mosqueMatches = [...state.mosqueMatches, ...uniqueNewMatches];
+        state.MosqueZawajes = [...state.MosqueZawajes, ...uniqueNewMatches];
 
         // Only update displayed matches if in mosque search mode
         if (state.searchMode === "mosque") {
-          state.matches = [...state.mosqueMatches]; // Display all accumulated mosque matches
+          state.matches = [...state.MosqueZawajes]; // Display all accumulated mosque matches
         }
 
         state.loading = false;
@@ -618,9 +618,9 @@ const matchSlice = createSlice({
       .addCase(fetchMatchesByMosque.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        // Do NOT clear mosqueMatches here. The error might be for one specific fetch
+        // Do NOT clear MosqueZawajes here. The error might be for one specific fetch
         // but other mosque's data might still be valid.
-        // Clearing of mosqueMatches should be managed by updateFilters/removeFilter
+        // Clearing of MosqueZawajes should be managed by updateFilters/removeFilter
         // when the selection changes, or clearAllFilters.
         // state.matches = []; // Don't clear unless explicitly removing all selected mosques
       })
@@ -639,12 +639,12 @@ const matchSlice = createSlice({
           professionalMatch.isInterested = true;
         }
 
-        // Update mosqueMatches
-        const mosqueMatch = state.mosqueMatches.find(
+        // Update MosqueZawajes
+        const MosqueZawaj = state.MosqueZawajes.find(
           (match) => match._id === interestedFemaleId
         );
-        if (mosqueMatch) {
-          mosqueMatch.isInterested = true;
+        if (MosqueZawaj) {
+          MosqueZawaj.isInterested = true;
         }
 
         // Update the currently displayed matches (which could be either)
@@ -673,12 +673,12 @@ const matchSlice = createSlice({
           professionalMatch.isInterested = false;
         }
 
-        // Update mosqueMatches
-        const mosqueMatch = state.mosqueMatches.find(
+        // Update MosqueZawajes
+        const MosqueZawaj = state.MosqueZawajes.find(
           (match) => match._id === deinterestedFemaleId
         );
-        if (mosqueMatch) {
-          mosqueMatch.isInterested = false;
+        if (MosqueZawaj) {
+          MosqueZawaj.isInterested = false;
         }
 
         // Update the currently displayed matches
@@ -702,7 +702,7 @@ const matchSlice = createSlice({
           state.activeFilters.selectedMosques.length === 0
         ) {
           state.activeFilters.selectedMosques = defaultMosques;
-          state.mosqueMatches = []; // Clear to trigger fresh fetch
+          state.MosqueZawajes = []; // Clear to trigger fresh fetch
           state.matches = [];
         }
       })
@@ -713,7 +713,7 @@ const matchSlice = createSlice({
         const savedMosques = action.payload;
         state.activeFilters.selectedMosques = savedMosques;
         state.hasSavedFilters = savedMosques.length > 0;
-        state.mosqueMatches = [];
+        state.MosqueZawajes = [];
         if (state.searchMode === "mosque") {
           state.matches = [];
         }

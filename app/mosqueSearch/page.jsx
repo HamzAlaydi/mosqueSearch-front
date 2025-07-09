@@ -83,7 +83,7 @@ export default function MatchSearchPage() {
   const {
     matches = [],
     professionalMatches = [], // No longer directly used for display logic here, but for triggering fetch
-    mosqueMatches = [], // No longer directly used for display logic here, but for triggering fetch
+    MosqueZawajes = [], // No longer directly used for display logic here, but for triggering fetch
     searchedMosques = [],
     activeFilters = {
       prayer: [],

@@ -5,8 +5,8 @@ import ClientLayout from "@/components/ClientLayout"; // Adjust path if needed
 import { Toaster } from "react-hot-toast";
 
 export const metadata = {
-  title: "MosqueMatch - Find Your Muslim Partner",
-  description: "Find your perfect match on MosqueMatch.",
+  title: "MosqueZawaj - Find Your Muslim Partner",
+  description: "Find your perfect match on MosqueZawaj.",
 };
 
 export default function RootLayout({ children }) {

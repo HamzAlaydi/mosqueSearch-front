@@ -103,7 +103,7 @@ export default function HomePage() {
   const testimonials = [
     {
       quote:
-        "MosqueMatch helped me find a spouse who shares my values and vision for the future. The community verification gave me confidence throughout the process.",
+        "MosqueZawaj helped me find a spouse who shares my values and vision for the future. The community verification gave me confidence throughout the process.",
       author: "Omar A.",
       role: "Software Engineer",
     },
@@ -115,7 +115,7 @@ export default function HomePage() {
     },
     {
       quote:
-        "MosqueMatch connected me with someone from my local community who I might never have met otherwise. We&apos;re now happily married, alhamdulillah.",
+        "MosqueZawaj connected me with someone from my local community who I might never have met otherwise. We&apos;re now happily married, alhamdulillah.",
       author: "Ahmed K.",
       role: "Medical Professional",
     },
@@ -244,10 +244,10 @@ export default function HomePage() {
             <div className="testimonial-card">
               <div className="testimonial-content">
                 <p className="testimonial-text">
-                  Amidst digital spaces, thanks to Mosquematch. Our profiles
+                  Amidst digital spaces, thanks to MosqueZawaj. Our profiles
                   aligned, hearts connected, and dreams intertwined. Together,
                   we embarked on a beautiful journey, embracing love, faith, and
-                  everlasting companionship. Mosquematch, the catalyst of our
+                  everlasting companionship. MosqueZawaj, the catalyst of our
                   blissful union.
                 </p>
                 <p className="testimonial-author">- Omar</p>
@@ -257,7 +257,7 @@ export default function HomePage() {
             <div className="testimonial-card">
               <div className="testimonial-content">
                 <p className="testimonial-text">
-                  Mosquematch, I discovered my soulmate, a beacon of light in a
+                  MosqueZawaj, I discovered my soulmate, a beacon of light in a
                   digital realm. Our hearts synchronized, and with Allah&apos;s
                   blessings, we embarked on an eternal journey of love, faith,
                   and happiness.
@@ -271,7 +271,7 @@ export default function HomePage() {
                 <p className="testimonial-text">
                   Discovered my missing puzzle piece. Our hearts recognized each
                   other&apos;s essence, and in the journey of love and devotion,
-                  we found solace, joy, and a lifelong partnership. Mosquematch,
+                  we found solace, joy, and a lifelong partnership. MosqueZawaj,
                   the divine matchmaker.
                 </p>
                 <p className="testimonial-author">- Ahmed</p>
@@ -281,10 +281,10 @@ export default function HomePage() {
             <div className="testimonial-card">
               <div className="testimonial-content">
                 <p className="testimonial-text">
-                  Mosquematch unveiled a world of possibilities. Through its
+                  MosqueZawaj unveiled a world of possibilities. Through its
                   platform, I discovered my true love, a companion whose heart
                   resonated with mine. Together, we embraced Islam, love, and a
-                  lifetime of cherished moments. Mosquematch, the gateway to
+                  lifetime of cherished moments. MosqueZawaj, the gateway to
                   eternal happiness.
                 </p>
                 <p className="testimonial-author">- Adam</p>

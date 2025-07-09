@@ -37,7 +37,7 @@ export default function Navbar() {
       <div className="container navbar-container">
         <div className="navbar-logo">
           <Link href="/mosqueSearch">
-            <h1>MosqueMatch</h1>
+            <h1>MosqueZawaj</h1>
           </Link>
         </div>
 
