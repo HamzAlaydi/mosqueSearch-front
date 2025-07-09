@@ -27,7 +27,7 @@ const AuthWrapper = ({ children }) => {
   }, [isAuthenticated, token, user, dispatch]);
 
   useEffect(() => {
-    // If after sync, still no token, redirect to login
+    // If after sync, still no token anywhere, redirect to login
     if (
       typeof window !== "undefined" &&
       !isAuthenticated &&
@@ -38,13 +38,13 @@ const AuthWrapper = ({ children }) => {
     }
   }, [isAuthenticated, token, router]);
 
-  // Show loading or nothing while checking authentication
+  // Only redirect if no token anywhere; otherwise, always render children
   if (
     typeof window !== "undefined" &&
-    (!isAuthenticated || !token || !user) &&
-    localStorage.getItem("token")
+    !isAuthenticated &&
+    !token &&
+    !localStorage.getItem("token")
   ) {
-    // Show a loading spinner or nothing while syncing
     return null;
   }
 

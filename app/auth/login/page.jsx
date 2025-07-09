@@ -55,8 +55,15 @@ const Login = () => {
               // Set credentials in Redux store
               dispatch(setCredentials(data));
 
-              // Set cookie
-              document.cookie = `token=${data.token}; path=/;`;
+              // Set cookie with robust attributes for compatibility and persistence
+              const isProduction =
+                typeof window !== "undefined" &&
+                window.location.protocol === "https:";
+              let cookieString = `token=${data.token}; path=/; SameSite=Lax; max-age=86400;`;
+              if (isProduction) {
+                cookieString += " Secure;";
+              }
+              document.cookie = cookieString;
 
               // Get redirect path based on user role
               const redirectPath = getRedirectPath(data.user.role);
