@@ -36,13 +36,13 @@ const Login = () => {
     }
   };
 
-  // Add useEffect to handle navigation after auth state is set
-  useEffect(() => {
-    if (token && user) {
-      const redirectPath = getRedirectPath(user.role);
-      router.push(redirectPath);
-    }
-  }, [token, user, router]);
+  // Remove useEffect-based navigation for login
+  // useEffect(() => {
+  //   if (token && user) {
+  //     const redirectPath = getRedirectPath(user.role);
+  //     router.push(redirectPath);
+  //   }
+  // }, [token, user, router]);
 
   return (
     <div className="auth-container">
@@ -58,8 +58,14 @@ const Login = () => {
           onSubmit={async (values, { setSubmitting, setErrors }) => {
             try {
               const data = await login(values).unwrap();
+              // Store in localStorage
+              localStorage.setItem("token", data.token);
+              localStorage.setItem("user", JSON.stringify(data.user));
               document.cookie = `token=${data.token}; path=/;`;
-              // Do NOT navigate here; navigation is handled by useEffect
+
+              // Redirect immediately (client-side)
+              const redirectPath = getRedirectPath(data.user.role);
+              router.replace(redirectPath); // Use replace to avoid back navigation issues
             } catch (error) {
               const errorMessage =
                 error?.data?.message || "Invalid credentials";
