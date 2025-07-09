@@ -497,10 +497,16 @@ export default function UserProfile() {
                         </>
                       )}
                     </button>
+                    {/* Message button (force green in all states) */}
                     <button
                       onClick={handleSendMessage}
                       disabled={!profileUser?._id}
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg border-2 font-semibold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: "var(--primary)",
+                        borderColor: "var(--primary)",
+                        color: "#fff",
+                      }}
                     >
                       <MessageCircle size={20} />
                       <span>Message</span>
@@ -810,36 +816,41 @@ export default function UserProfile() {
             {activeTab === "photos" && (
               <ProfileSection title="Photos" icon={<User size={20} />}>
                 <div className="flex flex-col items-center text-center py-10 px-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <Lock size={48} className="text-gray-300 mb-4" />
-                  <p className="text-gray-600 mb-6 max-w-md">
-                    Photos are private and hidden until a mutual interest is
-                    established.
-                  </p>
-                  <button
-                    onClick={handleInterestToggle}
-                    disabled={interestLoading}
-                    className="bg-white border border-gray-300 px-6 py-3 rounded-lg text-gray-700 font-medium hover:border-primary hover:text-primary hover:bg-gray-100 transition duration-200 flex items-center justify-center gap-2 shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {interestLoading ? (
-                      <Loader size={18} className="animate-spin" />
-                    ) : (
-                      <Heart
-                        size={18}
-                        fill={isInterested ? "#ef4444" : "transparent"}
-                        className={
-                          isInterested ? "text-red-500" : "text-gray-500"
-                        }
-                      />
-                    )}
-                    {isInterested
-                      ? "You are interested"
-                      : "Show Interest to View Photos"}
-                  </button>
-                  {isInterested && (
-                    <p className="text-sm text-green-600 mt-3">
-                      Mutual interest may reveal photos if the other user is
-                      also interested.
-                    </p>
+                  <div className="relative w-32 h-32 mx-auto mb-6">
+                    <Image
+                      src={
+                        isPhotoApproved(profileUser)
+                          ? profileUser.profilePicture?.startsWith("http")
+                            ? profileUser.profilePicture
+                            : getAvatar(profileUser.gender)
+                          : profileUser.blurredProfilePicture ||
+                            getAvatar(profileUser.gender)
+                      }
+                      alt={`${profileUser?.firstName || "User"}'s profile`}
+                      fill
+                      className={`h-full w-full object-cover rounded-full transition-all duration-300 ${
+                        !isPhotoApproved(profileUser)
+                          ? "filter blur-md brightness-75"
+                          : ""
+                      }`}
+                      onError={(e) => {
+                        e.target.src = getAvatar(profileUser.gender);
+                      }}
+                    />
+                  </div>
+                  {!isPhotoApproved(profileUser) && (
+                    <button
+                      onClick={handleRequestPhoto}
+                      className="border-2 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 shadow-sm"
+                      style={{
+                        backgroundColor: "var(--primary)",
+                        borderColor: "var(--primary)",
+                        color: "#fff",
+                      }}
+                    >
+                      <Eye size={18} />
+                      Send Unblur Photo Request
+                    </button>
                   )}
                 </div>
               </ProfileSection>
@@ -929,7 +940,12 @@ export default function UserProfile() {
                       </p>
                       <button
                         onClick={handleRequestWali}
-                        className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition duration-200 flex items-center justify-center gap-2 shadow-sm"
+                        className="border-2 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 shadow-sm"
+                        style={{
+                          backgroundColor: "var(--primary)",
+                          borderColor: "var(--primary)",
+                          color: "#fff",
+                        }}
                       >
                         <Mail size={18} />
                         Request Wali Contact

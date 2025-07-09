@@ -648,11 +648,10 @@ export default function MatchSearchPage() {
           } transition-all duration-300`}
         >
           {/* Sticky header/filter summary */}
-          <div className="px-4 py-2 sticky top-12 bg-white z-20 border-b border-gray-200">
+          <div className="px-4 py-2 bg-white z-20 border-b border-gray-200 md:sticky md:top-12">
             {/* Top row: Title and View Toggles */}
             <div className="flex justify-between items-center mb-2">
               {/* Toggle: Professional / Mosque */}
-
               <div>
                 <h1 className="text-lg font-semibold">Potential Matches</h1>
                 <p className="text-sm text-gray-600">
@@ -663,7 +662,6 @@ export default function MatchSearchPage() {
                     : `Select a mosque on the map to view matches`}
                 </p>
               </div>
-
               {/* View toggle buttons */}
               <div className="flex gap-2 items-center">
                 <button
@@ -718,7 +716,6 @@ export default function MatchSearchPage() {
                 >
                   Professional
                 </span>
-
                 {/* Switch Button */}
                 <button
                   onClick={handleSearchModeToggle}
@@ -734,7 +731,6 @@ export default function MatchSearchPage() {
                     }`}
                   />
                 </button>
-
                 {/* Mosque Label */}
                 <span
                   className={`text-sm transition-colors duration-200 ${
@@ -747,52 +743,6 @@ export default function MatchSearchPage() {
                 </span>
               </div>
             </div>
-
-            {searchMode === "mosque" && (
-              <div className="flex gap-2 mt-2">
-                {activeFilters.selectedMosques.length > 0 && (
-                  <button
-                    onClick={handleSaveMosqueSelection}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:border-emerald-300 transition-all duration-200 shadow-sm"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Save Selection
-                  </button>
-                )}
-
-                <button
-                  onClick={handleLoadSavedMosques}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                    />
-                  </svg>
-                  Load Saved
-                </button>
-              </div>
-            )}
             {/* Active Filters Display */}
             <ActiveFilters
               activeFilters={activeFilters}
@@ -814,17 +764,14 @@ export default function MatchSearchPage() {
               </div>
             )}
           </div>
-
           {/* Mosque Listings Cards */}
-
           <MatchListings
             listingsView={listingsView}
             handleMatchClick={handleMatchClick}
-            matchesToShow={matches} // This will now correctly reflect searchMode
+            matchesToShow={matches}
             loading={loading}
           />
         </div>
-
         {/* Map View Section */}
         {showMap && (
           <MatchMapView

@@ -26,6 +26,7 @@ import {
   markAsRead,
 } from "@/redux/notification/notificationSlice";
 import { HeaderNotifications } from "../NotificationSystem";
+import { useMediaQuery } from "react-responsive";
 // Distance Range Slider Component
 const DistanceFilter = ({ value, onChange }) => {
   const [distance, setDistance] = useState(value || 6); // Default to 6 miles
@@ -328,12 +329,14 @@ export default function Header({
     }
   };
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 767;
+
   return (
     <header className="border-b border-gray-200 bg-white sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <span className="text-primary text-xl font-bold">MosqueFind</span>
+          <span className="text-primary text-xl font-bold">MosqueZawaj</span>
         </Link>
 
         {/* Search Bar and Controls Group */}
@@ -566,22 +569,18 @@ export default function Header({
                 {showMap ? "Hide map" : "Show map"}
               </button>
 
-              <button className="p-2 bg-gray-100 rounded-full">
+              <button
+                className="p-2 bg-gray-100 rounded-full"
+                onClick={() => router.push("/messages")}
+              >
                 <MessageCircle size={16} className="text-gray-600" />
               </button>
 
-              <button className="p-2 bg-gray-100 rounded-full">
+              <button
+                className="p-2 bg-gray-100 rounded-full"
+                onClick={handleOpenInterests}
+              >
                 <Heart size={16} className="text-gray-600" />
-              </button>
-
-              {/* Mobile notification bell */}
-              <button className="p-2 bg-gray-100 rounded-full relative">
-                <Bell size={16} className="text-gray-600" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
               </button>
             </div>
           </div>

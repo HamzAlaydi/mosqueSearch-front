@@ -4,7 +4,7 @@ export default function CategoryNav({
   handleCategoryChange,
 }) {
   return (
-    <div className="container mx-auto px-4 py-2 overflow-x-auto hide-scrollbar fixed top-16 left-0 right-0 bg-white z-20 border-b border-gray-200">
+    <div className="container mx-auto px-4 py-2 overflow-x-auto hide-scrollbar bg-white z-20 border-b border-gray-200">
       <div className="flex gap-6 items-center">
         {categories.map((category) => (
           <button

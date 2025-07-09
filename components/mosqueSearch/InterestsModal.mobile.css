@@ -1,0 +1,43 @@
+.interests-modal-mobile {
+  z-index: 1000;
+}
+.interests-modal-content-mobile {
+  position: relative;
+}
+@media (max-width: 767px) {
+  .interests-modal-mobile {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
+  }
+  .interests-modal-content-mobile {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .close-btn-mobile {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #f5f5f5;
+    color: #333;
+    font-size: 2rem;
+    z-index: 10001;
+    border-radius: 50%;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+} 

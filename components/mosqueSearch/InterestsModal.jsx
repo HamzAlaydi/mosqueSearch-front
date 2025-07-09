@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { calculateAge, getAvatar } from "@/shared/helper/defaultData";
+import "./InterestsModal.mobile.css";
 
 export default function InterestsModal({ isOpen, onClose }) {
   const dispatch = useDispatch();
@@ -51,8 +52,8 @@ export default function InterestsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] flex items-center justify-center">
-      <div className="bg-white rounded-lg max-w-xl w-full max-h-[90vh] flex flex-col border border-gray-200 shadow-lg">
+    <div className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] flex items-center justify-center interests-modal-mobile">
+      <div className="bg-white rounded-lg max-w-xl w-full max-h-[90vh] flex flex-col border border-gray-200 shadow-lg interests-modal-content-mobile">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold flex items-center">
@@ -61,9 +62,11 @@ export default function InterestsModal({ isOpen, onClose }) {
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition"
+            className="p-3 rounded-full hover:bg-gray-100 transition close-btn-mobile"
+            style={{ minWidth: 44, minHeight: 44 }}
+            aria-label="Close interests modal"
           >
-            <X size={20} />
+            <X size={24} />
           </button>
         </div>
 

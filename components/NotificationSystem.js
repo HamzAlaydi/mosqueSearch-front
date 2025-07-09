@@ -31,6 +31,7 @@ import {
   fetchNotifications,
   markAsRead,
 } from "@/redux/notification/notificationSlice";
+import "./NotificationSystem.mobile.css";
 
 export function HeaderNotifications() {
   // Local state for UI toggles
@@ -233,11 +234,12 @@ export function HeaderNotifications() {
     <>
       <div className="relative notifications-dropdown">
         <button
-          className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors"
+          className="relative flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition-colors notification-btn-mobile"
           onClick={() => setShowNotificationsMenu(!showNotificationsMenu)}
           aria-label="Toggle notifications menu"
+          style={{ minWidth: 44, minHeight: 44 }}
         >
-          <Bell size={20} className="text-gray-600" />
+          <Bell size={24} className="text-gray-600" />
           {unreadCount > 0 && (
             <span className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -255,7 +257,7 @@ export function HeaderNotifications() {
         </button>
 
         {showNotificationsMenu && (
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-40">
+          <div className="notification-dropdown-mobile">
             <div className="p-3 border-b border-gray-200 flex justify-between items-center">
               <h3 className="font-semibold text-gray-800">Notifications</h3>
               {unreadCount > 0 && (
@@ -266,8 +268,15 @@ export function HeaderNotifications() {
                   Mark all as read
                 </button>
               )}
+              <button
+                className="ml-2 p-2 rounded-full bg-gray-100 text-gray-600 close-btn-mobile"
+                onClick={() => setShowNotificationsMenu(false)}
+                style={{ minWidth: 44, minHeight: 44 }}
+                aria-label="Close notifications"
+              >
+                ✕
+              </button>
             </div>
-
             <div className="max-h-96 overflow-y-auto">
               {notificationStatus === "loading" && (
                 <div className="p-6 text-center text-gray-500">Loading...</div>
