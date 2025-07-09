@@ -68,15 +68,8 @@ const Login = () => {
               // Get redirect path based on user role
               const redirectPath = getRedirectPath(data.user.role);
 
-              // For female/male roles, use a longer delay to ensure state propagation
-              const delay =
-                data.user.role === "female" || data.user.role === "male"
-                  ? 500
-                  : 300;
-
-              setTimeout(() => {
-                router.push(redirectPath);
-              }, delay);
+              // Force a full page reload so the cookie is sent to the server
+              window.location.href = redirectPath;
             } catch (error) {
               const errorMessage =
                 error?.data?.message || "Invalid credentials";
