@@ -29,13 +29,20 @@ const Login = () => {
       case "superadmin":
         return "/superAdmin";
       case "female":
-        return "/mosqueSearch";
       case "male":
         return "/mosqueSearch";
       default:
         return "/mosqueSearch";
     }
   };
+
+  // Add useEffect to handle navigation after auth state is set
+  useEffect(() => {
+    if (token && user) {
+      const redirectPath = getRedirectPath(user.role);
+      router.push(redirectPath);
+    }
+  }, [token, user, router]);
 
   return (
     <div className="auth-container">
@@ -52,12 +59,7 @@ const Login = () => {
             try {
               const data = await login(values).unwrap();
               document.cookie = `token=${data.token}; path=/;`;
-
-              // Add a short delay to ensure state/cookies are set before navigation
-              setTimeout(() => {
-                const redirectPath = getRedirectPath(data.user.role);
-                router.push(redirectPath);
-              }, 300);
+              // Do NOT navigate here; navigation is handled by useEffect
             } catch (error) {
               const errorMessage =
                 error?.data?.message || "Invalid credentials";
