@@ -38,7 +38,6 @@ export const basicInfoSchema = Yup.object().shape({
 export const educationSchema = Yup.object().shape({
   educationLevel: Yup.string(),
   profession: Yup.string(),
-  jobTitle: Yup.string(),
   firstLanguage: Yup.string().required("Primary language is required"),
   secondLanguage: Yup.string(),
 });

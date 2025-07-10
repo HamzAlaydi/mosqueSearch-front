@@ -705,47 +705,11 @@ export default function MatchSearchPage() {
                   )}
                 </button>
               </div>
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
-                {/* Professional Label */}
-                <span
-                  className={`text-sm transition-colors duration-200 ${
-                    searchMode === "professional"
-                      ? "text-blue-600 font-semibold"
-                      : "text-gray-500"
-                  }`}
-                >
-                  Professional
-                </span>
-                {/* Switch Button */}
-                <button
-                  onClick={handleSearchModeToggle}
-                  className={`relative inline-flex h-6 w-12 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    searchMode === "mosque" ? "bg-blue-600" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-                      searchMode === "mosque"
-                        ? "translate-x-6"
-                        : "translate-x-1"
-                    }`}
-                  />
-                </button>
-                {/* Mosque Label */}
-                <span
-                  className={`text-sm transition-colors duration-200 ${
-                    searchMode === "mosque"
-                      ? "text-blue-600 font-semibold"
-                      : "text-gray-500"
-                  }`}
-                >
-                  Mosque
-                </span>
-              </div>
             </div>
             {/* Active Filters Display */}
             <ActiveFilters
               activeFilters={activeFilters}
+              selectedMosques={activeFilters.selectedMosques}
               removeFilter={removeFilter}
               clearAllFilters={clearAllFilters}
             />
@@ -787,3 +751,43 @@ export default function MatchSearchPage() {
     </div>
   );
 }
+
+
+// keep commited toggle from mosque and professioal filter users 
+// <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+// {/* Professional Label */}
+// <span
+//   className={`text-sm transition-colors duration-200 ${
+//     searchMode === "professional"
+//       ? "text-blue-600 font-semibold"
+//       : "text-gray-500"
+//   }`}
+// >
+//   Professional
+// </span>
+// {/* Switch Button */}
+// <button
+//   onClick={handleSearchModeToggle}
+//   className={`relative inline-flex h-6 w-12 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+//     searchMode === "mosque" ? "bg-blue-600" : "bg-gray-300"
+//   }`}
+// >
+//   <span
+//     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+//       searchMode === "mosque"
+//         ? "translate-x-6"
+//         : "translate-x-1"
+//     }`}
+//   />
+// </button>
+// {/* Mosque Label */}
+// <span
+//   className={`text-sm transition-colors duration-200 ${
+//     searchMode === "mosque"
+//       ? "text-blue-600 font-semibold"
+//       : "text-gray-500"
+//   }`}
+// >
+//   Mosque
+// </span>
+// </div>

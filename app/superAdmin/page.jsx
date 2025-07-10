@@ -17,6 +17,7 @@ import {
   fetchImamRequests,
   approveImamRequest,
   denyImamRequest,
+  updateImamStatus,
   clearError,
   clearSuccess,
 } from "@/redux/superadmin/superAdminSlice";
@@ -168,7 +169,7 @@ const SuperAdmin = () => {
       title: "Deny Imam Request",
       message: `Are you sure you want to deny ${user.name}'s request?`,
       onConfirm: () => {
-        dispatch(denyImamRequest({ userId }));
+        dispatch(denyImamRequest({ imamId: userId }));
         setConfirmDialog((prev) => ({ ...prev, open: false }));
       },
     });
@@ -186,7 +187,9 @@ const SuperAdmin = () => {
     if (status === "approved") {
       dispatch(approveImamRequest({ imamId: userId }));
     } else if (status === "denied") {
-      dispatch(denyImamRequest({ userId, deniedReason }));
+      dispatch(denyImamRequest({ imamId: userId, reason: deniedReason }));
+    } else if (status === "pending") {
+      dispatch(updateImamStatus({ imamId: userId, status: "pending" }));
     }
     setEditModal({ open: false, imam: null });
   };
@@ -363,8 +366,6 @@ const SuperAdmin = () => {
           }
         }}
       />
-
-      <Toaster position="top-right" />
     </div>
   );
 };

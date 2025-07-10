@@ -4,11 +4,7 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import { educationSchema } from "@/shared/constants/validationSchemas";
 import Select from "react-select";
 import makeAnimated from "react-select/animated";
-import {
-  educationLevels,
-  professions,
-  languages,
-} from "@/shared/constants/signupData";
+import { educationLevels, languages } from "@/shared/constants/signupData";
 
 const animatedComponents = makeAnimated();
 
@@ -18,7 +14,6 @@ const SignupStep7 = ({ nextStep, prevStep, formData }) => {
       initialValues={{
         educationLevel: formData.educationLevel || "",
         profession: formData.profession || "",
-        jobTitle: formData.jobTitle || "",
         firstLanguage: formData.firstLanguage || "",
         secondLanguage: formData.secondLanguage || "",
       }}
@@ -52,36 +47,16 @@ const SignupStep7 = ({ nextStep, prevStep, formData }) => {
           </div>
 
           <div className="form-group">
-            <label>Profession</label>
-            <Select
-              options={professions}
-              value={professions.find((opt) => opt.value === values.profession)}
-              onChange={(option) =>
-                setFieldValue("profession", option?.value || "")
-              }
-              components={animatedComponents}
-              placeholder="Select your profession"
-              className="react-select-container"
-              classNamePrefix="react-select"
+            <label htmlFor="profession">Profession</label>
+            <Field
+              type="text"
+              name="profession"
+              id="profession"
+              className="form-input"
+              placeholder="Enter your profession"
             />
             <ErrorMessage
               name="profession"
-              component="div"
-              className="error-message"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="jobTitle">Job Title</label>
-            <Field
-              type="text"
-              name="jobTitle"
-              id="jobTitle"
-              className="form-input"
-              placeholder="Enter your job title"
-            />
-            <ErrorMessage
-              name="jobTitle"
               component="div"
               className="error-message"
             />

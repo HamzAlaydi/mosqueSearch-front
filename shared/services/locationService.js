@@ -3,6 +3,7 @@ import debounce from "lodash.debounce";
 
 /**
  * Creates a location search function using the LocationIQ API
+ * Supports global location search including zip codes, city names, addresses, and more
  * @returns {Function} A function that loads location options for react-select
  */
 export const createLocationSearchFunction = () => {

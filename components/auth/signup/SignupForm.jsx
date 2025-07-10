@@ -89,7 +89,7 @@ const SignupForm = () => {
           <ProgressBar step={currentStep} totalSteps={totalSteps} />
         </div>
 
-        {currentStep === 1 && (
+        {currentStep === 9 && (
           <SignupStep1 nextStep={handleStepSubmit} formData={formData} />
         )}
         {currentStep === 2 && (
@@ -141,7 +141,7 @@ const SignupForm = () => {
             formData={formData}
           />
         )}
-        {currentStep === 9 && (
+        {currentStep === 1 && (
           <SignupStep9
             onSubmit={handleSubmit}
             prevStep={prevStep}

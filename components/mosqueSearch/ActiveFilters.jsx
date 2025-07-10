@@ -1,6 +1,7 @@
 // Replace the existing FilterTag component
 
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const FilterTag = ({
   category,
@@ -96,8 +97,121 @@ const FilterTag = ({
     </div>
   );
 };
+
+// New Mosque Dropdown Component
+const MosqueDropdown = ({ selectedMosques, removeFilter }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close dropdown when clicking outside
+  const handleClickOutside = (event) => {
+    if (!event.target.closest(".mosque-dropdown")) {
+      setIsOpen(false);
+    }
+  };
+
+  // Add event listener when dropdown is open
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  if (!selectedMosques || selectedMosques.length === 0) {
+    return null;
+  }
+
+  const defaultMosques = selectedMosques.filter((mosque) => mosque.isDefault);
+  const additionalMosques = selectedMosques.filter(
+    (mosque) => !mosque.isDefault
+  );
+
+  return (
+    <div className="relative mosque-dropdown">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-800 border border-blue-200 shadow-sm rounded-full px-3 py-1.5 flex items-center gap-2 text-sm font-medium transition-all duration-200 hover:shadow-md"
+      >
+        <MapPin size={14} className="text-blue-600" />
+        <span className="font-semibold">
+          Attached Mosques ({selectedMosques.length})
+        </span>
+        {isOpen ? (
+          <ChevronUp size={14} className="text-blue-600" />
+        ) : (
+          <ChevronDown size={14} className="text-blue-600" />
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-64 max-h-60 overflow-y-auto">
+          <div className="p-2">
+            <div className="text-xs font-semibold text-gray-500 mb-2 px-2">
+              SELECTED MOSQUES
+            </div>
+
+            {/* Default/Attached Mosques */}
+            {defaultMosques.length > 0 && (
+              <div className="mb-2">
+                <div className="text-xs font-medium text-blue-600 mb-1 px-2">
+                  Your Attached Mosques
+                </div>
+                {defaultMosques.map((mosque) => (
+                  <div
+                    key={mosque.id}
+                    className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                      <span className="text-sm font-medium">{mosque.name}</span>
+                    </div>
+                    <button
+                      onClick={() => removeFilter("selectedMosques", mosque.id)}
+                      className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-100"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Additional Selected Mosques */}
+            {additionalMosques.length > 0 && (
+              <div>
+                <div className="text-xs font-medium text-gray-600 mb-1 px-2">
+                  Additional Mosques
+                </div>
+                {additionalMosques.map((mosque) => (
+                  <div
+                    key={mosque.id}
+                    className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin size={12} className="text-gray-500" />
+                      <span className="text-sm font-medium">{mosque.name}</span>
+                    </div>
+                    <button
+                      onClick={() => removeFilter("selectedMosques", mosque.id)}
+                      className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-100"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function ActiveFilters({
   activeFilters,
+  selectedMosques = [],
   removeFilter,
   clearAllFilters,
 }) {
@@ -111,7 +225,7 @@ export default function ActiveFilters({
     (activeFilters.profession?.length || 0) === 0 &&
     activeFilters.willingToRelocate === null &&
     activeFilters.selectedMosque === null && // Check for single selected mosque
-    (activeFilters.selectedMosques?.length || 0) === 0 && // Check for multiple selected mosques
+    (selectedMosques?.length || 0) === 0 && // Check for multiple selected mosques
     (!activeFilters.ageRange ||
       (activeFilters.ageRange.min === 18 &&
         activeFilters.ageRange.max === 65)) &&
@@ -209,17 +323,11 @@ export default function ActiveFilters({
         />
       )}
 
-      {/* IMPORTANT: Handling multiple selected mosques */}
-      {activeFilters.selectedMosques?.map((mosque) => (
-        <FilterTag
-          key={`selected-mosque-${mosque.id}`}
-          category="selectedMosques"
-          value={mosque.id}
-          displayValue={mosque.name}
-          isDefault={mosque.isDefault} // Pass the isDefault flag
-          removeFilter={removeFilter}
-        />
-      ))}
+      {/* Mosque Dropdown - replaces individual mosque tags */}
+      <MosqueDropdown
+        selectedMosques={selectedMosques}
+        removeFilter={removeFilter}
+      />
 
       <button
         onClick={clearAllFilters}

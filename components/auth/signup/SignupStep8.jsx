@@ -56,7 +56,7 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
                 className="form-checkbox"
                 required
               />
-              <label htmlFor="terms">
+              <label htmlFor="terms" className="ml-2">
                 I agree to the{" "}
                 <Link href="/terms" className="auth-link" target="_blank">
                   Terms of Service

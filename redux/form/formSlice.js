@@ -24,7 +24,6 @@ const initialState = {
     // Education & Language
     educationLevel: "",
     profession: "",
-    jobTitle: "",
     firstLanguage: "",
     secondLanguage: "",
 

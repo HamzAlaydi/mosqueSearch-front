@@ -140,6 +140,36 @@ export const removeImamFromMosque = createAsyncThunk(
   }
 );
 
+export const updateImamStatus = createAsyncThunk(
+  "superadmin/updateImamStatus",
+  async ({ imamId, status, deniedReason }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${rootRoute}/superadmin/imam-status/${imamId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status, deniedReason }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update imam status");
+      }
+
+      const data = await response.json();
+      return { imamId, status, data };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const initialState = {
   imamRequests: [],
   mosques: [],
@@ -237,6 +267,26 @@ const superAdminSlice = createSlice({
         state.success = action.payload.data.message;
       })
       .addCase(removeImamFromMosque.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Update imam status
+      .addCase(updateImamStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateImamStatus.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = action.payload.data.message;
+        // Update the imam request status
+        const index = state.imamRequests.findIndex(
+          (req) => req.id === action.payload.imamId
+        );
+        if (index !== -1) {
+          state.imamRequests[index].status = action.payload.status;
+        }
+      })
+      .addCase(updateImamStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

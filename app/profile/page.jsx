@@ -360,7 +360,7 @@ export default function EditProfile() {
     willingToRelocate: false,
     educationLevel: "",
     profession: "",
-    jobTitle: "",
+
     income: "",
     languages: [], // Assuming this is an array of strings
     firstLanguage: "",
@@ -401,15 +401,6 @@ export default function EditProfile() {
     { value: "bachelors", label: "Bachelor's Degree" },
     { value: "master", label: "Master's Degree" },
     { value: "phd", label: "PhD" },
-    { value: "other", label: "Other" },
-  ];
-
-  const professionOptions = [
-    { value: "education", label: "Education" },
-    { value: "healthcare", label: "Healthcare" },
-    { value: "technology", label: "Technology" },
-    { value: "business", label: "Business" },
-    { value: "arts", label: "Arts" },
     { value: "other", label: "Other" },
   ];
 
@@ -476,11 +467,77 @@ export default function EditProfile() {
   const languageOptions = [
     { value: "arabic", label: "Arabic" },
     { value: "english", label: "English" },
+    { value: "urdu", label: "Urdu" },
     { value: "french", label: "French" },
     { value: "spanish", label: "Spanish" },
-    { value: "urdu", label: "Urdu" },
+    { value: "german", label: "German" },
+    { value: "italian", label: "Italian" },
+    { value: "portuguese", label: "Portuguese" },
+    { value: "dutch", label: "Dutch" },
+    { value: "swedish", label: "Swedish" },
+    { value: "norwegian", label: "Norwegian" },
+    { value: "danish", label: "Danish" },
+    { value: "finnish", label: "Finnish" },
+    { value: "polish", label: "Polish" },
+    { value: "russian", label: "Russian" },
     { value: "turkish", label: "Turkish" },
-    { value: "persian", label: "Persian" },
+    { value: "persian", label: "Persian (Farsi)" },
+    { value: "bengali", label: "Bengali" },
+    { value: "hindi", label: "Hindi" },
+    { value: "punjabi", label: "Punjabi" },
+    { value: "pashto", label: "Pashto" },
+    { value: "dari", label: "Dari" },
+    { value: "kurdish", label: "Kurdish" },
+    { value: "azerbaijani", label: "Azerbaijani" },
+    { value: "kazakh", label: "Kazakh" },
+    { value: "uzbek", label: "Uzbek" },
+    { value: "tajik", label: "Tajik" },
+    { value: "kyrgyz", label: "Kyrgyz" },
+    { value: "turkmen", label: "Turkmen" },
+    { value: "malay", label: "Malay" },
+    { value: "indonesian", label: "Indonesian" },
+    { value: "filipino", label: "Filipino (Tagalog)" },
+    { value: "thai", label: "Thai" },
+    { value: "vietnamese", label: "Vietnamese" },
+    { value: "chinese_mandarin", label: "Chinese (Mandarin)" },
+    { value: "chinese_cantonese", label: "Chinese (Cantonese)" },
+    { value: "japanese", label: "Japanese" },
+    { value: "korean", label: "Korean" },
+    { value: "mongolian", label: "Mongolian" },
+    { value: "swahili", label: "Swahili" },
+    { value: "hausa", label: "Hausa" },
+    { value: "yoruba", label: "Yoruba" },
+    { value: "igbo", label: "Igbo" },
+    { value: "amharic", label: "Amharic" },
+    { value: "somali", label: "Somali" },
+    { value: "albanian", label: "Albanian" },
+    { value: "bosnian", label: "Bosnian" },
+    { value: "croatian", label: "Croatian" },
+    { value: "serbian", label: "Serbian" },
+    { value: "bulgarian", label: "Bulgarian" },
+    { value: "romanian", label: "Romanian" },
+    { value: "hungarian", label: "Hungarian" },
+    { value: "czech", label: "Czech" },
+    { value: "slovak", label: "Slovak" },
+    { value: "slovenian", label: "Slovenian" },
+    { value: "latvian", label: "Latvian" },
+    { value: "lithuanian", label: "Lithuanian" },
+    { value: "estonian", label: "Estonian" },
+    { value: "greek", label: "Greek" },
+    { value: "hebrew", label: "Hebrew" },
+    { value: "armenian", label: "Armenian" },
+    { value: "georgian", label: "Georgian" },
+    { value: "tamil", label: "Tamil" },
+    { value: "telugu", label: "Telugu" },
+    { value: "kannada", label: "Kannada" },
+    { value: "malayalam", label: "Malayalam" },
+    { value: "marathi", label: "Marathi" },
+    { value: "gujarati", label: "Gujarati" },
+    { value: "sindhi", label: "Sindhi" },
+    { value: "kashmiri", label: "Kashmiri" },
+    { value: "nepali", label: "Nepali" },
+    { value: "sinhala", label: "Sinhala" },
+    { value: "dhivehi", label: "Dhivehi (Maldivian)" },
     { value: "other", label: "Other" },
   ];
 
@@ -585,7 +642,7 @@ export default function EditProfile() {
         willingToRelocate: currentUser.willingToRelocate || false,
         educationLevel: currentUser.educationLevel || "",
         profession: currentUser.profession || "",
-        jobTitle: currentUser.jobTitle || "",
+
         income: currentUser.income || "",
         languages: currentUser.languages || [],
         firstLanguage: currentUser.firstLanguage || "",
@@ -1018,6 +1075,7 @@ export default function EditProfile() {
                 { id: "religion", label: "Religion" },
                 { id: "preferences", label: "Preferences" },
                 { id: "about", label: "About & Interests" },
+                { id: "mosques", label: "Attached Mosques" },
                 { id: "management", label: "Management" },
                 ...(currentUser.gender === "female"
                   ? [{ id: "wali", label: "Wali Contact" }]
@@ -1176,18 +1234,10 @@ export default function EditProfile() {
                     />
                     <FormField
                       label="Profession"
-                      type="select"
                       name="profession"
                       value={formData.profession}
                       onChange={handleChange}
-                      options={professionOptions}
-                      required
-                    />
-                    <FormField
-                      label="Job Title"
-                      name="jobTitle"
-                      value={formData.jobTitle}
-                      onChange={handleChange}
+                      placeholder="Enter your profession"
                       required
                     />
                     <FormField
@@ -1403,6 +1453,69 @@ export default function EditProfile() {
                   placeholder="Tell us about yourself, your hobbies, interests, etc."
                 />
                 {/* Add fields for interests, hobbies etc. if they exist in formData */}
+              </FormSection>
+            )}
+
+            {/* Attached Mosques Tab */}
+            {activeTab === "mosques" && (
+              <FormSection
+                title="Your Attached Mosques"
+                icon={<MapPin size={20} />}
+              >
+                <div className="space-y-4">
+                  {currentUser?.attachedMosques &&
+                  currentUser.attachedMosques.length > 0 ? (
+                    <div className="grid gap-4">
+                      {currentUser.attachedMosques.map((mosque, index) => (
+                        <div
+                          key={mosque.id || mosque._id || index}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                            <div>
+                              <h4 className="font-medium text-gray-900">
+                                {mosque.name}
+                              </h4>
+                              {mosque.address && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {mosque.address}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin size={16} className="text-blue-600" />
+                            <span className="text-sm text-gray-500">
+                              Attached
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <MapPin
+                        size={48}
+                        className="text-gray-300 mx-auto mb-4"
+                      />
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">
+                        No Attached Mosques
+                      </h4>
+                      <p className="text-gray-600 text-sm mb-4">
+                        You haven't attached to any mosques yet. Use the map to
+                        find and attach to mosques in your area.
+                      </p>
+                      <button
+                        onClick={() => (window.location.href = "/")}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2 mx-auto"
+                      >
+                        <MapPin size={16} />
+                        Find Mosques
+                      </button>
+                    </div>
+                  )}
+                </div>
               </FormSection>
             )}
 

@@ -8,9 +8,9 @@ const LocationSelect = ({
   value,
   onChange,
   name,
-  placeholder = "Select location",
+  placeholder = "Search for any location, city, zip code, or address",
   className = "react-select-container",
-  isRequired = false
+  isRequired = false,
 }) => {
   // Create a memoized function to load location options
   const loadOptions = useCallback(createLocationSearchFunction(), []);

@@ -8,6 +8,7 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [servicesReady, setServicesReady] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(true);
   const autocompleteService = useRef(null);
   const geocoder = useRef(null);
   const searchDebounceTimer = useRef(null);
@@ -18,12 +19,17 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
   useEffect(() => {
     const checkGoogleMaps = () => {
       if (window.google && window.google.maps && window.google.maps.places) {
-        autocompleteService.current =
-          new window.google.maps.places.AutocompleteService();
-        geocoder.current = new window.google.maps.Geocoder();
-        setServicesReady(true);
-      } else {
-        setError("Google Maps services are not available");
+        try {
+          autocompleteService.current =
+            new window.google.maps.places.AutocompleteService();
+          geocoder.current = new window.google.maps.Geocoder();
+          setServicesReady(true);
+          setServicesLoading(false);
+          console.log("Google Maps services loaded successfully");
+        } catch (error) {
+          console.error("Error initializing Google Maps services:", error);
+          setServicesLoading(false);
+        }
       }
     };
 
@@ -35,14 +41,16 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
     // Stop checking after 10 seconds
     const timeout = setTimeout(() => {
       clearInterval(interval);
-      setError("Google Maps services are not available after 10 seconds");
+      setServicesLoading(false);
+      console.log("Google Maps services failed to load, using fallback");
     }, 10000);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [setError]);
+  }, []);
+
   // Handle clicks outside of the results dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -60,9 +68,10 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLocationSearch = useCallback(
+  // Fallback search using LocationIQ API
+  const searchWithLocationIQ = useCallback(
     async (query) => {
-      if (!query.trim() || !autocompleteService.current) {
+      if (!query.trim()) {
         setSearchResults([]);
         return;
       }
@@ -71,60 +80,111 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
       setError(null);
 
       try {
-        const request = {
-          input: query,
-          types: ["geocode", "establishment"],
-          componentRestrictions: { country: "uk" },
-          language: "en",
-        };
+        const response = await fetch(
+          `https://api.locationiq.com/v1/autocomplete?key=pk.288b6dab564970e7a979efef12013f91&q=${encodeURIComponent(
+            query
+          )}&limit=10`
+        );
 
-        // Add location bias if we have user location
-        if (userLocation) {
-          request.location = new window.google.maps.LatLng(
-            userLocation.lat,
-            userLocation.lng
-          );
-          request.radius = 50000; // 50km radius
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const predictions = await new Promise((resolve, reject) => {
-          autocompleteService.current.getPlacePredictions(
-            request,
-            (predictions, status) => {
-              if (status !== window.google.maps.places.PlacesServiceStatus.OK) {
-                reject(status);
-              } else {
-                resolve(predictions || []);
-              }
-            }
-          );
-        });
+        const data = await response.json();
 
-        // Format and deduplicate results
-        const formattedResults = predictions.map((p) => ({
-          description: p.description,
-          placeId: p.place_id,
-          mainText: p.structured_formatting?.main_text || "",
-          secondaryText: p.structured_formatting?.secondary_text || "",
-          types: p.types || [],
+        const formattedResults = data.map((item) => ({
+          description: item.display_name,
+          placeId: item.place_id,
+          mainText: item.display_name.split(",")[0] || item.display_name,
+          secondaryText:
+            item.display_name.split(",").slice(1).join(",").trim() || "",
+          types: item.type ? [item.type] : [],
+          location: {
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+          },
         }));
 
         setSearchResults(formattedResults);
         setShowSearchResults(true);
       } catch (err) {
-        console.error("Location search error:", err);
-        if (
-          err === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS
-        ) {
-          setSearchResults([]);
-        } else {
-          setError("Unable to search locations. Please try again.");
-        }
+        console.error("LocationIQ search error:", err);
+        setError("Unable to search locations. Please try again.");
+        setSearchResults([]);
       } finally {
         setSearchingLocation(false);
       }
     },
-    [userLocation, setError]
+    [setError]
+  );
+
+  const handleLocationSearch = useCallback(
+    async (query) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
+      }
+
+      // If Google Maps services are available, use them
+      if (autocompleteService.current) {
+        setSearchingLocation(true);
+        setError(null);
+
+        try {
+          const request = {
+            input: query,
+            types: ["geocode", "establishment"],
+            language: "en",
+          };
+
+          // Add location bias if we have user location (optional, not required)
+          if (userLocation) {
+            request.location = new window.google.maps.LatLng(
+              userLocation.lat,
+              userLocation.lng
+            );
+            request.radius = 50000; // 50km radius
+          }
+
+          const predictions = await new Promise((resolve, reject) => {
+            autocompleteService.current.getPlacePredictions(
+              request,
+              (predictions, status) => {
+                if (
+                  status !== window.google.maps.places.PlacesServiceStatus.OK
+                ) {
+                  reject(status);
+                } else {
+                  resolve(predictions || []);
+                }
+              }
+            );
+          });
+
+          // Format and deduplicate results
+          const formattedResults = predictions.map((p) => ({
+            description: p.description,
+            placeId: p.place_id,
+            mainText: p.structured_formatting?.main_text || "",
+            secondaryText: p.structured_formatting?.secondary_text || "",
+            types: p.types || [],
+          }));
+
+          setSearchResults(formattedResults);
+          setShowSearchResults(true);
+        } catch (err) {
+          console.error("Google Maps search error:", err);
+          // Fallback to LocationIQ if Google Maps fails
+          await searchWithLocationIQ(query);
+        } finally {
+          setSearchingLocation(false);
+        }
+      } else {
+        // Use LocationIQ as fallback
+        await searchWithLocationIQ(query);
+      }
+    },
+    [userLocation, setError, searchWithLocationIQ]
   );
 
   // Debounced search to improve performance
@@ -143,40 +203,49 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
 
   const handleSelectLocation = useCallback(
     async (result) => {
-      if (!geocoder.current) {
-        setError("Location services not available");
-        return;
-      }
-
       setSearchingLocation(true);
       setError(null);
 
       try {
-        const geocodeResults = await new Promise((resolve, reject) => {
-          geocoder.current.geocode(
-            { placeId: result.placeId },
-            (results, status) => {
-              if (status === window.google.maps.GeocoderStatus.OK) {
-                resolve(results);
-              } else {
-                reject(status);
-              }
-            }
-          );
-        });
-
-        if (geocodeResults && geocodeResults[0]) {
-          const location = geocodeResults[0].geometry.location;
-          const bounds = geocodeResults[0].geometry.bounds;
-
+        // If we have coordinates directly from LocationIQ
+        if (result.location) {
           setSearchQuery(result.description);
           setUserLocation({
-            lat: location.lat(),
-            lng: location.lng(),
+            lat: result.location.lat,
+            lng: result.location.lng,
           });
           setShowSearchResults(false);
+          return;
+        }
+
+        // Otherwise try to geocode with Google Maps
+        if (geocoder.current) {
+          const geocodeResults = await new Promise((resolve, reject) => {
+            geocoder.current.geocode(
+              { placeId: result.placeId },
+              (results, status) => {
+                if (status === window.google.maps.GeocoderStatus.OK) {
+                  resolve(results);
+                } else {
+                  reject(status);
+                }
+              }
+            );
+          });
+
+          if (geocodeResults && geocodeResults[0]) {
+            const location = geocodeResults[0].geometry.location;
+            setSearchQuery(result.description);
+            setUserLocation({
+              lat: location.lat(),
+              lng: location.lng(),
+            });
+            setShowSearchResults(false);
+          } else {
+            setError("Could not locate this place");
+          }
         } else {
-          setError("Could not locate this place");
+          setError("Location services not available");
         }
       } catch (err) {
         console.error("Geocoding error:", err);
@@ -252,7 +321,11 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Search for a location or postcode"
+          placeholder={
+            servicesReady
+              ? "Search for any location, city, zip code, or address"
+              : "Loading map services... You can type to search once ready"
+          }
           className="flex-grow px-2 py-2 focus:outline-none text-sm rounded-full"
           value={searchQuery}
           onChange={(e) => {
@@ -267,7 +340,6 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
           onFocus={() => {
             if (searchResults.length > 0) setShowSearchResults(true);
           }}
-          disabled={!servicesReady}
         />
         {searchQuery && (
           <button
@@ -296,9 +368,7 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
             type="button"
             className="bg-primary p-2 rounded-full text-white mr-1 flex items-center justify-center"
             onClick={() => handleLocationSearch(searchQuery)}
-            disabled={
-              searchingLocation || !searchQuery.trim() || !servicesReady
-            }
+            disabled={searchingLocation || !searchQuery.trim()}
             aria-label="Search locations"
           >
             {searchingLocation ? (
@@ -310,9 +380,16 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
         </div>
       </div>
 
-      {!servicesReady && (
-        <div className="text-xs text-gray-600 ml-2">
+      {servicesLoading && (
+        <div className="text-xs text-gray-600 ml-2 flex items-center">
+          <Loader2 size={12} className="animate-spin mr-1" />
           Loading map services...
+        </div>
+      )}
+
+      {!servicesLoading && !servicesReady && (
+        <div className="text-xs text-yellow-600 ml-2">
+          Using fallback search service. Search functionality is available.
         </div>
       )}
 

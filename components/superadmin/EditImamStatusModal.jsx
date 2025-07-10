@@ -70,12 +70,12 @@ const EditImamStatusModal = ({ open, onClose, imam, onSave }) => {
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
         <div
-          className="fixed inset-0 bg-transparent backdrop-blur-[1.5px]"
+          className="fixed inset-0 bg-black bg-opacity-50"
           onClick={handleClose}
         />
 
         {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div className="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           {/* Header */}
           <div className="bg-blue-600 px-4 py-3 sm:px-6">
             <div className="flex items-center justify-between">

@@ -81,6 +81,7 @@ export default function OptimizedMosqueMap({
   const [showAttachedMosques, setShowAttachedMosques] = useState(false); // State to toggle showing only attached mosques
   const [searchedMosqueIds, setSearchedMosqueIds] = useState(new Set());
   const [loadError, setLoadError] = useState(null);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
   const mapRef = useRef(null);
 
   // Fetch user profile on component mount
@@ -393,16 +394,23 @@ export default function OptimizedMosqueMap({
         return;
       }
 
+      setIsUserInteracting(true);
       setSelectedMosque(mosque);
       setInfoWindowOpen(true);
 
-      // Pan to the marker location
+      // Pan to the marker location without changing zoom
       if (map && mosque.location) {
+        const currentZoom = map.getZoom();
         map.panTo({
           lat: mosque.location.lat,
           lng: mosque.location.lng,
         });
+        // Preserve the current zoom level
+        map.setZoom(currentZoom);
       }
+
+      // Reset interaction flag after a short delay
+      setTimeout(() => setIsUserInteracting(false), 1000);
     },
     [map, selectedMosque, handleInfoWindowClose]
   );
@@ -418,6 +426,8 @@ export default function OptimizedMosqueMap({
         setTimeout(() => setFeedbackMessage(null), 3000);
         return;
       }
+
+      setIsUserInteracting(true);
 
       // Use the pre-calculated set for efficient lookup
       const isAlreadyAttached =
@@ -482,8 +492,14 @@ export default function OptimizedMosqueMap({
             dispatch(fetchUserProfile(currentUser._id || currentUser.id));
           }
 
-          setTimeout(() => setFeedbackMessage(null), 3000);
-          handleInfoWindowClose(); // Close InfoWindow after action
+          // Automatically refresh the page after a short delay to update the UI
+          setTimeout(() => {
+            setFeedbackMessage(null);
+            handleInfoWindowClose(); // Close InfoWindow after action
+            setIsUserInteracting(false); // Reset interaction flag
+            // Refresh the page to update all components
+            window.location.reload();
+          }, 1500);
         } else {
           throw new Error(
             response.data.message || "Failed to update mosque attachment"
@@ -500,7 +516,10 @@ export default function OptimizedMosqueMap({
             "Failed to update mosque attachment. Please try again.",
         });
 
-        setTimeout(() => setFeedbackMessage(null), 3000);
+        setTimeout(() => {
+          setFeedbackMessage(null);
+          setIsUserInteracting(false); // Reset interaction flag
+        }, 3000);
       }
     },
     [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose]
@@ -563,7 +582,7 @@ export default function OptimizedMosqueMap({
           )}
 
           {/* Search Users in This Mosque Button - UPDATED with visual feedback */}
-          <button
+          {/* <button
             onClick={() => handleSearchInMosque(mosque)}
             className={`mt-2 text-sm px-4 py-2 rounded-md w-full transition-all duration-150 focus:outline-none focus:ring-2 ${
               hasBeenSearched
@@ -572,7 +591,7 @@ export default function OptimizedMosqueMap({
             }`}
           >
             {hasBeenSearched ? "✓ Users Searched" : "Find Users in This Mosque"}
-          </button>
+          </button> */}
         </div>
       );
     },
@@ -604,7 +623,7 @@ export default function OptimizedMosqueMap({
 
   // Update map when data changes or filters are applied
   useEffect(() => {
-    if (isLoaded && map) {
+    if (isLoaded && map && !isUserInteracting) {
       fitMapToBounds();
     }
   }, [

@@ -116,6 +116,7 @@ export default function MatchMapView({
   const [hoveredMosqueId, setHoveredMosqueId] = useState(null);
   const [mosquesToDisplay, setMosquesToDisplay] = useState([]);
   const [hasReachedLimit, setHasReachedLimit] = useState(false);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
   const mapRef = useRef(null);
 
   // Use filteredMosques as the source if provided, otherwise use allMosques
@@ -211,13 +212,21 @@ export default function MatchMapView({
 
   const handleMarkerClick = useCallback(
     (mosque) => {
+      setIsUserInteracting(true);
       setSelectedMosque(mosque);
       setCurrentMosqueForInfoWindow(mosque);
       setInfoWindowOpen(true);
-      map?.panTo({
-        lat: mosque.location.lat,
-        lng: mosque.location.lng,
-      });
+      if (map) {
+        const currentZoom = map.getZoom();
+        map.panTo({
+          lat: mosque.location.lat,
+          lng: mosque.location.lng,
+        });
+        // Preserve the current zoom level
+        map.setZoom(currentZoom);
+      }
+      // Reset interaction flag after a short delay
+      setTimeout(() => setIsUserInteracting(false), 1000);
     },
     [map]
   );
@@ -242,18 +251,21 @@ export default function MatchMapView({
 
   // Effect to manage InfoWindow visibility based on selectedMosque state
   useEffect(() => {
-    if (selectedMosque && map) {
+    if (selectedMosque && map && !isUserInteracting) {
       setCurrentMosqueForInfoWindow(selectedMosque);
       setInfoWindowOpen(true);
+      const currentZoom = map.getZoom();
       map.panTo({
         lat: selectedMosque.location.lat,
         lng: selectedMosque.location.lng,
       });
+      // Preserve the current zoom level
+      map.setZoom(currentZoom);
     } else if (!selectedMosque) {
       setInfoWindowOpen(false);
       setCurrentMosqueForInfoWindow(null);
     }
-  }, [selectedMosque, map]);
+  }, [selectedMosque, map, isUserInteracting]);
 
   // Effect to fit map to the distance circle when map or center changes
   useEffect(() => {

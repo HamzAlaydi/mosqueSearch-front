@@ -11,16 +11,12 @@ import {
 import { MarkerClustererF } from "@react-google-maps/api";
 import {
   Loader2,
-  Maximize2,
-  Minimize2,
-  ArrowLeft,
   MapPin,
   Users,
   CheckCircle,
   XCircle,
   Clock,
 } from "lucide-react";
-import { createPortal } from "react-dom";
 import { allMosquesInLondon } from "@/shared/allMosquesInLondon";
 import { GOOGLE_API } from "@/shared/constants/backendLink";
 
@@ -33,22 +29,12 @@ const MILES_TO_METERS = 1609.34;
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // London
 const INFOWINDOW_PAN_PIXEL_OFFSET_Y = 250; // Pixels to pan up for InfoWindow visibility
 
-const MAP_CONTAINER_STYLE_DEFAULT = {
+const MAP_CONTAINER_STYLE = {
   width: "100%",
   height: "400px",
   borderRadius: "8px",
   overflow: "hidden", // Ensures child elements like InfoWindow don't spill
   position: "relative", // Helps anchor elements properly
-  transition: "height 0.3s ease-in-out",
-};
-
-const MAP_CONTAINER_STYLE_FULLSCREEN = {
-  width: "100%",
-  height: "calc(100vh - 80px)", // Adjust depending on header/footer height
-  borderRadius: "0",
-  overflow: "hidden",
-  position: "relative",
-  transition: "height 0.3s ease-in-out",
 };
 
 const MAP_OPTIONS = {
@@ -56,7 +42,7 @@ const MAP_OPTIONS = {
   zoomControl: true,
   mapTypeControl: false,
   streetViewControl: false,
-  fullscreenControl: false, // We'll implement our own
+  fullscreenControl: true, // Enable Google Maps built-in full screen control
   clickableIcons: false, // Improve performance
   maxZoom: 18,
   // Simplified styles for performance/cleanliness
@@ -120,8 +106,8 @@ const MapContainer = ({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [selectedMosque, setSelectedMosque] = useState(null);
   const [hoveredMosqueId, setHoveredMosqueId] = useState(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
   const [infoWindowOpen, setInfoWindowOpen] = useState(false);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null); // Store map instance in a ref for persistence
 
@@ -372,16 +358,23 @@ const MapContainer = ({
         return;
       }
 
+      setIsUserInteracting(true);
       setSelectedMosque(mosque);
       setInfoWindowOpen(true);
 
-      // Simple pan to marker without complex offset calculations
+      // Simple pan to marker without changing zoom
       if (mapInstanceRef.current && mosque.location) {
+        const currentZoom = mapInstanceRef.current.getZoom();
         mapInstanceRef.current.panTo({
           lat: mosque.location.lat,
           lng: mosque.location.lng,
         });
+        // Preserve the current zoom level
+        mapInstanceRef.current.setZoom(currentZoom);
       }
+
+      // Reset interaction flag after a short delay
+      setTimeout(() => setIsUserInteracting(false), 1000);
     },
     [selectedMosque]
   );
@@ -420,164 +413,6 @@ const MapContainer = ({
     setHoveredMosqueId(null);
   }, []);
 
-  // Fullscreen toggle logic
-  const toggleFullScreen = useCallback(() => {
-    const mapElement = document.getElementById("google-map-container");
-    if (!mapElement) return;
-
-    if (!isFullScreen) {
-      // Go to fullscreen mode
-      document.body.style.overflow = "hidden"; // Prevent body scroll
-
-      // Create fullscreen container if it doesn't exist
-      let fsContainer = document.getElementById("map-fullscreen-container");
-      if (!fsContainer) {
-        fsContainer = document.createElement("div");
-        fsContainer.id = "map-fullscreen-container";
-        fsContainer.className = "fixed inset-0 z-50 bg-white flex flex-col";
-        document.body.appendChild(fsContainer);
-
-        // Create header
-        const header = document.createElement("div");
-        header.className =
-          "p-4 border-b flex justify-between items-center bg-white shadow-sm";
-        header.innerHTML = `
-        <button id="exit-fs-button" class="flex items-center text-gray-700 hover:text-gray-900 text-sm font-semibold">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="m15 19-7-7 7-7"></path></svg>
-          <span>Back</span>
-        </button>
-        <div class="text-center flex-grow">
-          <h2 class="font-semibold text-lg">Select Mosques</h2>
-          <p class="text-sm text-gray-600">
-            Found ${filteredMosques.length} mosques within ${distance} miles
-          </p>
-        </div>
-        <div class="w-20"></div>
-      `;
-        fsContainer.appendChild(header);
-
-        // Create content container
-        const content = document.createElement("div");
-        content.className = "flex-grow relative";
-        content.id = "map-fs-content";
-        fsContainer.appendChild(content);
-
-        // Add event listener to exit button
-        document
-          .getElementById("exit-fs-button")
-          .addEventListener("click", () => {
-            toggleFullScreen();
-          });
-      }
-
-      // Move map into fullscreen container
-      document.getElementById("map-fs-content").appendChild(mapElement);
-    } else {
-      // Exit fullscreen mode
-      document.body.style.overflow = ""; // Restore body scroll
-
-      // Move map back to original container
-      const originalContainer = document.querySelector(".mb-4.relative > div");
-      if (originalContainer) {
-        originalContainer.appendChild(mapElement);
-      }
-
-      // Remove fullscreen container
-      const fsContainer = document.getElementById("map-fullscreen-container");
-      if (fsContainer) {
-        document.body.removeChild(fsContainer);
-      }
-
-      // Refit map bounds after a delay to let it resize
-      setTimeout(() => {
-        if (mapInstanceRef.current && isMapLoaded && userLocation) {
-          const currentMap = mapInstanceRef.current;
-          const bounds = new window.google.maps.LatLngBounds();
-
-          // Extend bounds for all filtered mosques
-          filteredMosques.forEach((mosque) => {
-            bounds.extend(
-              new window.google.maps.LatLng(
-                mosque.location.lat,
-                mosque.location.lng
-              )
-            );
-          });
-
-          // Also extend bounds for the user's location
-          bounds.extend(
-            new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
-          );
-
-          if (filteredMosques.length === 0) {
-            currentMap.setCenter(userLocation);
-            currentMap.setZoom(12);
-          } else if (filteredMosques.length === 1) {
-            currentMap.fitBounds(bounds, { padding: 100 });
-          } else {
-            currentMap.fitBounds(bounds, { padding: 50 });
-          }
-        }
-      }, 100);
-    }
-
-    // Toggle fullscreen state
-    setIsFullScreen(!isFullScreen);
-
-    // Ensure Google Map resizes to fit container
-    setTimeout(() => {
-      if (window.google && mapInstanceRef.current) {
-        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
-      }
-    }, 200);
-  }, [
-    isFullScreen,
-    filteredMosques.length,
-    distance,
-    isMapLoaded,
-    userLocation,
-  ]);
-
-  // Render the full-screen modal portal
-  const renderFullScreenModal = () => {
-    if (!isFullScreen) return null;
-
-    // The map element itself is moved, so the portal just contains the fullscreen container and controls
-    return createPortal(
-      <div className="fixed inset-0 z-50 bg-white overflow-hidden flex flex-col">
-        <div className="p-4 border-b flex justify-between items-center bg-white shadow-sm">
-          <button
-            onClick={toggleFullScreen}
-            className="flex items-center text-gray-700 hover:text-gray-900 text-sm font-semibold"
-            aria-label="Exit full screen"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            <span>Back</span>
-          </button>
-          <div className="text-center flex-grow">
-            <h2 className="font-semibold text-lg">Select Mosques</h2>
-            <p className="text-sm text-gray-600">
-              Found {filteredMosques.length} mosques within {distance} miles
-            </p>
-          </div>
-          <div className="w-20"></div> {/* Spacer for alignment */}
-        </div>
-        {/* The map will be appended here by toggleFullScreen */}
-        <div className="flex-grow relative" ref={mapContainerRef}>
-          {/* Optional: Add loading or message overlay inside fullscreen */}
-          {isMapLoaded && filteredMosques.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
-              <p className="text-gray-700 font-semibold">
-                No mosques found within {distance} miles.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>,
-      document.body // Render into the body
-    );
-  };
-
   // Map load handler
   const onMapLoad = useCallback((mapInstance) => {
     mapInstanceRef.current = mapInstance; // Store in ref for persistence
@@ -587,7 +422,12 @@ const MapContainer = ({
 
   // Trigger map fitting when filtered mosques or map state changes
   useEffect(() => {
-    if (isMapLoaded && mapInstanceRef.current && userLocation) {
+    if (
+      isMapLoaded &&
+      mapInstanceRef.current &&
+      userLocation &&
+      !isUserInteracting
+    ) {
       const currentMap = mapInstanceRef.current;
       const bounds = new window.google.maps.LatLngBounds();
 
@@ -640,7 +480,7 @@ const MapContainer = ({
         );
       }
     }
-  }, [isMapLoaded, userLocation, filteredMosques.length]);
+  }, [isMapLoaded, userLocation, filteredMosques.length, isUserInteracting]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -739,80 +579,95 @@ const MapContainer = ({
   // Render InfoWindow content
   const renderInfoWindowContent = useCallback(
     (mosque) => {
-      const isAttached = mosque.isAttached;
+      const isAttached = attachedMosqueIds.has(mosque.id);
       const requestStatus = getMosqueRequestStatus(mosque);
 
       // Determine button text and behavior based on request status
       let buttonText = "Add to Selection";
       let buttonClass =
-        "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 text-white";
+        "mt-2 text-sm text-white bg-primary hover:bg-blue-700 px-4 py-2 rounded-md w-full transition-colors duration-150";
       let buttonDisabled = false;
 
       if (requestStatus === "approved") {
         buttonText = "Approved ✓";
-        buttonClass = "bg-green-600 text-white cursor-not-allowed opacity-75";
+        buttonClass =
+          "mt-2 text-sm text-white bg-green-600 px-4 py-2 rounded-md w-full transition-colors duration-150 cursor-not-allowed opacity-75";
         buttonDisabled = true;
       } else if (requestStatus === "denied") {
         buttonText = "Denied ✗";
-        buttonClass = "bg-red-600 text-white cursor-not-allowed opacity-75";
+        buttonClass =
+          "mt-2 text-sm text-white bg-red-600 px-4 py-2 rounded-md w-full transition-colors duration-150 cursor-not-allowed opacity-75";
         buttonDisabled = true;
       } else if (requestStatus === "pending") {
         buttonText = "Request Pending...";
-        buttonClass = "bg-orange-600 text-white cursor-not-allowed opacity-75";
+        buttonClass =
+          "mt-2 text-sm text-white bg-orange-600 px-4 py-2 rounded-md w-full transition-colors duration-150 cursor-not-allowed opacity-75";
         buttonDisabled = true;
       } else if (isAttached) {
         buttonText = "Remove from Selection";
         buttonClass =
-          "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white";
+          "mt-2 text-sm text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md w-full transition-colors duration-150";
+      } else {
+        buttonText = "Add to Selection";
+        buttonClass =
+          "mt-2 text-sm text-white bg-blue-700 hover:bg-blue-700 px-4 py-2 rounded-md w-full transition-colors duration-150";
       }
 
       return (
-        <div className="p-3 max-w-xs font-sans text-gray-800">
-          <h3 className="font-semibold text-lg mb-1 text-gray-900">
+        <div
+          className="bg-white p-5 rounded-xl shadow-xl max-w-xs font-sans flex flex-col items-center justify-center"
+          style={{ minWidth: 260 }}
+        >
+          <h3 className="font-semibold text-lg text-gray-800 mb-1 text-center">
             {mosque.name}
           </h3>
-          <p className="text-sm text-gray-600 mb-3">{mosque.address}</p>
-
-          {/* Facilities badges */}
-          <div className="flex flex-wrap gap-1 mb-3">
-            {mosque.hasFemaleArea && (
-              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full font-medium">
-                <Users className="inline h-3 w-3 mr-1" />
-                Female Prayer Area
-              </span>
-            )}
-            {requestStatus === "approved" && (
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                <CheckCircle className="inline h-3 w-3 mr-1" />
-                Request Approved
-              </span>
-            )}
-            {requestStatus === "denied" && (
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
-                <XCircle className="inline h-3 w-3 mr-1" />
-                Request Denied
-              </span>
-            )}
-            {requestStatus === "pending" && (
-              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-medium">
-                <Clock className="inline h-3 w-3 mr-1" />
-                Request Pending
-              </span>
-            )}
-            {!requestStatus && isAttached && (
-              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-                <CheckCircle className="inline h-3 w-3 mr-1" />
-                Selected
-              </span>
-            )}
-          </div>
+          <p className="text-sm text-gray-600 mb-2 text-center">
+            {mosque.address}
+          </p>
 
           {/* Distance info */}
           {mosque.distance && (
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-gray-500 mb-2 text-center">
               <MapPin className="inline h-3 w-3 mr-1" />
               {mosque.distance.toFixed(1)} miles away
             </p>
+          )}
+
+          {/* Status badges */}
+          {mosque.hasFemaleArea && (
+            <div className="mt-2 mb-2">
+              <div className="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-1 rounded-full inline-block">
+                Female Prayer Area
+              </div>
+            </div>
+          )}
+          {requestStatus === "approved" && (
+            <div className="mt-2 mb-2">
+              <div className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-1 rounded-full inline-block">
+                Request Approved
+              </div>
+            </div>
+          )}
+          {requestStatus === "denied" && (
+            <div className="mt-2 mb-2">
+              <div className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-1 rounded-full inline-block">
+                Request Denied
+              </div>
+            </div>
+          )}
+          {requestStatus === "pending" && (
+            <div className="mt-2 mb-2">
+              <div className="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-1 rounded-full inline-block">
+                Request Pending
+              </div>
+            </div>
+          )}
+          {!requestStatus && isAttached && (
+            <div className="mt-2 mb-2">
+              <div className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full inline-block">
+                Selected
+              </div>
+            </div>
           )}
 
           {/* Toggle Button */}
@@ -824,14 +679,19 @@ const MapContainer = ({
               }
             }}
             disabled={buttonDisabled}
-            className={`w-full text-sm px-4 py-2 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-opacity-50 ${buttonClass}`}
+            className={buttonClass}
           >
             {buttonText}
           </button>
         </div>
       );
     },
-    [toggleMosqueAttachment, handleInfoWindowClose, getMosqueRequestStatus]
+    [
+      toggleMosqueAttachment,
+      handleInfoWindowClose,
+      getMosqueRequestStatus,
+      attachedMosqueIds,
+    ]
   );
 
   // Show loading state while the script is loading
@@ -858,19 +718,10 @@ const MapContainer = ({
 
   return (
     <div className="mb-4 relative">
-      {renderFullScreenModal()}
-
       {/* This div will contain the actual map element */}
-      <div
-        id="google-map-container"
-        style={isFullScreen ? {} : MAP_CONTAINER_STYLE_DEFAULT}
-      >
+      <div id="google-map-container" style={MAP_CONTAINER_STYLE}>
         <GoogleMap
-          mapContainerStyle={
-            isFullScreen
-              ? MAP_CONTAINER_STYLE_FULLSCREEN
-              : MAP_CONTAINER_STYLE_DEFAULT
-          }
+          mapContainerStyle={MAP_CONTAINER_STYLE}
           center={userLocation || DEFAULT_CENTER}
           zoom={userLocation ? 12 : 2}
           options={MAP_OPTIONS}
@@ -938,18 +789,25 @@ const MapContainer = ({
           {/* Info window for selected mosque */}
           {infoWindowOpen && selectedMosque && (
             <InfoWindow
-              position={selectedMosque.location}
+              position={{
+                lat: selectedMosque.location.lat,
+                lng: selectedMosque.location.lng,
+              }}
               onCloseClick={handleInfoWindowClose}
               options={{
-                pixelOffset: new window.google.maps.Size(20, -60),
-                minWidth: 300,
-                maxWidth: 450,
+                pixelOffset:
+                  typeof window !== "undefined" && window.google?.maps
+                    ? new window.google.maps.Size(
+                        0,
+                        -(hoveredMosqueId === selectedMosque.id
+                          ? 60 // Adjust offset based on larger hovered icon size
+                          : 48) // Default icon size
+                      )
+                    : undefined,
                 disableAutoPan: false,
               }}
             >
-              <div className="bg-white rounded-lg shadow-lg">
-                {renderInfoWindowContent(selectedMosque)}
-              </div>
+              {renderInfoWindowContent(selectedMosque)}
             </InfoWindow>
           )}
         </GoogleMap>
@@ -982,36 +840,35 @@ const MapContainer = ({
       </div>
 
       {/* Count and Legend */}
-      {!isFullScreen &&
-        isMapLoaded && ( // Hide legend in fullscreen to save space
-          <div className="absolute bottom-2 right-2 z-10 bg-white p-3 rounded-lg shadow-md text-xs">
-            <p className="font-semibold text-gray-700 mb-2">
-              Found {filteredMosques.length} mosques within {distance} miles
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                <span>No Request</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-green-600"></div>
-                <span>Approved</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-red-600"></div>
-                <span>Denied</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-orange-600"></div>
-                <span>Pending</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                <span>Female Area</span>
-              </div>
+      {/* {isMapLoaded && (
+        <div className="absolute bottom-2 right-2 z-10 bg-white p-3 rounded-lg shadow-md text-xs">
+          <p className="font-semibold text-gray-700 mb-2">
+            Found {filteredMosques.length} mosques within {distance} miles
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+              <span>No Request</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-green-600"></div>
+              <span>Approved</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-red-600"></div>
+              <span>Denied</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-orange-600"></div>
+              <span>Pending</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+              <span>Female Area</span>
             </div>
           </div>
-        )}
+        </div>
+      )} */}
 
       {/* Controls */}
       <div className="absolute top-2 right-2 z-10 flex gap-2">
@@ -1022,19 +879,9 @@ const MapContainer = ({
             className="bg-white p-2 rounded-lg shadow-md text-xs text-blue-600 flex items-center font-semibold hover:bg-gray-50 transition-colors"
             aria-label="Fit map to show all mosques"
           >
-            <span>Show all</span>
+            {/* <span>Show all</span> */}
           </button>
         )}
-
-        <button
-          type="button"
-          onClick={toggleFullScreen}
-          className="bg-white p-2 rounded-lg shadow-md flex items-center justify-center text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-          title={isFullScreen ? "Exit full screen" : "Full screen"}
-          aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
-        >
-          {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-        </button>
       </div>
     </div>
   );
