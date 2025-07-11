@@ -82,6 +82,7 @@ export default function OptimizedMosqueMap({
   const [searchedMosqueIds, setSearchedMosqueIds] = useState(new Set());
   const [loadError, setLoadError] = useState(null);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const [justAttachedOrDetached, setJustAttachedOrDetached] = useState(false);
   const mapRef = useRef(null);
 
   // Fetch user profile on component mount
@@ -318,66 +319,10 @@ export default function OptimizedMosqueMap({
     [searchedMosqueIds]
   ); // Add searchedMosqueIds to dependencies
 
-  // Fit map to bounds
-  const fitMapToBounds = useCallback(() => {
-    if (!map || !isLoaded || !window.google?.maps) return;
-
-    try {
-      if (showAttachedMosques && processedMosques.length > 0) {
-        // Fit to attached mosques
-        const bounds = new window.google.maps.LatLngBounds();
-        processedMosques.forEach((mosque) => {
-          bounds.extend(
-            new window.google.maps.LatLng(
-              mosque.location.lat,
-              mosque.location.lng
-            )
-          );
-        });
-
-        // Avoid zooming to a single point if only one mosque is attached
-        if (processedMosques.length === 1) {
-          map.setCenter(
-            new window.google.maps.LatLng(
-              processedMosques[0].location.lat,
-              processedMosques[0].location.lng
-            )
-          );
-          map.setZoom(15); // A reasonable zoom level for a single marker
-        } else {
-          map.fitBounds(bounds, 50); // 50px padding
-        }
-      } else if (mapCenter && distanceRadiusMeters > 0) {
-        // Fit to radius circle around the map center
-        const circle = new window.google.maps.Circle({
-          center: mapCenter,
-          radius: distanceRadiusMeters,
-        });
-
-        map.fitBounds(circle.getBounds(), 50);
-      } else if (mapCenter) {
-        // Just set center if no radius or attached mosques
-        map.setCenter(mapCenter);
-        map.setZoom(13); // Default zoom if no bounds to fit
-      } else {
-        // Fallback to default center if no mapCenter
-        map.setCenter(DEFAULT_CENTER);
-        map.setZoom(13);
-      }
-    } catch (error) {
-      console.error("Error fitting map to bounds:", error);
-      // Fallback in case of error
-      map.setCenter(mapCenter || DEFAULT_CENTER);
-      map.setZoom(13);
-    }
-  }, [
-    map,
-    isLoaded,
-    mapCenter,
-    distanceRadiusMeters,
-    processedMosques,
-    showAttachedMosques,
-  ]);
+  // REMOVE fitMapToBounds and all related logic
+  // Remove the fitMapToBounds function entirely
+  // Remove the useEffect that calls fitMapToBounds
+  // In the <GoogleMap> component, set zoom to a fixed value (e.g., 13) and do not change it programmatically
 
   // Handle InfoWindow close
   const handleInfoWindowClose = useCallback(() => {
@@ -428,6 +373,7 @@ export default function OptimizedMosqueMap({
       }
 
       setIsUserInteracting(true);
+      setJustAttachedOrDetached(true); // Prevent zoom change on next update
 
       // Use the pre-calculated set for efficient lookup
       const isAlreadyAttached =
@@ -492,13 +438,11 @@ export default function OptimizedMosqueMap({
             dispatch(fetchUserProfile(currentUser._id || currentUser.id));
           }
 
-          // Automatically refresh the page after a short delay to update the UI
+          // Automatically update UI after a short delay (no reload)
           setTimeout(() => {
             setFeedbackMessage(null);
             handleInfoWindowClose(); // Close InfoWindow after action
             setIsUserInteracting(false); // Reset interaction flag
-            // Refresh the page to update all components
-            window.location.reload();
           }, 1500);
         } else {
           throw new Error(
@@ -623,17 +567,26 @@ export default function OptimizedMosqueMap({
 
   // Update map when data changes or filters are applied
   useEffect(() => {
-    if (isLoaded && map && !isUserInteracting) {
-      fitMapToBounds();
+    if (justAttachedOrDetached) {
+      setJustAttachedOrDetached(false); // Reset the flag, skip fitMapToBounds this time
+      return;
     }
+    // REMOVE fitMapToBounds and all related logic
+    // Remove the fitMapToBounds function entirely
+    // Remove the useEffect that calls fitMapToBounds
+    // In the <GoogleMap> component, set zoom to a fixed value (e.g., 13) and do not change it programmatically
   }, [
     isLoaded,
     map,
-    fitMapToBounds,
+    // REMOVE fitMapToBounds and all related logic
+    // Remove the fitMapToBounds function entirely
+    // Remove the useEffect that calls fitMapToBounds
+    // In the <GoogleMap> component, set zoom to a fixed value (e.g., 13) and do not change it programmatically
     mosquesToDisplay.length, // Re-fit when the list of displayed mosques changes
     showAttachedMosques, // Re-fit when toggling between all/attached
     mapCenter, // Re-fit if map center changes
     distanceRadiusMeters, // Re-fit if radius changes
+    justAttachedOrDetached, // Add as dependency
   ]);
 
   // Cluster options

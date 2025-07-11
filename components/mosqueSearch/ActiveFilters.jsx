@@ -324,7 +324,7 @@ export default function ActiveFilters({
       )}
 
       {/* Mosque Dropdown - replaces individual mosque tags */}
-      <MosqueDropdown
+      {/* <MosqueDropdown
         selectedMosques={selectedMosques}
         removeFilter={removeFilter}
       />
@@ -334,7 +334,7 @@ export default function ActiveFilters({
         className="text-primary hover:underline text-sm ml-2"
       >
         Clear all
-      </button>
+      </button> */}
     </div>
   );
 }
