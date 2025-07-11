@@ -21,6 +21,7 @@ import {
   selectChatList,
 } from "@/redux/chat/chatSlice";
 import { getAvatar } from "@/shared/helper/defaultData";
+import { shouldBlurUserPhoto } from "@/shared/helper/shouldBlurUserPhoto";
 import EmojiPicker from "emoji-picker-react";
 import RequestMessageItem from "./PhotoRequestMessage";
 import axios from "axios";
@@ -127,9 +128,7 @@ const ChatWindow = ({
                 participant?.lastName || ""
               }`.trim()}
               className={`w-8 h-8 rounded-full object-cover ${
-                participant?.profilePicture &&
-                participant?.approvedPhotosFor &&
-                !participant.approvedPhotosFor.includes(currentUser.id)
+                shouldBlurUserPhoto(participant, currentUser.id)
                   ? "blur-sm"
                   : ""
               }`}

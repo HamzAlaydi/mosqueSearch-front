@@ -9,11 +9,9 @@ const imamSignupStep1Schema = Yup.object().shape({
   firstName: Yup.string().required("First name is required"),
   lastName: Yup.string().required("Last name is required"),
   email: Yup.string()
-    .email("Please enter a valid email address")
-    .required("Email address is required"),
-  phone: Yup.string()
-    .required("Phone number is required")
-    .matches(/^[0-9+\s()-]{8,20}$/, "Please enter a valid phone number"),
+    .email("Invalid email address")
+    .required("Email is required"),
+  phone: Yup.string().required("Phone number is required"),
   message: Yup.string().max(500, "Message cannot exceed 500 characters"),
   languages: Yup.array()
     .min(1, "Please select at least one language")

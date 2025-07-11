@@ -39,20 +39,10 @@ import { toast } from "react-hot-toast";
 import { getAvatar } from "@/shared/helper/defaultData";
 import Link from "next/link";
 import { countryFlags } from "@/shared/helper/flagsData";
+import { shouldBlurUserPhoto } from "@/shared/helper/shouldBlurUserPhoto";
 import ConfirmationModal from "../common/ConfirmationModal";
 
-const checkPhotoAccess = (targetUser, currentUserId) => {
-  if (!targetUser.profilePicture) {
-    return true;
-  }
-  if (targetUser._id === currentUserId) {
-    return true;
-  }
-  return (
-    targetUser.approvedPhotosFor &&
-    targetUser.approvedPhotosFor.includes(currentUserId)
-  );
-};
+// Removed checkPhotoAccess function - now using shouldBlurUserPhoto helper
 const extractCountryFromLocation = (location) => {
   if (!location) return null;
   // Split by comma and get the last part (country)
@@ -82,7 +72,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
   const { blockedUsers } = useSelector((state) => state.block);
   const isBlocked = blockedUsers.some((user) => user._id === match._id);
-  const hasPhotoAccess = checkPhotoAccess(match, currentUserId);
+  const shouldBlur = shouldBlurUserPhoto(match, currentUserId);
 
   useEffect(() => {
     setFlagUrl(countryFlags[match.citizenship]);
@@ -205,7 +195,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           height={500}
           className={`object-cover ${
             isListView ? "w-full h-full" : "w-full h-48"
-          } ${!hasPhotoAccess ? "blur-sm" : ""}`}
+          } ${shouldBlur ? "blur-sm" : ""}`}
         />
         <div className="absolute top-2 left-2 flex items-center gap-2 z-10 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1">
           <div className="flex items-center gap-1">

@@ -201,7 +201,8 @@ export default function UserProfile() {
     console.log({ user });
     console.log({ loggedInUserId });
 
-    return user?.approvedPhotosFor?.includes(loggedInUserId);
+    // Use the new shouldBlurUserPhoto logic
+    return !shouldBlurUserPhoto(user, loggedInUserId);
   };
 
   const isWaliApproved = (user) => {

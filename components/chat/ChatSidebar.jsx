@@ -13,6 +13,7 @@ import {
   selectSocketConnected,
 } from "@/redux/chat/chatSlice";
 import { getAvatar } from "@/shared/helper/defaultData";
+import { shouldBlurUserPhoto } from "@/shared/helper/shouldBlurUserPhoto";
 
 const ChatSidebar = ({
   searchTerm,
@@ -127,11 +128,7 @@ const ChatSidebar = ({
                       }
                       alt={`${participant.firstName}`}
                       className={`w-8 h-8 rounded-full object-cover ${
-                        participant.profilePicture &&
-                        participant.approvedPhotosFor &&
-                        !participant.approvedPhotosFor.includes(
-                          getLoggedInUserId()
-                        )
+                        shouldBlurUserPhoto(participant, getLoggedInUserId())
                           ? "blur-sm"
                           : ""
                       }`}

@@ -33,6 +33,7 @@ import {
   Check,
   Hand, // For religion section
   Target, // For preferences
+  Eye, // For photo privacy
 } from "lucide-react";
 import { calculateAge, getAvatar } from "@/shared/helper/defaultData";
 import useCountryFlag from "@/shared/helper/useCountryFlag";
@@ -388,6 +389,8 @@ export default function EditProfile() {
     },
     // Male-specific fields
     hasBeard: false,
+    // Photo privacy settings
+    blurPhotoForEveryone: true,
   });
 
   const [profileImage, setProfileImage] = useState(null);
@@ -669,6 +672,10 @@ export default function EditProfile() {
           email: currentUser.wali?.email || "",
         },
         hasBeard: currentUser.hasBeard || false,
+        blurPhotoForEveryone:
+          currentUser.blurPhotoForEveryone !== undefined
+            ? currentUser.blurPhotoForEveryone
+            : true,
       });
     }
   }, [currentUser]);
@@ -1215,6 +1222,48 @@ export default function EditProfile() {
                       value={formData.willingToRelocate}
                       onChange={handleChange}
                     />
+                  </div>
+                </FormSection>
+
+                <FormSection title="Photo Privacy" icon={<Eye size={20} />}>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <h4 className="font-medium text-gray-900">
+                          Photo Privacy Settings
+                        </h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Control who can see your profile photo
+                        </p>
+                      </div>
+                      <label className="signup-toggle-switch">
+                        <input
+                          type="checkbox"
+                          name="blurPhotoForEveryone"
+                          checked={formData.blurPhotoForEveryone}
+                          onChange={(e) =>
+                            handleChange({
+                              target: {
+                                name: "blurPhotoForEveryone",
+                                type: "checkbox",
+                                checked: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        <span className="signup-toggle-slider" />
+                      </label>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <p>
+                        <strong>Blurred for everyone:</strong> Your photo will
+                        be blurred for all users except those you've approved.
+                      </p>
+                      <p className="mt-1">
+                        <strong>Visible to everyone:</strong> Your photo will be
+                        visible to all users on the platform.
+                      </p>
+                    </div>
                   </div>
                 </FormSection>
 
