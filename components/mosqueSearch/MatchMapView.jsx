@@ -856,23 +856,6 @@ export default function OptimizedMosqueMap({
       )}
 
       {/* Controls */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        {/* Toggle My Mosques Button */}
-        {currentUser && ( // Only show button if user is logged in
-          <button
-            onClick={() => setShowAttachedMosques(!showAttachedMosques)}
-            className={`px-4 py-2 rounded-md shadow-md text-sm font-semibold transition-colors duration-150 ${
-              showAttachedMosques
-                ? "bg-amber-500 text-white hover:bg-amber-600"
-                : "bg-white text-blue-600 hover:bg-blue-100"
-            }`}
-          >
-            {showAttachedMosques ? "Show All Mosques" : "Show My Mosques"}
-          </button>
-        )}
-
-        {/* Add other controls here if needed */}
-      </div>
 
       {/* Legend */}
       <div className="absolute bottom-4 right-4 z-10 bg-white p-3 rounded-md shadow-md">

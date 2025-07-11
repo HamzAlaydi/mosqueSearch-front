@@ -26,7 +26,8 @@ body {
   line-height: 1.5;
 }
 
-button {
+/* Add a specific class for mosqueSearch buttons */
+.mosque-search-btn {
   cursor: pointer;
   border: none;
   background: none;

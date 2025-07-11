@@ -666,7 +666,7 @@ export default function MatchSearchPage() {
               <div className="flex gap-2 items-center">
                 <button
                   onClick={toggleListingsView}
-                  className="p-2 rounded-full hover:bg-gray-100"
+                  className="mosque-search-btn p-2 rounded-full hover:bg-gray-100"
                   aria-label="Toggle list/grid view"
                 >
                   {listingsView === "grid" ? (
@@ -721,7 +721,7 @@ export default function MatchSearchPage() {
                 </span>
                 <button
                   onClick={clearMosqueSearch}
-                  className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200"
+                  className="mosque-search-btn ml-2 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200"
                 >
                   Clear Mosque Selection
                 </button>
