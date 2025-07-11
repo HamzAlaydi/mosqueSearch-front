@@ -1,6 +1,9 @@
 import React from "react";
+import { useSelector } from "react-redux";
+import { shouldBlurUserPhoto } from "@/shared/helper/shouldBlurUserPhoto";
 
 export default function UserCard({ user }) {
+  const currentUserId = useSelector((state) => state.user.currentUser?._id);
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow border border-gray-200">
       <div className="p-4">
@@ -11,6 +14,12 @@ export default function UserCard({ user }) {
               src={user.profilePicture || "/api/placeholder/100/100"}
               alt={user.name}
               className="w-full h-full object-cover"
+              style={{
+                filter: shouldBlurUserPhoto(user, currentUserId)
+                  ? "blur(8px)"
+                  : "none",
+                transition: "filter 0.3s",
+              }}
             />
           </div>
 

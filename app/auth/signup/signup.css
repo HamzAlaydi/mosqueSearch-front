@@ -290,3 +290,50 @@
   justify-content: space-evenly;
   align-items: center;
 }
+
+/* Toggle Switch for Blur Photo */
+.signup-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  vertical-align: middle;
+}
+.signup-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.signup-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb; /* gray-200 */
+  border-radius: 18px;
+  transition: background 0.2s;
+  box-shadow: 0 1px 2px rgba(36, 147, 110, 0.08);
+}
+.signup-toggle-switch input:checked + .signup-toggle-slider {
+  background-color: var(--primary);
+}
+.signup-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(36, 147, 110, 0.12);
+}
+.signup-toggle-switch input:checked + .signup-toggle-slider:before {
+  transform: translateX(14px);
+}
+.signup-toggle-slider {
+  box-sizing: border-box;
+}

@@ -11,12 +11,17 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
         profilePicture: formData.profilePicture || null,
         profilePicturePreview: formData.profilePicturePreview || "",
         terms: formData.terms || false,
+        blurPhotoForEveryone:
+          typeof formData.blurPhotoForEveryone === "boolean"
+            ? formData.blurPhotoForEveryone
+            : true,
       }}
       validationSchema={finalStepSchema}
       onSubmit={(values) => {
         nextStep({
           ...values,
           profilePicture: values.profilePicture || null,
+          blurPhotoForEveryone: values.blurPhotoForEveryone,
         });
       }}
       enableReinitialize={true}
@@ -30,6 +35,7 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
               component={AvatarUpload}
               props={{
                 preview: values.profilePicturePreview,
+                blurPhotoForEveryone: values.blurPhotoForEveryone,
                 onChange: (file, previewUrl) => {
                   setFieldValue("profilePicture", file);
                   setFieldValue("profilePicturePreview", previewUrl);
@@ -40,6 +46,30 @@ const SignupStep8 = ({ nextStep, prevStep, formData }) => {
                 },
               }}
             />
+            <div className="flex items-center mt-2">
+              <label
+                htmlFor="blurPhotoForEveryone"
+                className="mr-2 text-sm font-medium"
+              >
+                Blur my photo for everyone (except approved users)
+              </label>
+              <Field name="blurPhotoForEveryone">
+                {({ field, form }) => (
+                  <label className="signup-toggle-switch">
+                    <input
+                      type="checkbox"
+                      id="blurPhotoForEveryone"
+                      checked={field.value}
+                      onChange={() =>
+                        form.setFieldValue("blurPhotoForEveryone", !field.value)
+                      }
+                      aria-label="Blur my photo for everyone (except approved users)"
+                    />
+                    <span className="signup-toggle-slider" />
+                  </label>
+                )}
+              </Field>
+            </div>
             <ErrorMessage
               name="profilePicture"
               component="div"

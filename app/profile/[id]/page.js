@@ -49,6 +49,7 @@ import coverImage from "@/public/images/matches/background.jpg";
 import useCountryFlag from "@/shared/helper/useCountryFlag";
 import toast from "react-hot-toast";
 import { countryFlags } from "@/shared/helper/flagsData";
+import { shouldBlurUserPhoto } from "@/shared/helper/shouldBlurUserPhoto";
 
 const ProfileSection = ({
   title,
@@ -392,20 +393,22 @@ export default function UserProfile() {
                   <div className="relative w-full h-full">
                     <Image
                       src={
-                        isPhotoApproved(profileUser)
-                          ? profileUser.profilePicture?.startsWith("http")
-                            ? profileUser.profilePicture
-                            : getAvatar(profileUser.gender)
-                          : profileUser.blurredProfilePicture ||
-                            getAvatar(profileUser.gender)
+                        profileUser.profilePicture?.startsWith("http")
+                          ? profileUser.profilePicture
+                          : getAvatar(profileUser.gender)
                       }
                       alt={`${profileUser?.firstName || "User"}'s profile`}
                       fill
-                      className={`h-full w-full object-cover transition-all duration-300 ${
-                        !isPhotoApproved(profileUser)
-                          ? "filter blur-md brightness-75"
-                          : ""
-                      }`}
+                      className={`h-full w-full object-cover transition-all duration-300`}
+                      style={{
+                        filter: shouldBlurUserPhoto(
+                          profileUser,
+                          currentUser?._id
+                        )
+                          ? "blur(8px)"
+                          : "none",
+                        transition: "filter 0.3s",
+                      }}
                       onError={(e) => {
                         e.target.src = getAvatar(profileUser.gender);
                       }}

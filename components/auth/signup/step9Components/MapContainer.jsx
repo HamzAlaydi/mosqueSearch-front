@@ -360,16 +360,33 @@ const MapContainer = ({
 
       setIsUserInteracting(true);
       setSelectedMosque(mosque);
-      setInfoWindowOpen(true);
 
-      // Simple pan to marker without changing zoom
+      // Add a small delay to ensure proper InfoWindow positioning
+      setTimeout(() => {
+        setInfoWindowOpen(true);
+      }, 100);
+
+      // Pan to marker without changing zoom level
       if (mapInstanceRef.current && mosque.location) {
         const currentZoom = mapInstanceRef.current.getZoom();
-        mapInstanceRef.current.panTo({
-          lat: mosque.location.lat,
-          lng: mosque.location.lng,
-        });
-        // Preserve the current zoom level
+        const currentCenter = mapInstanceRef.current.getCenter();
+
+        // Calculate if the marker is within the current viewport
+        const bounds = mapInstanceRef.current.getBounds();
+        const markerLatLng = new window.google.maps.LatLng(
+          mosque.location.lat,
+          mosque.location.lng
+        );
+
+        // Only pan if the marker is not visible in the current viewport
+        if (!bounds || !bounds.contains(markerLatLng)) {
+          mapInstanceRef.current.panTo({
+            lat: mosque.location.lat,
+            lng: mosque.location.lng,
+          });
+        }
+
+        // Ensure zoom level stays the same
         mapInstanceRef.current.setZoom(currentZoom);
       }
 
@@ -429,58 +446,66 @@ const MapContainer = ({
       !isUserInteracting
     ) {
       const currentMap = mapInstanceRef.current;
-      const bounds = new window.google.maps.LatLngBounds();
 
-      // Extend bounds for all filtered mosques
-      filteredMosques.forEach((mosque) => {
+      // Only fit bounds on initial load, not on every mosque filter change
+      // This prevents unwanted zoom changes when user is interacting with the map
+      if (!mapInstanceRef.current.hasInitialBounds) {
+        const bounds = new window.google.maps.LatLngBounds();
+
+        // Extend bounds for all filtered mosques
+        filteredMosques.forEach((mosque) => {
+          bounds.extend(
+            new window.google.maps.LatLng(
+              mosque.location.lat,
+              mosque.location.lng
+            )
+          );
+        });
+
+        // Also extend bounds for the user's location
         bounds.extend(
-          new window.google.maps.LatLng(
-            mosque.location.lat,
-            mosque.location.lng
-          )
+          new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
         );
-      });
 
-      // Also extend bounds for the user's location
-      bounds.extend(
-        new window.google.maps.LatLng(userLocation.lat, userLocation.lng)
-      );
+        // Handle cases with 0 or 1 mosque + user location
+        if (filteredMosques.length === 0) {
+          // If no mosques found, just center on user and show the circle
+          currentMap.setCenter(userLocation);
+          currentMap.setZoom(12); // Default zoom
+        } else if (filteredMosques.length === 1) {
+          // If only one mosque, include it and the user in the bounds
+          bounds.extend(
+            new window.google.maps.LatLng(
+              filteredMosques[0].location.lat,
+              filteredMosques[0].location.lng
+            )
+          );
+          currentMap.fitBounds(bounds, { padding: 100 }); // Add more padding for a single marker + user location
+          const listener = window.google.maps.event.addListenerOnce(
+            currentMap,
+            "bounds_changed",
+            () => {
+              if (currentMap.getZoom() > 16) currentMap.setZoom(16); // Prevent zooming in too close
+            }
+          );
+        } else {
+          // Fit bounds for multiple mosques and user location
+          currentMap.fitBounds(bounds, { padding: 50 }); // Add some padding
+          // Optional: Limit max zoom after fitting bounds if it zoomed in too much
+          const listener = window.google.maps.event.addListenerOnce(
+            currentMap,
+            "bounds_changed",
+            () => {
+              if (currentMap.getZoom() > 15) currentMap.setZoom(15); // Prevent zooming in too close on dense clusters/markers
+            }
+          );
+        }
 
-      // Handle cases with 0 or 1 mosque + user location
-      if (filteredMosques.length === 0) {
-        // If no mosques found, just center on user and show the circle
-        currentMap.setCenter(userLocation);
-        currentMap.setZoom(12); // Default zoom
-      } else if (filteredMosques.length === 1) {
-        // If only one mosque, include it and the user in the bounds
-        bounds.extend(
-          new window.google.maps.LatLng(
-            filteredMosques[0].location.lat,
-            filteredMosques[0].location.lng
-          )
-        );
-        currentMap.fitBounds(bounds, { padding: 100 }); // Add more padding for a single marker + user location
-        const listener = window.google.maps.event.addListenerOnce(
-          currentMap,
-          "bounds_changed",
-          () => {
-            if (currentMap.getZoom() > 16) currentMap.setZoom(16); // Prevent zooming in too close
-          }
-        );
-      } else {
-        // Fit bounds for multiple mosques and user location
-        currentMap.fitBounds(bounds, { padding: 50 }); // Add some padding
-        // Optional: Limit max zoom after fitting bounds if it zoomed in too much
-        const listener = window.google.maps.event.addListenerOnce(
-          currentMap,
-          "bounds_changed",
-          () => {
-            if (currentMap.getZoom() > 15) currentMap.setZoom(15); // Prevent zooming in too close on dense clusters/markers
-          }
-        );
+        // Mark that initial bounds have been set
+        mapInstanceRef.current.hasInitialBounds = true;
       }
     }
-  }, [isMapLoaded, userLocation, filteredMosques.length, isUserInteracting]);
+  }, [isMapLoaded, userLocation, isUserInteracting]); // Removed filteredMosques.length from dependencies
 
   // Cleanup on unmount
   useEffect(() => {
@@ -495,6 +520,7 @@ const MapContainer = ({
   const handleShowAllClick = useCallback(() => {
     if (mapInstanceRef.current && isMapLoaded && userLocation) {
       const currentMap = mapInstanceRef.current;
+      const currentZoom = currentMap.getZoom();
       const bounds = new window.google.maps.LatLngBounds();
 
       // Extend bounds for all filtered mosques
@@ -516,7 +542,7 @@ const MapContainer = ({
       if (filteredMosques.length === 0) {
         // If no mosques found, just center on user and show the circle
         currentMap.setCenter(userLocation);
-        currentMap.setZoom(12); // Default zoom
+        currentMap.setZoom(Math.max(currentZoom, 12)); // Use current zoom or minimum 12
       } else if (filteredMosques.length === 1) {
         // If only one mosque, include it and the user in the bounds
         bounds.extend(
@@ -789,6 +815,7 @@ const MapContainer = ({
           {/* Info window for selected mosque */}
           {infoWindowOpen && selectedMosque && (
             <InfoWindow
+              key={selectedMosque.id} // Add key to ensure proper re-rendering
               position={{
                 lat: selectedMosque.location.lat,
                 lng: selectedMosque.location.lng,
@@ -797,14 +824,11 @@ const MapContainer = ({
               options={{
                 pixelOffset:
                   typeof window !== "undefined" && window.google?.maps
-                    ? new window.google.maps.Size(
-                        0,
-                        -(hoveredMosqueId === selectedMosque.id
-                          ? 60 // Adjust offset based on larger hovered icon size
-                          : 48) // Default icon size
-                      )
+                    ? new window.google.maps.Size(0, -50) // Fixed offset for better positioning
                     : undefined,
-                disableAutoPan: false,
+                disableAutoPan: true, // Prevent automatic panning that causes positioning issues
+                maxWidth: 300,
+                minWidth: 200,
               }}
             >
               {renderInfoWindowContent(selectedMosque)}

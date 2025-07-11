@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import "./AvatarUpload.css";
 
-const AvatarUpload = ({ field, form, preview }) => {
+const AvatarUpload = ({ field, form, preview, blurPhotoForEveryone }) => {
   const [previewUrl, setPreviewUrl] = useState(preview || "");
 
   // Handle initial load and form state changes
@@ -68,6 +68,7 @@ const AvatarUpload = ({ field, form, preview }) => {
             })`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            filter: blurPhotoForEveryone ? "blur(8px)" : "none",
           }}
         >
           <div className="edit-overlay absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">

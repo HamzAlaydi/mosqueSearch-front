@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { getAvatar } from "@/shared/helper/defaultData";
+import { shouldBlurUserPhoto } from "@/shared/helper/shouldBlurUserPhoto";
 
 const MessageItem = ({
   message,
@@ -39,6 +40,12 @@ const MessageItem = ({
             }
             alt={`${message.sender.firstName} ${message.sender.lastName}`}
             className="w-8 h-8 rounded-full object-cover"
+            style={{
+              filter: shouldBlurUserPhoto(message.sender, currentUser._id)
+                ? "blur(8px)"
+                : "none",
+              transition: "filter 0.3s",
+            }}
           />
         </div>
       )}
