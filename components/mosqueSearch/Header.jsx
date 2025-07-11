@@ -30,6 +30,7 @@ import {
 } from "@/redux/notification/notificationSlice";
 import { HeaderNotifications } from "../NotificationSystem";
 import { useMediaQuery } from "react-responsive";
+import { fetchUserProfile } from "@/redux/user/userSlice";
 
 // Detach Confirmation Modal Component
 const DetachConfirmationModal = ({ isOpen, onClose, mosque, onConfirm }) => {
@@ -116,7 +117,7 @@ const DetachConfirmationModal = ({ isOpen, onClose, mosque, onConfirm }) => {
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-red rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
           >
             <X size={16} />
             Detach from Mosque
@@ -747,10 +748,10 @@ export default function Header({
 
       if (response.data.success) {
         toast.success(`Successfully detached from ${mosqueToDetach.name}!`);
-        // Refresh the page to update the UI
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // Instead of reloading, re-fetch user profile to update attached mosques
+        if (currentUser?._id || currentUser?.id) {
+          dispatch(fetchUserProfile(currentUser._id || currentUser.id));
+        }
       } else {
         throw new Error(
           response.data.message || "Failed to detach from mosque"
