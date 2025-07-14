@@ -1,0 +1,115 @@
+/* Professional, isolated layout for SignupStep9 */
+
+.step9FormWrapper {
+  all: initial;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  min-height: 600px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.step9Grid {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  width: 100%;
+  height: 100%; /* Make grid fill parent */
+  min-height: 500px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.leftPanel {
+  flex: 1 1 350px;
+  max-width: 420px;
+  padding: 2rem 1.5rem;
+  background: #f9f9fb;
+  border-right: 1px solid #ececec;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%; /* Fill grid height */
+}
+
+.rightPanel {
+  flex: 2 1 0;
+  min-width: 0;
+  padding: 2rem 1.5rem;
+  background: #fff;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: 100%; /* Fill grid height */
+  min-height: 500px;
+  position: relative;
+}
+
+/* Ensure the map always fills the right panel */
+#google-map-container,
+.gm-style,
+.rightPanel > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 400px;
+  min-width: 300px;
+  position: relative;
+}
+
+/* GoogleMap component root sometimes uses inline style, so force it */
+.rightPanel .gm-style {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 400px;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #222;
+}
+
+.subheading {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.errorBox {
+  background: #ffeaea;
+  color: #c00;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.validationError {
+  color: #c00;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .step9Grid {
+    flex-direction: column;
+    gap: 0;
+  }
+  .leftPanel, .rightPanel {
+    max-width: 100%;
+    padding: 1rem;
+    border-right: none;
+    border-bottom: 1px solid #ececec;
+  }
+  .rightPanel {
+    border-bottom: none;
+  }
+} 

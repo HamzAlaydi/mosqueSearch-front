@@ -88,7 +88,7 @@ const initialState = {
 // Improved Thunk with correct API interaction
 export const submitRegistration = createAsyncThunk(
   "form/submitRegistration",
-  async (values, { dispatch, getState }) => {
+  async (values, { dispatch, getState, rejectWithValue }) => {
     try {
       const state = getState();
       const finalData = { ...state.form.formData, ...values };
@@ -243,13 +243,13 @@ export const submitRegistration = createAsyncThunk(
         data: error?.data,
         message: error?.message,
       });
-      return {
+      return rejectWithValue({
         error:
           error?.data?.errors ||
           error?.data?.message ||
           error?.message ||
           "Signup failed",
-      };
+      });
     }
   }
 );

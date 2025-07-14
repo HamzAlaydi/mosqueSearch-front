@@ -31,7 +31,8 @@ const INFOWINDOW_PAN_PIXEL_OFFSET_Y = 250; // Pixels to pan up for InfoWindow vi
 
 const MAP_CONTAINER_STYLE = {
   width: "100%",
-  height: "400px",
+  height: "100%",
+  minHeight: "400px",
   borderRadius: "8px",
   overflow: "hidden", // Ensures child elements like InfoWindow don't spill
   position: "relative", // Helps anchor elements properly
@@ -743,11 +744,29 @@ const MapContainer = ({
   }
 
   return (
-    <div className="mb-4 relative">
+    <div
+      className="mb-4 relative"
+      style={{ width: "100%", height: "100%", minHeight: "400px" }}
+    >
       {/* This div will contain the actual map element */}
-      <div id="google-map-container" style={MAP_CONTAINER_STYLE}>
+      <div
+        id="google-map-container"
+        style={{
+          width: "100%",
+          height: "100%",
+          minHeight: "400px",
+          borderRadius: "8px",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
         <GoogleMap
-          mapContainerStyle={MAP_CONTAINER_STYLE}
+          mapContainerStyle={{
+            width: "100%",
+            height: "100%",
+            minHeight: "400px",
+            borderRadius: "8px",
+          }}
           center={userLocation || DEFAULT_CENTER}
           zoom={userLocation ? 12 : 2}
           options={MAP_OPTIONS}
@@ -796,7 +815,7 @@ const MapContainer = ({
                     <Marker
                       key={mosque.id}
                       position={mosque.location}
-                      onClick={() => handleMarkerClick(mosque)}
+                      onClick={() => toggleMosqueAttachment(mosque)}
                       onMouseOver={() => setHoveredMosqueId(mosque.id)}
                       onMouseOut={() => setHoveredMosqueId(null)}
                       icon={createMarkerIcon(
@@ -810,29 +829,6 @@ const MapContainer = ({
                 })
               }
             </MarkerClustererF>
-          )}
-
-          {/* Info window for selected mosque */}
-          {infoWindowOpen && selectedMosque && (
-            <InfoWindow
-              key={selectedMosque.id} // Add key to ensure proper re-rendering
-              position={{
-                lat: selectedMosque.location.lat,
-                lng: selectedMosque.location.lng,
-              }}
-              onCloseClick={handleInfoWindowClose}
-              options={{
-                pixelOffset:
-                  typeof window !== "undefined" && window.google?.maps
-                    ? new window.google.maps.Size(0, -50) // Fixed offset for better positioning
-                    : undefined,
-                disableAutoPan: true, // Prevent automatic panning that causes positioning issues
-                maxWidth: 300,
-                minWidth: 200,
-              }}
-            >
-              {renderInfoWindowContent(selectedMosque)}
-            </InfoWindow>
           )}
         </GoogleMap>
       </div>

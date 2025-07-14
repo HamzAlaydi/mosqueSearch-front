@@ -8,6 +8,7 @@ import OptimizedMapContainer from "./step9Components/OptimizedMapContainer";
 import SelectedMosquesList from "./step9Components/SelectedMosquesList";
 import FormNavigation from "./step9Components/FormNavigation";
 import { GOOGLE_API } from "@/shared/constants/backendLink";
+import styles from "./SignupStep9.module.css";
 
 const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
   const [userLocation, setUserLocation] = useState({
@@ -83,35 +84,38 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
         }, [attachedMosques, setFieldValue]);
 
         return (
-          <Form className="auth-form">
-            <div className="form-group">
-              <h2 className="text-lg font-medium">Find Mosques Near You</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Search for mosques in your area and select ones you'd like to
-                connect with.
-              </p>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
-                  {error}
-                </div>
-              )}
-
-              <LocationSearch
-                userLocation={userLocation}
-                setUserLocation={setUserLocation}
-                setError={setError}
-              />
-
-              {/* Using the optimized slider component */}
-              <OptimizedDistanceSlider
-                values={values}
-                errors={errors}
-                touched={touched}
-                setFieldValue={setFieldValue}
-              />
-
-              {/* Using the optimized map container */}
+          <Form className={styles.step9FormWrapper}>
+            <div className={styles.step9Grid}>
+              {/* Left: Selection Controls */}
+              <div className={styles.leftPanel}>
+                <h2 className={styles.heading}>Find Mosques Near You</h2>
+                <p className={styles.subheading}>
+                  Search for mosques in your area and select ones you'd like to
+                  connect with.
+                </p>
+                {error && <div className={styles.errorBox}>{error}</div>}
+                <LocationSearch
+                  userLocation={userLocation}
+                  setUserLocation={setUserLocation}
+                  setError={setError}
+                />
+                <OptimizedDistanceSlider
+                  values={values}
+                  errors={errors}
+                  touched={touched}
+                  setFieldValue={setFieldValue}
+                />
+                <SelectedMosquesList
+                  attachedMosques={attachedMosques}
+                  toggleMosqueAttachment={toggleMosqueAttachment}
+                />
+                {errors.attachedMosques && touched.attachedMosques && (
+                  <div className={styles.validationError}>
+                    {errors.attachedMosques}
+                  </div>
+                )}
+              </div>
+              {/* Right: Map */}
               <OptimizedMapContainer
                 userLocation={userLocation}
                 distance={values.distance}
@@ -119,18 +123,7 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
                 toggleMosqueAttachment={toggleMosqueAttachment}
                 setError={setError}
               />
-
-              <SelectedMosquesList
-                attachedMosques={attachedMosques}
-                toggleMosqueAttachment={toggleMosqueAttachment}
-              />
-              {errors.attachedMosques && touched.attachedMosques && (
-                <div className="mt-2 text-red-600 text-sm">
-                  {errors.attachedMosques}
-                </div>
-              )}
             </div>
-
             <FormNavigation
               prevStep={() =>
                 prevStep({
