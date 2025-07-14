@@ -14,6 +14,7 @@ import {
   Bell,
   Loader2,
   X,
+  Building2,
 } from "lucide-react";
 import InterestsModal from "./InterestsModal";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,102 +32,6 @@ import {
 import { HeaderNotifications } from "../NotificationSystem";
 import { useMediaQuery } from "react-responsive";
 import { fetchUserProfile } from "@/redux/user/userSlice";
-
-// Detach Confirmation Modal Component
-const DetachConfirmationModal = ({ isOpen, onClose, mosque, onConfirm }) => {
-  if (!isOpen) return null;
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Detach from Mosque
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <X size={24} className="text-red-600" />
-            </div>
-            <div>
-              <h4 className="text-lg font-medium text-gray-900">
-                Are you sure?
-              </h4>
-              <p className="text-sm text-gray-600">
-                You're about to detach from this mosque
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-              <div>
-                <h5 className="font-medium text-gray-900">{mosque?.name}</h5>
-                {mosque?.address && (
-                  <p className="text-sm text-gray-600 mt-1">{mosque.address}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-yellow-800 text-xs font-bold">!</span>
-              </div>
-              <div>
-                <p className="text-sm text-yellow-800 font-medium mb-1">
-                  Important Note
-                </p>
-                <p className="text-sm text-yellow-700">
-                  This action will remove this mosque from your attached mosques
-                  list. You can always re-attach to it later from the map.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
-          >
-            <X size={16} />
-            Detach from Mosque
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Attached Mosques Popup Component
 const AttachedMosquesPopup = ({
@@ -149,58 +54,71 @@ const AttachedMosquesPopup = ({
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Your Attached Mosques
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-          >
-            <X size={20} />
-          </button>
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 max-h-[85vh] overflow-hidden">
+        {/* Header with gradient background */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <Building2 size={20} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">My Attached Mosques</h3>
+                <p className="text-blue-100 text-sm">
+                  {attachedMosques?.length || 0} mosque
+                  {attachedMosques?.length !== 1 ? "s" : ""} attached
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-blue-100 p-2 rounded-full hover:bg-white  hover:bg-opacity-20 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
           {attachedMosques && attachedMosques.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {attachedMosques.map((mosque, index) => (
                 <div
                   key={mosque.id || index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all duration-200"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                    <div>
-                      <h4 className="font-medium text-gray-900">
-                        {mosque.name}
-                      </h4>
-                      {mosque.address && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          {mosque.address}
-                        </p>
-                      )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                        <MapPin size={20} className="text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 text-lg">
+                          {mosque.name}
+                        </h4>
+                        {mosque.address && (
+                          <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
+                            <MapPin size={12} className="text-gray-400" />
+                            {mosque.address}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} className="text-blue-600" />
                     <button
                       onClick={() => onDetachMosque(mosque)}
                       disabled={detachingMosque === mosque.id}
-                      className={`p-2 rounded-full transition-all duration-200 ${
+                      className={`p-3 rounded-full transition-all duration-200 ${
                         detachingMosque === mosque.id
                           ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 hover:scale-105"
+                          : "bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 hover:scale-110 shadow-sm"
                       }`}
                       title="Detach from this mosque"
                     >
                       {detachingMosque === mosque.id ? (
-                        <Loader2 size={14} className="animate-spin" />
+                        <Loader2 size={16} className="animate-spin" />
                       ) : (
-                        <X size={14} />
+                        <X size={16} />
                       )}
                     </button>
                   </div>
@@ -208,28 +126,45 @@ const AttachedMosquesPopup = ({
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <MapPin size={48} className="text-gray-300 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">
-                No Attached Mosques
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <MapPin size={32} className="text-blue-400" />
+              </div>
+              <h4 className="text-xl font-semibold text-gray-900 mb-3">
+                No Attached Mosques Yet
               </h4>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-sm leading-relaxed max-w-sm mx-auto">
                 You haven't attached to any mosques yet. Use the map to find and
-                attach to mosques in your area.
+                attach to mosques in your area. This will help you stay
+                connected with your local community.
               </p>
+              <div className="mt-6">
+                <button
+                  onClick={onClose}
+                  className="bg-blue-500 text-white px-6 py-3 rounded-full hover:bg-blue-600 transition-colors font-medium"
+                >
+                  Explore Mosques on Map
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-          >
-            Close
-          </button>
-        </div>
+        {attachedMosques && attachedMosques.length > 0 && (
+          <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">{attachedMosques.length}</span>{" "}
+              mosque{attachedMosques.length !== 1 ? "s" : ""} attached
+            </div>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors font-medium"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -329,8 +264,6 @@ export default function Header({
   const [servicesLoading, setServicesLoading] = useState(true);
   const [showAttachedMosquesPopup, setShowAttachedMosquesPopup] =
     useState(false);
-  const [showDetachConfirmation, setShowDetachConfirmation] = useState(false);
-  const [mosqueToDetach, setMosqueToDetach] = useState(null);
   const [detachingMosque, setDetachingMosque] = useState(null);
   const autocompleteService = useRef(null);
   const geocoder = useRef(null);
@@ -695,28 +628,15 @@ export default function Header({
 
   const handleCloseAttachedMosques = () => {
     setShowAttachedMosquesPopup(false);
-    // Also close confirmation modal if open
-    setShowDetachConfirmation(false);
-    setMosqueToDetach(null);
   };
 
-  const handleDetachMosque = (mosque) => {
+  const handleDetachMosque = async (mosque) => {
     if (!currentUser) {
       toast.error("Please log in to manage mosque attachments");
       return;
     }
 
-    // Show custom confirmation modal
-    setMosqueToDetach(mosque);
-    setShowDetachConfirmation(true);
-  };
-
-  const handleConfirmDetach = async () => {
-    if (!mosqueToDetach) return;
-
-    setDetachingMosque(mosqueToDetach.id);
-    setShowDetachConfirmation(false);
-    setMosqueToDetach(null);
+    setDetachingMosque(mosque.id);
 
     try {
       const token = localStorage.getItem("token");
@@ -724,18 +644,17 @@ export default function Header({
         throw new Error("Authentication token not found");
       }
 
-      const mosqueIdentifier =
-        mosqueToDetach.externalId || mosqueToDetach.id || mosqueToDetach._id;
+      const mosqueIdentifier = mosque.externalId || mosque.id || mosque._id;
 
       const response = await axios.post(
         `${rootRoute}/mosque-attachments/request`,
         {
           mosqueId: mosqueIdentifier,
           mosqueData: {
-            name: mosqueToDetach.name,
-            address: mosqueToDetach.address,
-            location: mosqueToDetach.location,
-            externalId: mosqueToDetach.id || mosqueToDetach.externalId,
+            name: mosque.name,
+            address: mosque.address,
+            location: mosque.location,
+            externalId: mosque.id || mosque.externalId,
           },
         },
         {
@@ -747,8 +666,8 @@ export default function Header({
       );
 
       if (response.data.success) {
-        toast.success(`Successfully detached from ${mosqueToDetach.name}!`);
-        // Instead of reloading, re-fetch user profile to update attached mosques
+        toast.success(`Successfully detached from ${mosque.name}!`);
+        // Re-fetch user profile to update attached mosques
         if (currentUser?._id || currentUser?.id) {
           dispatch(fetchUserProfile(currentUser._id || currentUser.id));
         }
@@ -990,6 +909,41 @@ export default function Header({
           </div>
         </div>
 
+        {/* Mobile Controls - Visible on mobile only */}
+        <div className="md:hidden flex items-center gap-2">
+          {/* Mobile Attached Mosques Button */}
+          <button
+            onClick={handleOpenAttachedMosques}
+            className="flex items-center gap-2 bg-blue-50 border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-100 px-3 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md group"
+          >
+            <span className="text-xs font-semibold text-blue-700 group-hover:text-blue-800">
+              My Mosques
+            </span>
+            {currentUser?.attachedMosques?.length > 0 && (
+              <div className="bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-bold min-w-[16px] h-[16px] px-1 text-[10px]">
+                {currentUser.attachedMosques.length}
+              </div>
+            )}
+          </button>
+
+          {/* Mobile Messages Button */}
+          <Link href="/messages">
+            <button className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-xs">
+              <MessageCircle size={14} className="text-gray-600" />
+              <span className="hidden sm:inline">Messages</span>
+            </button>
+          </Link>
+
+          {/* Mobile Interests Button */}
+          <button
+            onClick={handleOpenInterests}
+            className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-xs"
+          >
+            <Heart size={14} className="text-gray-600" />
+            <span className="hidden sm:inline">Interests</span>
+          </button>
+        </div>
+
         {/* Right Navigation */}
         <div className="flex items-center gap-4">
           {/* Notification Bell */}
@@ -1000,13 +954,20 @@ export default function Header({
             isOpen={isInterestsModalOpen}
             onClose={handleCloseInterests}
           />
+
+          {/* Attached Mosques Button - More Prominent */}
           <button
             onClick={handleOpenAttachedMosques}
-            className="hidden md:block text-sm font-medium hover:bg-gray-100 px-4 py-2 rounded-full transition flex items-center gap-2"
+            className="flex items-center gap-2 bg-blue-50 border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-100 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md group"
           >
-            <span>
-              Attached Mosques ({currentUser?.attachedMosques?.length || 0})
+            <span className="text-sm font-semibold text-blue-700 group-hover:text-blue-800">
+              My Mosques
             </span>
+            {currentUser?.attachedMosques?.length > 0 && (
+              <div className="bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-bold min-w-[18px] h-[18px] px-1">
+                {currentUser.attachedMosques.length}
+              </div>
+            )}
           </button>
 
           <div className="relative" ref={userMenuRef}>
@@ -1053,17 +1014,6 @@ export default function Header({
         attachedMosques={currentUser?.attachedMosques || []}
         onDetachMosque={handleDetachMosque}
         detachingMosque={detachingMosque}
-      />
-
-      {/* Detach Confirmation Modal */}
-      <DetachConfirmationModal
-        isOpen={showDetachConfirmation}
-        onClose={() => {
-          setShowDetachConfirmation(false);
-          setMosqueToDetach(null);
-        }}
-        mosque={mosqueToDetach}
-        onConfirm={handleConfirmDetach}
       />
     </header>
   );

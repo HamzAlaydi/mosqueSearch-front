@@ -1,7 +1,7 @@
 // MatchCard.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +17,7 @@ import {
   requestPhotoAccess,
   getCurrentUser,
   requestWaliAccess,
+  sendMessage,
 } from "../../redux/chat/chatSlice";
 import {
   blockUser,
@@ -69,6 +70,11 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
   // State for the confirmation modal
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
+  const [quickMessage, setQuickMessage] = useState("");
+  const [sendingQuickMessage, setSendingQuickMessage] = useState(false);
+  const [lastChatId, setLastChatId] = useState(null);
+  const quickMessageRef = useRef();
 
   const { blockedUsers } = useSelector((state) => state.block);
   const isBlocked = blockedUsers.some((user) => user._id === match._id);
@@ -103,19 +109,31 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
   const handleMessageClick = async (e) => {
     e.stopPropagation();
+    setIsQuickMessageOpen(true);
+    setQuickMessage("");
+    setLastChatId(null);
+    setTimeout(() => {
+      if (quickMessageRef.current) quickMessageRef.current.focus();
+    }, 100);
+  };
+
+  const handleSendQuickMessage = async () => {
+    if (!quickMessage.trim()) return;
+    setSendingQuickMessage(true);
     try {
-      console.log("Clicking message for user:", match._id);
-      const result = await dispatch(
-        findOrCreateConversation(match._id)
+      // Send the message directly, as in the chatbox
+      await dispatch(
+        sendMessage({ receiverId: match._id, text: quickMessage })
       ).unwrap();
-      console.log("findOrCreateConversation result:", result);
-      dispatch(setActiveChat(result.chatId));
-      await dispatch(fetchChatList()).unwrap();
-      router.push("/messages");
-      toast.success(`Opening chat with ${match.firstName || "User"}`);
+      toast.success("Message sent!");
+      setQuickMessage("");
+      setIsQuickMessageOpen(false);
+      // Optionally, set active chat so user can go to it
+      setLastChatId(match._id);
     } catch (error) {
-      console.error("Failed to open chat:", error);
-      toast.error("Failed to open chat");
+      toast.error(error.message || "Failed to send message");
+    } finally {
+      setSendingQuickMessage(false);
     }
   };
 
@@ -175,7 +193,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   return (
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer ${
-        isListView ? "flex" : ""
+        isListView ? "flex h-[180px]" : "flex flex-col h-[420px]"
       }`}
       onClick={() => onClick(match)}
     >
@@ -222,25 +240,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
             </div>
           </div>
         </div>
-        // Modified name row:
-        <h3 className="font-semibold text-lg flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
-            <span className="font-normal">{match.age}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm font-normal">
-            {match.maritalStatus && (
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                {match.maritalStatus}
-              </span>
-            )}
-            {match.religiousness && (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                {match.religiousness}
-              </span>
-            )}
-          </div>
-        </h3>
+        {/* Removed repeated name and badges row here */}
         <div className="absolute top-2 right-2 z-10">
           <button
             onClick={handleInterestClick}
@@ -256,9 +256,18 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
         </div>
       </div>
 
-      <div className={`p-4 ${isListView ? "w-2/3" : ""}`}>
+      <div
+        className={`p-4 ${
+          isListView ? "w-2/3" : "flex-1 flex flex-col justify-between"
+        }`}
+      >
         <h3 className="font-semibold text-lg flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 max-w-[160px] truncate"
+            title={`${match.firstName || "UnKnown User"} ${
+              match.lastName || ""
+            }`}
+          >
             {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
             <span className="font-normal">{match.age}</span>
           </div>
@@ -278,7 +287,9 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
         <div className="flex items-center text-sm text-gray-600 mb-2">
           <MapPin size={14} className="mr-1" />
-          <span>{match.distance}</span>
+          <span className="truncate max-w-[120px] block" title={match.distance}>
+            {match.distance}
+          </span>
         </div>
 
         <div className="mb-2 text-sm text-gray-600 space-y-1">
@@ -291,7 +302,10 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           {match.currentLocation && (
             <div className="flex items-center gap-1">
               <MapPin size={14} className="text-gray-500" />
-              <span className="font-medium text-gray-700">
+              <span
+                className="truncate max-w-[140px] block"
+                title={match.currentLocation}
+              >
                 {match.currentLocation}
               </span>
             </div>
@@ -375,6 +389,51 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
         </div>
       </div>
 
+      {/* Quick Message Modal */}
+      {isQuickMessageOpen && (
+        <div className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] flex items-center justify-center">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
+              onClick={() => setIsQuickMessageOpen(false)}
+              aria-label="Close modal"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h3 className="text-xl font-semibold mb-4 text-gray-800">
+              Send a quick message to {match.firstName || "this user"}
+            </h3>
+            <textarea
+              ref={quickMessageRef}
+              className="w-full border border-gray-300 rounded-lg p-3 mb-6 resize-none focus:outline-none focus:ring-2 focus:ring-primary text-base min-h-[90px]"
+              rows={4}
+              placeholder="Type your message..."
+              value={quickMessage}
+              onChange={(e) => setQuickMessage(e.target.value)}
+              disabled={sendingQuickMessage}
+            />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-end items-stretch">
+              <button
+                className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-dark disabled:opacity-60 w-full sm:w-auto"
+                onClick={handleSendQuickMessage}
+                disabled={sendingQuickMessage || !quickMessage.trim()}
+              >
+                {sendingQuickMessage ? "Sending..." : "Send"}
+              </button>
+              <button
+                className="border border-primary text-primary px-6 py-2 rounded-lg font-medium hover:bg-primary hover:text-white transition-colors w-full sm:w-auto cursor-pointer"
+                onClick={() => {
+                  setIsQuickMessageOpen(false);
+                  router.push(`/messages?chat=${match._id}`);
+                }}
+                type="button"
+              >
+                Go to this user chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={isBlockModalOpen}
