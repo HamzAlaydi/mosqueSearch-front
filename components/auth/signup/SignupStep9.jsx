@@ -43,7 +43,7 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
           });
         },
         () => {
-          setError("Could not get your location. Using default location.");
+          setError("");
         }
       );
     }
@@ -85,35 +85,33 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
 
         return (
           <Form className={styles.step9FormWrapper}>
+            {/* Show mosque selection error at the top */}
+            {errors.attachedMosques && touched.attachedMosques && (
+              <div className={styles.validationError}>
+                {errors.attachedMosques}
+              </div>
+            )}
             <div className={styles.step9Grid}>
               {/* Left: Selection Controls */}
               <div className={styles.leftPanel}>
-                <h2 className={styles.heading}>Find Mosques Near You</h2>
-                <p className={styles.subheading}>
-                  Search for mosques in your area and select ones you'd like to
-                  connect with.
-                </p>
-                {error && <div className={styles.errorBox}>{error}</div>}
-                <LocationSearch
-                  userLocation={userLocation}
-                  setUserLocation={setUserLocation}
-                  setError={setError}
-                />
-                <OptimizedDistanceSlider
-                  values={values}
-                  errors={errors}
-                  touched={touched}
-                  setFieldValue={setFieldValue}
-                />
-                <SelectedMosquesList
-                  attachedMosques={attachedMosques}
-                  toggleMosqueAttachment={toggleMosqueAttachment}
-                />
-                {errors.attachedMosques && touched.attachedMosques && (
-                  <div className={styles.validationError}>
-                    {errors.attachedMosques}
-                  </div>
-                )}
+                <div>
+                  {error && <div className={styles.errorBox}>{error}</div>}
+                  <LocationSearch
+                    userLocation={userLocation}
+                    setUserLocation={setUserLocation}
+                    setError={setError}
+                  />
+                  <OptimizedDistanceSlider
+                    values={values}
+                    errors={errors}
+                    touched={touched}
+                    setFieldValue={setFieldValue}
+                  />
+                  <SelectedMosquesList
+                    attachedMosques={attachedMosques}
+                    toggleMosqueAttachment={toggleMosqueAttachment}
+                  />
+                </div>
               </div>
               {/* Right: Map */}
               <OptimizedMapContainer

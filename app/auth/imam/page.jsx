@@ -8,6 +8,7 @@ import Link from "next/link";
 import ProgressBar from "@/shared/ui/ProgressBar";
 import { rootRoute } from "@/shared/constants/backendLink";
 import "@/components/auth/auth.css";
+import { toast, Toaster } from "react-hot-toast";
 
 // Import Step Components
 import ImamSignupStep1 from "@/components/auth/imamSignup/ImamSignupStep1";
@@ -19,6 +20,7 @@ const ImamSignup = () => {
   const { formData, currentStep } = useSelector((state) => state.form);
   const [signup, { isLoading }] = useSignupMutation();
   const [successMessage, setSuccessMessage] = useState("");
+  const [serverError, setServerError] = useState("");
   const router = useRouter();
 
   const totalSteps = 2;
@@ -29,8 +31,14 @@ const ImamSignup = () => {
     return () => dispatch(resetForm());
   }, [dispatch]);
 
-  const nextStep = () => dispatch(setStep(currentStep + 1));
-  const prevStep = () => dispatch(setStep(currentStep - 1));
+  const nextStep = () => {
+    setServerError("");
+    dispatch(setStep(currentStep + 1));
+  };
+  const prevStep = () => {
+    setServerError("");
+    dispatch(setStep(currentStep - 1));
+  };
 
   const handleStepSubmit = (values) => {
     dispatch(updateFormData(values));
@@ -38,6 +46,7 @@ const ImamSignup = () => {
   };
 
   const handleFinalSubmit = async (values, { setSubmitting, setErrors }) => {
+    setServerError("");
     try {
       const finalData = { ...formData, ...values };
 
@@ -105,12 +114,16 @@ const ImamSignup = () => {
 
       if (response.success) {
         setSuccessMessage(response.message);
+        setServerError("");
         dispatch(resetForm());
       }
     } catch (error) {
+      const errMsg = error.data?.message || error.message || "Signup failed";
+      setServerError(errMsg);
+      toast.error(errMsg);
       setErrors({
         email: " ",
-        password: error.data?.message || "Signup failed",
+        password: errMsg,
       });
     } finally {
       setSubmitting(false);
@@ -149,6 +162,7 @@ const ImamSignup = () => {
             prevStep={prevStep}
             isLoading={isLoading}
             formData={formData}
+            serverError={serverError}
           />
         )}
 

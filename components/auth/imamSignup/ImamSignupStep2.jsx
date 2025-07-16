@@ -14,7 +14,13 @@ const imamSignupStep2Schema = Yup.object().shape({
     .max(100, "Maximum 100 miles"),
 });
 
-const ImamSignupStep2 = ({ onSubmit, prevStep, isLoading, formData }) => {
+const ImamSignupStep2 = ({
+  onSubmit,
+  prevStep,
+  isLoading,
+  formData,
+  serverError,
+}) => {
   const [userLocation, setUserLocation] = useState({
     lat: 51.5074,
     lng: -0.1278,
@@ -50,9 +56,9 @@ const ImamSignupStep2 = ({ onSubmit, prevStep, isLoading, formData }) => {
     });
   }, []);
 
-  const handleSubmit = (values) => {
+  const handleSubmit = (values, helpers) => {
     const combinedValues = { ...values, attachedMosques };
-    onSubmit(combinedValues, { setSubmitting: () => {} });
+    onSubmit(combinedValues, helpers);
   };
 
   return (
@@ -73,11 +79,16 @@ const ImamSignupStep2 = ({ onSubmit, prevStep, isLoading, formData }) => {
                 connect with.
               </p>
 
-              {error && (
+              {/* {error && (
                 <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
                   {error}
                 </div>
               )}
+              {serverError && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                  {serverError}
+                </div>
+              )} */}
 
               <LocationSearch
                 userLocation={userLocation}
@@ -117,7 +128,7 @@ const ImamSignupStep2 = ({ onSubmit, prevStep, isLoading, formData }) => {
               <button
                 type="submit"
                 className="auth-button"
-                disabled={isLoading}
+                disabled={isLoading || attachedMosques.length === 0}
               >
                 {isLoading ? "Submitting..." : "Register as Imam"}
               </button>

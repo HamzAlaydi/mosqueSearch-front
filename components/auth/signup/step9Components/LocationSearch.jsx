@@ -317,7 +317,7 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
   return (
     <div className="relative mb-4">
       <div className="flex items-center border border-gray-300 rounded-full shadow-sm mb-2">
-        <MapPin size={16} className="text-primary ml-3" />
+        {/* <MapPin size={16} className="text-primary ml-3" /> */}
         <input
           ref={searchInputRef}
           type="text"
@@ -366,15 +366,15 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
           </button>
           <button
             type="button"
-            className="bg-primary p-2 rounded-full text-white mr-1 flex items-center justify-center"
+            className="bg-primary p-1.5 rounded-full text-black mr-1 flex items-center justify-center h-8 w-8 min-w-0 min-h-0"
             onClick={() => handleLocationSearch(searchQuery)}
             disabled={searchingLocation || !searchQuery.trim()}
             aria-label="Search locations"
           >
             {searchingLocation ? (
-              <Loader2 size={16} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Search size={16} />
+              <Search size={14} />
             )}
           </button>
         </div>
