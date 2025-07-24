@@ -89,6 +89,9 @@ export default function OptimizedMosqueMap({
   // Track current zoom level
   const [currentZoom, setCurrentZoom] = useState(13); // Default zoom value
 
+  // Track hovered label for z-index
+  const [hoveredLabelId, setHoveredLabelId] = useState(null);
+
   // Fetch user profile on component mount
   useEffect(() => {
     const userString = localStorage.getItem("user");
@@ -798,8 +801,11 @@ export default function OptimizedMosqueMap({
                                 letterSpacing: "0.01em",
                                 textShadow:
                                   "0 1px 0 #fff, 0 1.5px 2px rgba(0,0,0,0.08)",
-                                zIndex: 1000,
+                                zIndex:
+                                  hoveredLabelId === mosque.id ? 9999 : 1000,
                               }}
+                              onMouseEnter={() => setHoveredLabelId(mosque.id)}
+                              onMouseLeave={() => setHoveredLabelId(null)}
                             >
                               {mosque.name}
                             </div>
@@ -851,7 +857,7 @@ export default function OptimizedMosqueMap({
       )}
 
       {/* Zoom Controls */}
-      {/* <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+      <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
         <button
           onClick={handleZoomIn}
           className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center text-2xl font-bold border border-gray-300 hover:bg-gray-100 focus:outline-none"
@@ -866,7 +872,7 @@ export default function OptimizedMosqueMap({
         >
           −
         </button>
-      </div> */}
+      </div>
     </div>
   );
 }
@@ -928,21 +934,6 @@ export function ActiveFilters({
           removeFilter={removeFilter}
         />
       )}
-
-      {activeFilters.distance && (
-        <FilterTag
-          category="distance"
-          value={`Within ${activeFilters.distance} miles`}
-          removeFilter={removeFilter}
-        />
-      )}
-
-      <button
-        onClick={clearAllFilters}
-        className="text-primary hover:underline text-sm ml-2"
-      >
-        Clear all
-      </button>
     </div>
   );
 }

@@ -33,6 +33,10 @@ const formatUserResponse = (user) => {
     currentLocation,
     maritalStatus,
     religiousness,
+    sector,
+    keepsHalal,
+    prayerFrequency,
+    profession,
   } = user;
   console.log({ user });
 
@@ -62,6 +66,10 @@ const formatUserResponse = (user) => {
     currentLocation,
     maritalStatus,
     religiousness,
+    sector,
+    keepsHalal,
+    prayerFrequency,
+    profession,
   };
 };
 

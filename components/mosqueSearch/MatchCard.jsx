@@ -60,6 +60,14 @@ const extractCountryFromLocation = (location) => {
 
   return countryMap[country] || country;
 };
+// Helper to format props: remove underscores and capitalize words
+const formatProp = (str) => {
+  if (!str) return '';
+  return str
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 const MatchCard = ({ match, isListView, onClick, isInterested }) => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -261,77 +269,144 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           isListView ? "w-2/3" : "flex-1 flex flex-col justify-between"
         }`}
       >
-        <h3 className="font-semibold text-lg flex items-center justify-between gap-2">
-          <div
-            className="flex items-center gap-2 max-w-[160px] truncate"
-            title={`${match.firstName || "UnKnown User"} ${
-              match.lastName || ""
-            }`}
-          >
-            {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
-            <span className="font-normal">{match.age}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm font-normal">
-            {match.maritalStatus && (
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                {match.maritalStatus}
-              </span>
-            )}
-            {match.religiousness && (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                {match.religiousness}
-              </span>
-            )}
-          </div>
-        </h3>
-
-        <div className="flex items-center text-sm text-gray-600 mb-2">
-          <MapPin size={14} className="mr-1" />
-          <span className="truncate max-w-[120px] block" title={match.distance}>
-            {match.distance}
-          </span>
-        </div>
-
-        <div className="mb-2 text-sm text-gray-600 space-y-1">
-          <p>
-            <span className="font-medium text-gray-700">Languages:</span>{" "}
-            {match.languages
-              .map((lang) => lang.charAt(0).toUpperCase() + lang.slice(1))
-              .join(", ")}
-          </p>
-          {match.currentLocation && (
-            <div className="flex items-center gap-1">
-              <MapPin size={14} className="text-gray-500" />
+        <div className="flex flex-row w-full">
+          {/* Left column: main info */}
+          <div className="flex flex-col flex-1 min-w-0 gap-2">
+            <div
+              className="flex items-center gap-2 max-w-[160px] truncate"
+              title={`${match.firstName || "UnKnown User"} ${
+                match.lastName || ""
+              }`}
+            >
+              {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
+              <span className="font-normal">{match.age}</span>
+            </div>
+            <div className="flex items-center text-sm text-gray-600 mb-2">
+              <MapPin size={14} className="mr-1" />
               <span
-                className="truncate max-w-[140px] block"
-                title={match.currentLocation}
+                className="truncate max-w-[120px] block"
+                title={match.distance}
               >
-                {match.currentLocation}
+                {match.distance}
               </span>
             </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-1 mt-2">
-          {match.interests?.slice(0, 3).map((interest, index) => (
-            <span
-              key={index}
-              className="bg-gray-100 text-xs text-gray-700 rounded-full px-2 py-1"
-            >
-              {interest}
-            </span>
-          ))}
-          {match.interests?.length > 3 && (
-            <span className="bg-gray-100 text-xs text-gray-700 rounded-full px-2 py-1">
-              +{match.interests.length - 3}
-            </span>
-          )}
+            <div className="mb-2 text-sm text-gray-600 space-y-1">
+              <p>
+                <span className="font-medium text-gray-700">Languages:</span>{" "}
+                {match.languages
+                  .map((lang) => lang.charAt(0).toUpperCase() + lang.slice(1))
+                  .join(", ")}
+              </p>
+              {match.currentLocation && (
+                <div className="flex items-center gap-1">
+                  <MapPin size={14} className="text-gray-500" />
+                  <span
+                    className="truncate max-w-[140px] block"
+                    title={match.currentLocation}
+                  >
+                    {match.currentLocation}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {match.interests?.slice(0, 3).map((interest, index) => (
+                <span
+                  key={index}
+                  className="bg-gray-100 text-xs text-gray-700 rounded-full px-2 py-1"
+                >
+                  {formatProp(interest)}
+                </span>
+              ))}
+              {match.interests?.length > 3 && (
+                <span className="bg-gray-100 text-xs text-gray-700 rounded-full px-2 py-1">
+                  +{match.interests.length - 3}
+                </span>
+              )}
+            </div>
+          </div>
+          {/* Right column: all props as badges, 2 per row */}
+          <div className="flex flex-col items-start ml-6">
+            {(() => {
+              const badges = [];
+              if (match.sector) {
+                badges.push(
+                  <span
+                    key="sector"
+                    className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full"
+                  >
+                    {formatProp(match.sector)}
+                  </span>
+                );
+              }
+              if (match.keepsHalal) {
+                badges.push(
+                  <span
+                    key="keepsHalal"
+                    className="bg-pink-100 text-pink-800 px-2 py-1 rounded-full"
+                  >
+                    Keeps Halal
+                  </span>
+                );
+              }
+              if (match.prayerFrequency === "always") {
+                badges.push(
+                  <span
+                    key="prayerFrequency"
+                    className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full"
+                  >
+                    Prays Always
+                  </span>
+                );
+              }
+              if (match.profession) {
+                badges.push(
+                  <span
+                    key="profession"
+                    className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full"
+                  >
+                    {formatProp(match.profession)}
+                  </span>
+                );
+              }
+              if (match.maritalStatus) {
+                badges.push(
+                  <span
+                    key="maritalStatus"
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full"
+                  >
+                    {formatProp(match.maritalStatus)}
+                  </span>
+                );
+              }
+              if (match.religiousness) {
+                badges.push(
+                  <span
+                    key="religiousness"
+                    className="bg-green-100 text-green-800 px-2 py-1 rounded-full"
+                  >
+                    {formatProp(match.religiousness)}
+                  </span>
+                );
+              }
+              // Stack badges 2 per row
+              const rows = [];
+              for (let i = 0; i < badges.length; i += 2) {
+                rows.push(
+                  <div key={i} className="flex flex-row gap-2 mb-1">
+                    {badges.slice(i, i + 2)}
+                  </div>
+                );
+              }
+              return rows;
+            })()}
+          </div>
         </div>
 
         <div className="mt-3 flex justify-between items-center">
           <Link href={`/profile/${match._id}`} passHref>
             <button
-              className="flex items-center text-primary text-sm font-medium hover:underline"
+              className="flex items-center text-primary text-sm font-medium hover:underline cursor-pointer"
               onClick={(e) => e.stopPropagation()}
             >
               View Profile
@@ -341,7 +416,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleRequestPhoto}
-              className="p-1 rounded-full hover:bg-gray-100"
+              className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
               title="Request Profile Photo"
             >
               <ImageIcon size={18} className="text-gray-700" />
@@ -350,7 +425,7 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
             {/* Changed onClick to open the modal */}
             <button
               onClick={handleBlockUserClick}
-              className="p-1 rounded-full hover:bg-gray-100"
+              className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
               title={isBlocked ? "Unblock User" : "Block User"}
             >
               <Ban
@@ -359,15 +434,17 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
               />
             </button>
 
-            <button
-              onClick={handleRequestWali}
-              className="p-1 rounded-full hover:bg-gray-100"
-              title="Request Wali Info"
-            >
-              <UserCheck size={18} className="text-gray-700" />
-            </button>
+            {match.gender !== "male" && (
+              <button
+                onClick={handleRequestWali}
+                className="p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+                title="Request Wali Info"
+              >
+                <UserCheck size={18} className="text-gray-700" />
+              </button>
+            )}
 
-            <button
+            {/* <button
               onClick={(e) => {
                 e.stopPropagation();
                 console.log("Warning");
@@ -376,10 +453,10 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
               title="Warning"
             >
               <AlertCircle size={18} className="text-red-500" />
-            </button>
+            </button> */}
 
             <button
-              className="flex items-center gap-1 bg-primary text-white px-3 py-1 rounded-full text-sm hover:bg-primary-dark transition-colors"
+              className="flex items-center gap-1 bg-primary text-white px-3 py-1 rounded-full text-sm hover:bg-primary-dark transition-colors cursor-pointer"
               onClick={handleMessageClick}
             >
               <MessageCircle size={14} />
