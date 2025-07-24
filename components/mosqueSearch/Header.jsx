@@ -32,6 +32,7 @@ import {
 import { HeaderNotifications } from "../NotificationSystem";
 import { useMediaQuery } from "react-responsive";
 import { fetchUserProfile } from "@/redux/user/userSlice";
+import { setSearchDistance } from "@/redux/match/matchSlice";
 
 // Attached Mosques Popup Component
 const AttachedMosquesPopup = ({
@@ -173,54 +174,38 @@ const AttachedMosquesPopup = ({
 // Distance Range Slider Component
 const DistanceFilter = ({ value, onChange }) => {
   const [distance, setDistance] = useState(value || 6); // Default to 6 miles
+  const [isDragging, setIsDragging] = useState(false);
+  const debounceTimer = useRef(null);
 
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
-  const [isInterestsModalOpen, setIsInterestsModalOpen] = useState(false);
-  const { currentUser } = useSelector((state) => state.user);
+  // Sync local state with prop value if changed externally
+  useEffect(() => {
+    if (!isDragging && value !== distance) {
+      setDistance(value);
+    }
+  }, [value]);
 
-  const handleChange = (e) => {
+  // Only call onChange after debounce or drag end
+  useEffect(() => {
+    if (!isDragging && distance !== value) {
+      debounceTimer.current = setTimeout(() => {
+        onChange(distance);
+      }, 300); // 300ms debounce
+      return () => clearTimeout(debounceTimer.current);
+    }
+  }, [distance, isDragging]);
+
+  const handleSliderChange = (e) => {
     const newValue = parseInt(e.target.value);
     setDistance(newValue);
-    onChange(newValue);
   };
 
-  useEffect(() => {
-    // Fetch initial notifications
-    const fetchNotifications = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${rootRoute}/notifications`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setNotifications(response.data);
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-      }
-    };
+  const handleDragStart = () => setIsDragging(true);
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    // Update immediately on drag end
+    onChange(distance);
+  };
 
-    // Fetch unread notification count
-    const fetchUnreadCount = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `${rootRoute}/notifications/unread-count`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setUnreadCount(response.data.unreadCount);
-      } catch (error) {
-        console.error("Failed to fetch unread count:", error);
-      }
-    };
-
-    if (currentUser) {
-      fetchNotifications();
-      fetchUnreadCount();
-    }
-  }, [currentUser]);
   return (
     <div className="relative flex flex-col min-w-[120px]">
       <label className="text-xs text-gray-500 mb-1">
@@ -231,7 +216,11 @@ const DistanceFilter = ({ value, onChange }) => {
         min="1"
         max="100"
         value={distance}
-        onChange={handleChange}
+        onChange={handleSliderChange}
+        onMouseDown={handleDragStart}
+        onMouseUp={handleDragEnd}
+        onTouchStart={handleDragStart}
+        onTouchEnd={handleDragEnd}
         className="h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
       />
     </div>
@@ -694,7 +683,7 @@ export default function Header({
   };
 
   const handleDistanceChange = (value) => {
-    handleFilterChange("distance", value);
+    dispatch(setSearchDistance(value));
   };
 
   const handleLogout = () => {

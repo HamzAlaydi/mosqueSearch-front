@@ -101,12 +101,53 @@ export default function OptimizedMosqueMap({
     }
   }, [dispatch, currentUser]);
 
-  // Calculate distance radius in meters
-  const distanceRadiusMeters = useMemo(() => {
-    const distanceMiles =
-      typeof activeFilters?.distance === "number" ? activeFilters.distance : 10;
-    return distanceMiles * 1609.34; // Convert miles to meters
+  // Remove debounce for effectiveDistance
+  const [effectiveDistance, setEffectiveDistance] = useState(
+    typeof activeFilters?.distance === "number" ? activeFilters.distance : 10
+  );
+
+  // Update effectiveDistance immediately on distance change
+  useEffect(() => {
+    setEffectiveDistance(
+      typeof activeFilters?.distance === "number" ? activeFilters.distance : 10
+    );
   }, [activeFilters?.distance]);
+
+  // Add debouncedDistance state
+  const [debouncedDistance, setDebouncedDistance] = useState(effectiveDistance);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedDistance(effectiveDistance);
+    }, 200); // 200ms debounce
+    return () => clearTimeout(handler);
+  }, [effectiveDistance]);
+
+  // Map distance to zoom level (example: 1 mile = 14, 5 = 13, 10 = 12, 20 = 11, 50+ = 10)
+  function getZoomForDistance(distance) {
+    if (distance <= 2) return 14;
+    if (distance <= 5) return 13;
+    if (distance <= 10) return 12;
+    if (distance <= 20) return 11;
+    if (distance <= 50) return 10;
+    return 9;
+  }
+
+  // Use debouncedDistance for all map operations
+  const distanceRadiusMeters = useMemo(
+    () => debouncedDistance * 1609.34,
+    [debouncedDistance]
+  );
+  const zoom = getZoomForDistance(debouncedDistance);
+
+  // Update map zoom when debouncedDistance changes
+  useEffect(() => {
+    if (map && mapCenter) {
+      map.setZoom(zoom);
+      map.panTo(mapCenter);
+    }
+  }, [debouncedDistance, map, mapCenter, zoom]);
+  // --- END NEW ---
 
   // Create a set of attached mosque IDs for quick lookup (normalize to string)
   const attachedMosqueIds = useMemo(() => {
@@ -717,7 +758,7 @@ export default function OptimizedMosqueMap({
           <GoogleMap
             mapContainerStyle={MAP_CONTAINER_STYLE}
             center={mapCenter || DEFAULT_CENTER} // Use mapCenter if available, otherwise fallback
-            zoom={mapCenter ? 13 : 13} // Initial zoom level (will be adjusted by fitBounds)
+            zoom={zoom} // Initial zoom level (will be adjusted by fitBounds)
             options={MAP_OPTIONS}
             onLoad={onLoad}
             onUnmount={onUnmount}
