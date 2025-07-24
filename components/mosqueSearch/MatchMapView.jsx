@@ -9,6 +9,7 @@ import {
   Circle,
 } from "@react-google-maps/api";
 import { MarkerClustererF } from "@react-google-maps/api";
+import { OverlayView } from "@react-google-maps/api";
 import { GOOGLE_API, rootRoute } from "@/shared/constants/backendLink"; // Your Google API key
 import { useSelector, useDispatch, shallowEqual } from "react-redux";
 import { fetchUserProfile, updateUserProfile } from "@/redux/user/userSlice";
@@ -84,6 +85,9 @@ export default function OptimizedMosqueMap({
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const [justAttachedOrDetached, setJustAttachedOrDetached] = useState(false);
   const mapRef = useRef(null);
+
+  // Track current zoom level
+  const [currentZoom, setCurrentZoom] = useState(13); // Default zoom value
 
   // Fetch user profile on component mount
   useEffect(() => {
@@ -372,35 +376,6 @@ export default function OptimizedMosqueMap({
     setHoveredMosqueId(null); // Also clear hover state on close
   }, []);
 
-  // Handle marker click
-  const handleMarkerClick = useCallback(
-    (mosque) => {
-      if (selectedMosque?.id === mosque.id) {
-        handleInfoWindowClose();
-        return;
-      }
-
-      setIsUserInteracting(true);
-      setSelectedMosque(mosque);
-      setInfoWindowOpen(true);
-
-      // Pan to the marker location without changing zoom
-      if (map && mosque.location) {
-        const currentZoom = map.getZoom();
-        map.panTo({
-          lat: mosque.location.lat,
-          lng: mosque.location.lng,
-        });
-        // Preserve the current zoom level
-        map.setZoom(currentZoom);
-      }
-
-      // Reset interaction flag after a short delay
-      setTimeout(() => setIsUserInteracting(false), 1000);
-    },
-    [map, selectedMosque, handleInfoWindowClose]
-  );
-
   // Handle mosque attachment/detachment
   const handleAttachToggle = useCallback(
     async (mosque) => {
@@ -510,34 +485,22 @@ export default function OptimizedMosqueMap({
     [dispatch, currentUser, attachedMosqueIds, handleInfoWindowClose]
   );
 
-  const handleSearchInMosque = useCallback(
+  // On marker click, immediately attach/detach the mosque
+  const handleMarkerClick = useCallback(
     (mosque) => {
-      // Add mosque to searched set
-      setSearchedMosqueIds((prev) => new Set([...prev, mosque.id]));
-
-      // Call the parent component's function to trigger search by mosque
-      if (onSearchInMosque) {
-        onSearchInMosque(mosque);
-      }
-
-      // Close the InfoWindow after triggering search
-      handleInfoWindowClose();
+      handleAttachToggle(mosque);
     },
-    [onSearchInMosque, handleInfoWindowClose]
+    [handleAttachToggle]
   );
+
   // Render InfoWindow content
   const renderInfoWindowContent = useCallback(
     (mosque) => {
-      console.log({ mosque });
-
       const isAttached = mosque.isAttached;
-      const hasBeenSearched = searchedMosqueIds.has(mosque.id);
-
       return (
         <div className="p-2 max-w-xs font-sans text-gray-800">
           <h3 className="font-semibold text-lg mb-1">{mosque.name}</h3>
           <p className="text-sm text-gray-600 mb-2">{mosque.address}</p>
-
           {/* Facilities badges */}
           <div className="flex flex-wrap gap-1 mb-2">
             {mosque.hasFemaleArea && (
@@ -551,36 +514,10 @@ export default function OptimizedMosqueMap({
               </span>
             )}
           </div>
-
-          {/* Attach/Detach Button */}
-          {currentUser && (
-            <button
-              onClick={() => handleAttachToggle(mosque)}
-              className={`mt-2 text-sm !text-white px-4 py-2 rounded-md w-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
-                isAttached
-                  ? "!bg-red-600 hover:!bg-red-700 focus:!ring-red-500"
-                  : "!bg-emerald-600 hover:!bg-emerald-700 focus:!ring-emerald-500"
-              }`}
-            >
-              {isAttached ? "Detach from Mosque" : "Attach to Mosque"}
-            </button>
-          )}
-
-          {/* Search Users in This Mosque Button - UPDATED with visual feedback */}
-          {/* <button
-            onClick={() => handleSearchInMosque(mosque)}
-            className={`mt-2 text-sm px-4 py-2 rounded-md w-full transition-all duration-150 focus:outline-none focus:ring-2 ${
-              hasBeenSearched
-                ? "!bg-gray-500 !text-white hover:!bg-gray-600 focus:!ring-gray-400 opacity-75"
-                : "!text-white !bg-blue-600 hover:!bg-blue-700 focus:!ring-blue-400"
-            }`}
-          >
-            {hasBeenSearched ? "✓ Users Searched" : "Find Users in This Mosque"}
-          </button> */}
         </div>
       );
     },
-    [currentUser, handleAttachToggle, handleSearchInMosque, searchedMosqueIds]
+    [searchedMosqueIds]
   );
 
   // Map load handlers
@@ -629,6 +566,13 @@ export default function OptimizedMosqueMap({
     distanceRadiusMeters, // Re-fit if radius changes
     justAttachedOrDetached, // Add as dependency
   ]);
+
+  // Update currentZoom when map zoom changes
+  const handleZoomChanged = useCallback(() => {
+    if (map) {
+      setCurrentZoom(map.getZoom());
+    }
+  }, [map]);
 
   // Cluster options
   const clusterOptions = {
@@ -719,6 +663,18 @@ export default function OptimizedMosqueMap({
     );
   }
 
+  // --- ZOOM BUTTONS ---
+  const handleZoomIn = () => {
+    if (map) {
+      map.setZoom(map.getZoom() + 1);
+    }
+  };
+  const handleZoomOut = () => {
+    if (map) {
+      map.setZoom(map.getZoom() - 1);
+    }
+  };
+
   return (
     <div className="sticky top-20 h-[calc(100vh-100px)] shadow-inner relative flex-grow">
       {/* Map container */}
@@ -763,6 +719,7 @@ export default function OptimizedMosqueMap({
             onLoad={onLoad}
             onUnmount={onUnmount}
             onClick={handleInfoWindowClose} // Close InfoWindow when clicking on the map
+            onZoomChanged={handleZoomChanged}
           >
             {/* Render the Circle if not showing attached mosques and radius is set */}
             {isLoaded &&
@@ -789,22 +746,66 @@ export default function OptimizedMosqueMap({
                     const isCurrentlyHovered = hoveredMosqueId === mosque.id;
 
                     return (
-                      <Marker
-                        key={mosque.id}
-                        position={{
-                          lat: mosque.location.lat,
-                          lng: mosque.location.lng,
-                        }}
-                        onClick={() => handleMarkerClick(mosque)}
-                        onMouseOver={() => setHoveredMosqueId(mosque.id)}
-                        onMouseOut={() => setHoveredMosqueId(null)}
-                        icon={createMarkerIcon(
-                          mosque,
-                          isCurrentlyHovered,
-                          isCurrentlySelected
+                      <>
+                        <Marker
+                          key={mosque.id}
+                          position={{
+                            lat: mosque.location.lat,
+                            lng: mosque.location.lng,
+                          }}
+                          onClick={() => handleMarkerClick(mosque)}
+                          onMouseOver={() => {
+                            setHoveredMosqueId(mosque.id);
+                            setSelectedMosque(mosque);
+                            setInfoWindowOpen(true);
+                          }}
+                          onMouseOut={() => {
+                            setHoveredMosqueId(null);
+                            setSelectedMosque(null);
+                            setInfoWindowOpen(false);
+                          }}
+                          icon={createMarkerIcon(
+                            mosque,
+                            isCurrentlyHovered,
+                            isCurrentlySelected
+                          )}
+                          clusterer={clusterer} // Assign to the clusterer
+                        />
+                        {/* Mosque name label when zoomed in */}
+                        {currentZoom >= 15 && (
+                          <OverlayView
+                            position={{
+                              lat: mosque.location.lat,
+                              lng: mosque.location.lng,
+                            }}
+                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                          >
+                            <div
+                              style={{
+                                background: "none",
+                                color: "#d32f2f",
+                                fontWeight: 700,
+                                fontSize: "13px",
+                                fontFamily:
+                                  "Segoe UI, Roboto, Arial, sans-serif",
+                                whiteSpace: "nowrap",
+                                marginLeft: 22,
+                                marginTop: -8,
+                                display: "inline-block",
+                                padding: 0,
+                                border: "none",
+                                boxShadow: "none",
+                                letterSpacing: "0.01em",
+                                textShadow:
+                                  "0 1px 0 #fff, 0 1.5px 2px rgba(0,0,0,0.08)",
+                                zIndex: 1000,
+                              }}
+                            >
+                              {mosque.name}
+                            </div>
+                          </OverlayView>
                         )}
-                        clusterer={clusterer} // Assign to the clusterer
-                      />
+                      </>
                     );
                   })
                 }
@@ -849,26 +850,23 @@ export default function OptimizedMosqueMap({
         </div>
       )}
 
-      {/* Controls */}
-
-      {/* Legend */}
-      <div className="absolute bottom-4 right-4 z-10 bg-white p-3 rounded-md shadow-md">
-        <div className="text-xs font-semibold mb-2">Legend</div>
-        <div className="flex items-center mb-1">
-          <div className="w-3 h-3 rounded-full bg-blue-600 mr-2"></div>
-          <span className="text-xs">Standard Mosque</span>
-        </div>
-
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
-          <span className="text-xs">My Mosque</span>
-        </div>
-        {/* Add Selected/Hovered states to legend if desired */}
-        <div className="flex items-center mt-2">
-          <div className="w-3 h-3 rounded-full bg-green-600 mr-2"></div>
-          <span className="text-xs">Selected Mosque</span>
-        </div>
-      </div>
+      {/* Zoom Controls */}
+      {/* <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+        <button
+          onClick={handleZoomIn}
+          className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center text-2xl font-bold border border-gray-300 hover:bg-gray-100 focus:outline-none"
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center text-2xl font-bold border border-gray-300 hover:bg-gray-100 focus:outline-none"
+          aria-label="Zoom out"
+        >
+          −
+        </button>
+      </div> */}
     </div>
   );
 }
