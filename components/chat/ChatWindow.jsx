@@ -160,17 +160,16 @@ const ChatWindow = ({
 
         <div className="flex items-center space-x-2">
           {/* Example of a button to send a photo request - keep if needed */}
-          <button
+          {/* <button
             onClick={() => handlePhotoRequest(participant?._id)}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
             disabled={!participant?._id}
           >
             <Phone className="w-5 h-5" />{" "}
-            {/* This might be a placeholder for photo request */}
           </button>
           <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <Video className="w-5 h-5" />
-          </button>
+          </button> */}
           <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <MoreVertical className="w-5 h-5" />
           </button>

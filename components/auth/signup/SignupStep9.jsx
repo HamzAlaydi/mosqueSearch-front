@@ -50,13 +50,27 @@ const SignupStep9 = ({ onSubmit, prevStep, isLoading, formData }) => {
   }, []);
 
   // Toggle mosque attachment - memoized to prevent recreation
+  // Enhanced toggleMosqueAttachment function with UX improvements
   const toggleMosqueAttachment = useCallback((mosque) => {
     setAttachedMosques((prev) => {
       const isAttached = prev.some((m) => m.id === mosque.id);
-      return isAttached
-        ? prev.filter((m) => m.id !== mosque.id)
-        : [...prev, mosque];
+
+      if (isAttached) {
+        // Remove mosque
+        return prev.filter((m) => m.id !== mosque.id);
+      } else {
+        // Add mosque to the TOP of the list for immediate visibility
+        return [mosque, ...prev];
+      }
     });
+
+    // Scroll to top of the mosque list after adding to show the new mosque
+    setTimeout(() => {
+      const mosqueListContainer = document.querySelector(".bg-gray-50");
+      if (mosqueListContainer) {
+        mosqueListContainer.scrollTop = 0;
+      }
+    }, 100);
   }, []);
 
   return (

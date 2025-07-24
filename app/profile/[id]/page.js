@@ -195,16 +195,19 @@ export default function UserProfile() {
       return null;
     }
   };
-
   const isPhotoApproved = (user) => {
     const loggedInUserId = getLoggedInUserId();
-    console.log({ user });
-    console.log({ loggedInUserId });
+    console.log({ user, loggedInUserId });
 
-    // Use the new shouldBlurUserPhoto logic
+    // If no logged in user, photos should be blurred
+    if (!loggedInUserId) return false;
+
+    // If viewing own profile, always show unblurred
+    if (user?._id === loggedInUserId) return true;
+
+    // Use the shouldBlurUserPhoto logic (inverted because shouldBlur returns true when should blur)
     return !shouldBlurUserPhoto(user, loggedInUserId);
   };
-
   const isWaliApproved = (user) => {
     const loggedInUserId = getLoggedInUserId();
     return user?.approvedWaliFor?.includes(loggedInUserId);
@@ -402,10 +405,7 @@ export default function UserProfile() {
                       fill
                       className={`h-full w-full object-cover transition-all duration-300`}
                       style={{
-                        filter: shouldBlurUserPhoto(
-                          profileUser,
-                          currentUser?._id
-                        )
+                        filter: !isPhotoApproved(profileUser)
                           ? "blur(8px)"
                           : "none",
                         transition: "filter 0.3s",
@@ -823,38 +823,50 @@ export default function UserProfile() {
                   <div className="relative w-32 h-32 mx-auto mb-6">
                     <Image
                       src={
-                        isPhotoApproved(profileUser)
-                          ? profileUser.profilePicture?.startsWith("http")
-                            ? profileUser.profilePicture
-                            : getAvatar(profileUser.gender)
-                          : profileUser.blurredProfilePicture ||
-                            getAvatar(profileUser.gender)
+                        profileUser.profilePicture?.startsWith("http")
+                          ? profileUser.profilePicture
+                          : getAvatar(profileUser.gender)
                       }
                       alt={`${profileUser?.firstName || "User"}'s profile`}
                       fill
-                      className={`h-full w-full object-cover rounded-full transition-all duration-300 ${
-                        !isPhotoApproved(profileUser)
-                          ? "filter blur-md brightness-75"
-                          : ""
-                      }`}
+                      className="h-full w-full object-cover rounded-full transition-all duration-300"
+                      style={{
+                        filter: !isPhotoApproved(profileUser)
+                          ? "blur(8px)"
+                          : "none",
+                        transition: "filter 0.3s",
+                      }}
                       onError={(e) => {
                         e.target.src = getAvatar(profileUser.gender);
                       }}
                     />
+
+                    {/* Add blur overlay for better visual effect */}
+                    {!isPhotoApproved(profileUser) && (
+                      <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center">
+                        <Lock size={24} className="text-white drop-shadow-lg" />
+                      </div>
+                    )}
                   </div>
+
                   {!isPhotoApproved(profileUser) && (
-                    <button
-                      onClick={handleRequestPhoto}
-                      className="border-2 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 shadow-sm"
-                      style={{
-                        backgroundColor: "var(--primary)",
-                        borderColor: "var(--primary)",
-                        color: "#fff",
-                      }}
-                    >
-                      <Eye size={18} />
-                      Send Unblur Photo Request
-                    </button>
+                    <div className="text-center mb-4">
+                      <p className="text-gray-600 mb-4">
+                        Photo access required to view
+                      </p>
+                      <button
+                        onClick={handleRequestPhoto}
+                        className="border-2 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 shadow-sm"
+                        style={{
+                          backgroundColor: "var(--primary)",
+                          borderColor: "var(--primary)",
+                          color: "#fff",
+                        }}
+                      >
+                        <Eye size={18} />
+                        Send Unblur Photo Request
+                      </button>
+                    </div>
                   )}
                 </div>
               </ProfileSection>

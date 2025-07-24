@@ -3,6 +3,30 @@
 import { useCallback, useState, useEffect } from "react";
 import AsyncSelect from "react-select/async";
 
+// Popular countries list (you can customize this based on your needs)
+const POPULAR_COUNTRIES = [
+  { code: "US", name: "United States" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "CA", name: "Canada" },
+  { code: "AU", name: "Australia" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "IT", name: "Italy" },
+  { code: "ES", name: "Spain" },
+  { code: "NL", name: "Netherlands" },
+  { code: "BR", name: "Brazil" },
+  { code: "IN", name: "India" },
+  { code: "CN", name: "China" },
+  { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" },
+  { code: "SG", name: "Singapore" },
+  { code: "AE", name: "United Arab Emirates" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "EG", name: "Egypt" },
+  { code: "ZA", name: "South Africa" },
+  { code: "MX", name: "Mexico" },
+];
+
 // Custom hook to load the initial selected country
 const useSelectedCountry = (countryCode) => {
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -48,6 +72,64 @@ const useSelectedCountry = (countryCode) => {
   return { selectedCountry, loading };
 };
 
+// Custom hook to load popular countries
+const usePopularCountries = () => {
+  const [popularCountries, setPopularCountries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPopularCountries = async () => {
+      try {
+        // Fetch all popular countries in one request
+        const countryCodes = POPULAR_COUNTRIES.map(
+          (country) => country.code
+        ).join(",");
+        const response = await fetch(
+          `https://restcountries.com/v3.1/alpha?codes=${countryCodes}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch popular countries");
+        }
+
+        const countries = await response.json();
+
+        // Map and sort according to our popular countries order
+        const sortedCountries = POPULAR_COUNTRIES.map((popularCountry) => {
+          const country = countries.find((c) => c.cca2 === popularCountry.code);
+          return country
+            ? {
+                value: country.cca2,
+                label: country.name.common,
+                flagUrl: country.flags.svg,
+              }
+            : {
+                value: popularCountry.code,
+                label: popularCountry.name,
+              };
+        }).filter(Boolean);
+
+        setPopularCountries(sortedCountries);
+      } catch (error) {
+        console.error("Error loading popular countries:", error);
+        // Fallback to basic popular countries without flags
+        setPopularCountries(
+          POPULAR_COUNTRIES.map((country) => ({
+            value: country.code,
+            label: country.name,
+          }))
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPopularCountries();
+  }, []);
+
+  return { popularCountries, loading };
+};
+
 const CountrySelect = ({
   value,
   onChange,
@@ -56,40 +138,61 @@ const CountrySelect = ({
   className = "react-select-container",
   isRequired = false,
 }) => {
-  // Use custom hook to load the selected country
-  const { selectedCountry, loading } = useSelectedCountry(value);
+  // Use custom hooks
+  const { selectedCountry, loading: selectedLoading } =
+    useSelectedCountry(value);
+  const { popularCountries, loading: popularLoading } = usePopularCountries();
 
-  // Create a memoized function to load country options with REST Countries API
-  const loadCountryOptions = useCallback(async (inputValue) => {
-    if (inputValue.length < 2) {
-      return [];
-    }
-
-    try {
-      // Using REST Countries API which is free and includes flag data
-      const response = await fetch(
-        `https://restcountries.com/v3.1/name/${encodeURIComponent(inputValue)}`
-      );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          // No countries found for the search term
-          return [];
-        }
-        throw new Error("Failed to fetch countries");
+  // Create a memoized function to load country options
+  const loadCountryOptions = useCallback(
+    async (inputValue) => {
+      // If no input, return popular countries
+      if (!inputValue || inputValue.length === 0) {
+        return popularCountries;
       }
 
-      const countries = await response.json();
-      return countries.map((country) => ({
-        value: country.cca2, // ISO 3166-1 alpha-2 code
-        label: country.name.common,
-        flagUrl: country.flags.svg, // SVG flag URL
-      }));
-    } catch (error) {
-      console.error("Error searching countries:", error);
-      return [];
-    }
-  }, []);
+      // If input is less than 2 characters, still show popular countries
+      if (inputValue.length < 2) {
+        // Filter popular countries by input
+        return popularCountries.filter((country) =>
+          country.label.toLowerCase().includes(inputValue.toLowerCase())
+        );
+      }
+
+      try {
+        // Search all countries using REST Countries API
+        const response = await fetch(
+          `https://restcountries.com/v3.1/name/${encodeURIComponent(
+            inputValue
+          )}`
+        );
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            // No countries found, try to filter popular countries as fallback
+            return popularCountries.filter((country) =>
+              country.label.toLowerCase().includes(inputValue.toLowerCase())
+            );
+          }
+          throw new Error("Failed to fetch countries");
+        }
+
+        const countries = await response.json();
+        return countries.map((country) => ({
+          value: country.cca2,
+          label: country.name.common,
+          flagUrl: country.flags.svg,
+        }));
+      } catch (error) {
+        console.error("Error searching countries:", error);
+        // Fallback to filtering popular countries
+        return popularCountries.filter((country) =>
+          country.label.toLowerCase().includes(inputValue.toLowerCase())
+        );
+      }
+    },
+    [popularCountries]
+  );
 
   // Format the select option to include flags
   const formatOptionLabel = ({ label, flagUrl }) => (
@@ -111,17 +214,17 @@ const CountrySelect = ({
   return (
     <AsyncSelect
       cacheOptions
-      defaultOptions
+      defaultOptions={popularCountries.length > 0 ? popularCountries : true}
       loadOptions={loadCountryOptions}
       getOptionValue={(option) => option.value}
       getOptionLabel={(option) => option.label}
       formatOptionLabel={formatOptionLabel}
       value={selectedCountry}
-      isLoading={loading}
+      isLoading={selectedLoading || popularLoading}
       loadingMessage={() => "Loading countries..."}
       noOptionsMessage={({ inputValue }) =>
-        inputValue.length < 2
-          ? "Type at least 2 characters to search"
+        !inputValue || inputValue.length === 0
+          ? "Loading popular countries..."
           : "No countries found"
       }
       placeholder={placeholder}
