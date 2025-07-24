@@ -1,0 +1,16 @@
+/* Animated beating heart for Interests button */
+.animated-heart {
+  animation: heart-beat 1s infinite;
+  transform-origin: center;
+}
+
+@keyframes heart-beat {
+  0% { transform: scale(1); }
+  10% { transform: scale(1.2); }
+  20% { transform: scale(0.95); }
+  30% { transform: scale(1.15); }
+  40% { transform: scale(0.98); }
+  50% { transform: scale(1.05); }
+  60% { transform: scale(1); }
+  100% { transform: scale(1); }
+} 

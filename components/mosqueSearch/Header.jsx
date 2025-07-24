@@ -33,6 +33,8 @@ import { HeaderNotifications } from "../NotificationSystem";
 import { useMediaQuery } from "react-responsive";
 import { fetchUserProfile } from "@/redux/user/userSlice";
 import { setSearchDistance } from "@/redux/match/matchSlice";
+import { Heart as HeartIcon } from "lucide-react";
+import './HeaderHeart.css'; // We'll add a CSS file for the animation
 
 // Attached Mosques Popup Component
 const AttachedMosquesPopup = ({
@@ -265,6 +267,8 @@ export default function Header({
 
   // Get current user from Redux
   const { currentUser } = useSelector((state) => state.user);
+  // Get interests count (number of users the current user is interested in)
+  const interestsCount = currentUser?.interests?.length || 0;
 
   // Initialize Google services when script loads
   useEffect(() => {
@@ -884,10 +888,22 @@ export default function Header({
             {/* Interests Button */}
             <button
               onClick={handleOpenInterests}
-              className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-sm"
+              className="flex items-center gap-2 border border-gray-300 rounded-full px-3 py-2 hover:shadow-sm text-sm relative group bg-white"
+              style={{ position: 'relative' }}
             >
-              <Heart size={14} className="text-gray-600" />
-              <span>Interests</span>
+              <span className="relative flex items-center">
+                <HeartIcon
+                  size={20}
+                  className="text-red-500 animated-heart"
+                  style={{ marginRight: 4 }}
+                />
+                {interestsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold border-2 border-white animate-bounce">
+                    {interestsCount}
+                  </span>
+                )}
+              </span>
+              <span className="font-medium text-gray-700 group-hover:text-red-600 transition-colors">Interests</span>
             </button>
 
             {/* Modal */}

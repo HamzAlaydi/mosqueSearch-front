@@ -37,8 +37,10 @@ const formatUserResponse = (user) => {
     keepsHalal,
     prayerFrequency,
     profession,
+    photoRequested,
+    waliRequested,
+    messageSent,
   } = user;
-  console.log({ user });
 
   const age = calculateAge(birthDate);
   const distanceText = distance

@@ -67,7 +67,6 @@ export default function MosqueCard({ mosque, listView, onClick }) {
         onClick={() => onClick(safeMosque)}
       >
         <div className={`relative ${listView ? "w-1/3" : ""}`}>
-          {console.log(safeMosque.image)}
 
           <img
             src={safeMosque.image}
