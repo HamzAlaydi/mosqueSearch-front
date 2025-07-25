@@ -276,16 +276,16 @@ export default function OptimizedMosqueMap({
     (mosque, isHovered, isSelected) => {
       const isAttached = mosque.isAttached;
       const hasFemaleArea = mosque.hasFemaleArea;
-      const hasBeenSearched = searchedMosqueIds.has(mosque.id); // Add this line
+      const hasBeenSearched = searchedMosqueIds.has(mosque.id);
 
       const baseColor = isAttached
-        ? "#F59E0B" // Gold/Orange
+        ? "#10B981" // Green for attached mosques
         : hasFemaleArea
         ? "#8B5CF6" // Purple
         : "#2563EB"; // Blue
 
       const hoverColor = isAttached
-        ? "#D97706"
+        ? "#F59E0B" // Orange on hover for attached mosques
         : hasFemaleArea
         ? "#7C3AED"
         : "#1D4ED8";
@@ -348,7 +348,7 @@ export default function OptimizedMosqueMap({
         : ""
     }
   </svg>
-`;
+  `;
 
       return {
         url: `data:image/svg+xml;utf-8,${encodeURIComponent(svgContent)}`,
@@ -361,12 +361,11 @@ export default function OptimizedMosqueMap({
             ? 10
             : hasBeenSearched
             ? 8
-            : 5, // Add higher zIndex for searched mosques
+            : 5,
       };
     },
     [searchedMosqueIds]
-  ); // Add searchedMosqueIds to dependencies
-
+  );
   // REMOVE fitMapToBounds and all related logic
   // Remove the fitMapToBounds function entirely
   // Remove the useEffect that calls fitMapToBounds

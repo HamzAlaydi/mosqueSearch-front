@@ -1,133 +1,289 @@
 // components/common/CountrySelect.jsx
 "use client";
-import { useCallback, useState, useEffect } from "react";
-import AsyncSelect from "react-select/async";
+import { useState, useEffect, useMemo } from "react";
+import Select from "react-select";
 
-// Popular countries list (you can customize this based on your needs)
-const POPULAR_COUNTRIES = [
-  { code: "US", name: "United States" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "CA", name: "Canada" },
-  { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "IT", name: "Italy" },
-  { code: "ES", name: "Spain" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BR", name: "Brazil" },
-  { code: "IN", name: "India" },
-  { code: "CN", name: "China" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "SG", name: "Singapore" },
+// Complete list of all countries with flags (using flag-icons CDN for reliable flag display)
+const ALL_COUNTRIES = [
+  { code: "AD", name: "Andorra" },
   { code: "AE", name: "United Arab Emirates" },
-  { code: "SA", name: "Saudi Arabia" },
+  { code: "AF", name: "Afghanistan" },
+  { code: "AG", name: "Antigua and Barbuda" },
+  { code: "AI", name: "Anguilla" },
+  { code: "AL", name: "Albania" },
+  { code: "AM", name: "Armenia" },
+  { code: "AO", name: "Angola" },
+  { code: "AQ", name: "Antarctica" },
+  { code: "AR", name: "Argentina" },
+  { code: "AS", name: "American Samoa" },
+  { code: "AT", name: "Austria" },
+  { code: "AU", name: "Australia" },
+  { code: "AW", name: "Aruba" },
+  { code: "AX", name: "Åland Islands" },
+  { code: "AZ", name: "Azerbaijan" },
+  { code: "BA", name: "Bosnia and Herzegovina" },
+  { code: "BB", name: "Barbados" },
+  { code: "BD", name: "Bangladesh" },
+  { code: "BE", name: "Belgium" },
+  { code: "BF", name: "Burkina Faso" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "BH", name: "Bahrain" },
+  { code: "BI", name: "Burundi" },
+  { code: "BJ", name: "Benin" },
+  { code: "BL", name: "Saint Barthélemy" },
+  { code: "BM", name: "Bermuda" },
+  { code: "BN", name: "Brunei" },
+  { code: "BO", name: "Bolivia" },
+  { code: "BQ", name: "Caribbean Netherlands" },
+  { code: "BR", name: "Brazil" },
+  { code: "BS", name: "Bahamas" },
+  { code: "BT", name: "Bhutan" },
+  { code: "BV", name: "Bouvet Island" },
+  { code: "BW", name: "Botswana" },
+  { code: "BY", name: "Belarus" },
+  { code: "BZ", name: "Belize" },
+  { code: "CA", name: "Canada" },
+  { code: "CC", name: "Cocos (Keeling) Islands" },
+  { code: "CD", name: "Democratic Republic of the Congo" },
+  { code: "CF", name: "Central African Republic" },
+  { code: "CG", name: "Republic of the Congo" },
+  { code: "CH", name: "Switzerland" },
+  { code: "CI", name: "Ivory Coast" },
+  { code: "CK", name: "Cook Islands" },
+  { code: "CL", name: "Chile" },
+  { code: "CM", name: "Cameroon" },
+  { code: "CN", name: "China" },
+  { code: "CO", name: "Colombia" },
+  { code: "CR", name: "Costa Rica" },
+  { code: "CU", name: "Cuba" },
+  { code: "CV", name: "Cape Verde" },
+  { code: "CW", name: "Curaçao" },
+  { code: "CX", name: "Christmas Island" },
+  { code: "CY", name: "Cyprus" },
+  { code: "CZ", name: "Czech Republic" },
+  { code: "DE", name: "Germany" },
+  { code: "DJ", name: "Djibouti" },
+  { code: "DK", name: "Denmark" },
+  { code: "DM", name: "Dominica" },
+  { code: "DO", name: "Dominican Republic" },
+  { code: "DZ", name: "Algeria" },
+  { code: "EC", name: "Ecuador" },
+  { code: "EE", name: "Estonia" },
   { code: "EG", name: "Egypt" },
-  { code: "ZA", name: "South Africa" },
+  { code: "EH", name: "Western Sahara" },
+  { code: "ER", name: "Eritrea" },
+  { code: "ES", name: "Spain" },
+  { code: "ET", name: "Ethiopia" },
+  { code: "FI", name: "Finland" },
+  { code: "FJ", name: "Fiji" },
+  { code: "FK", name: "Falkland Islands" },
+  { code: "FM", name: "Micronesia" },
+  { code: "FO", name: "Faroe Islands" },
+  { code: "FR", name: "France" },
+  { code: "GA", name: "Gabon" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "GD", name: "Grenada" },
+  { code: "GE", name: "Georgia" },
+  { code: "GF", name: "French Guiana" },
+  { code: "GG", name: "Guernsey" },
+  { code: "GH", name: "Ghana" },
+  { code: "GI", name: "Gibraltar" },
+  { code: "GL", name: "Greenland" },
+  { code: "GM", name: "Gambia" },
+  { code: "GN", name: "Guinea" },
+  { code: "GP", name: "Guadeloupe" },
+  { code: "GQ", name: "Equatorial Guinea" },
+  { code: "GR", name: "Greece" },
+  { code: "GS", name: "South Georgia and the South Sandwich Islands" },
+  { code: "GT", name: "Guatemala" },
+  { code: "GU", name: "Guam" },
+  { code: "GW", name: "Guinea-Bissau" },
+  { code: "GY", name: "Guyana" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "HM", name: "Heard Island and McDonald Islands" },
+  { code: "HN", name: "Honduras" },
+  { code: "HR", name: "Croatia" },
+  { code: "HT", name: "Haiti" },
+  { code: "HU", name: "Hungary" },
+  { code: "ID", name: "Indonesia" },
+  { code: "IE", name: "Ireland" },
+  { code: "IL", name: "Israel" },
+  { code: "IM", name: "Isle of Man" },
+  { code: "IN", name: "India" },
+  { code: "IO", name: "British Indian Ocean Territory" },
+  { code: "IQ", name: "Iraq" },
+  { code: "IR", name: "Iran" },
+  { code: "IS", name: "Iceland" },
+  { code: "IT", name: "Italy" },
+  { code: "JE", name: "Jersey" },
+  { code: "JM", name: "Jamaica" },
+  { code: "JO", name: "Jordan" },
+  { code: "JP", name: "Japan" },
+  { code: "KE", name: "Kenya" },
+  { code: "KG", name: "Kyrgyzstan" },
+  { code: "KH", name: "Cambodia" },
+  { code: "KI", name: "Kiribati" },
+  { code: "KM", name: "Comoros" },
+  { code: "KN", name: "Saint Kitts and Nevis" },
+  { code: "KP", name: "North Korea" },
+  { code: "KR", name: "South Korea" },
+  { code: "KW", name: "Kuwait" },
+  { code: "KY", name: "Cayman Islands" },
+  { code: "KZ", name: "Kazakhstan" },
+  { code: "LA", name: "Laos" },
+  { code: "LB", name: "Lebanon" },
+  { code: "LC", name: "Saint Lucia" },
+  { code: "LI", name: "Liechtenstein" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "LR", name: "Liberia" },
+  { code: "LS", name: "Lesotho" },
+  { code: "LT", name: "Lithuania" },
+  { code: "LU", name: "Luxembourg" },
+  { code: "LV", name: "Latvia" },
+  { code: "LY", name: "Libya" },
+  { code: "MA", name: "Morocco" },
+  { code: "MC", name: "Monaco" },
+  { code: "MD", name: "Moldova" },
+  { code: "ME", name: "Montenegro" },
+  { code: "MF", name: "Saint Martin" },
+  { code: "MG", name: "Madagascar" },
+  { code: "MH", name: "Marshall Islands" },
+  { code: "MK", name: "North Macedonia" },
+  { code: "ML", name: "Mali" },
+  { code: "MM", name: "Myanmar" },
+  { code: "MN", name: "Mongolia" },
+  { code: "MO", name: "Macao" },
+  { code: "MP", name: "Northern Mariana Islands" },
+  { code: "MQ", name: "Martinique" },
+  { code: "MR", name: "Mauritania" },
+  { code: "MS", name: "Montserrat" },
+  { code: "MT", name: "Malta" },
+  { code: "MU", name: "Mauritius" },
+  { code: "MV", name: "Maldives" },
+  { code: "MW", name: "Malawi" },
   { code: "MX", name: "Mexico" },
+  { code: "MY", name: "Malaysia" },
+  { code: "MZ", name: "Mozambique" },
+  { code: "NA", name: "Namibia" },
+  { code: "NC", name: "New Caledonia" },
+  { code: "NE", name: "Niger" },
+  { code: "NF", name: "Norfolk Island" },
+  { code: "NG", name: "Nigeria" },
+  { code: "NI", name: "Nicaragua" },
+  { code: "NL", name: "Netherlands" },
+  { code: "NO", name: "Norway" },
+  { code: "NP", name: "Nepal" },
+  { code: "NR", name: "Nauru" },
+  { code: "NU", name: "Niue" },
+  { code: "NZ", name: "New Zealand" },
+  { code: "OM", name: "Oman" },
+  { code: "PA", name: "Panama" },
+  { code: "PE", name: "Peru" },
+  { code: "PF", name: "French Polynesia" },
+  { code: "PG", name: "Papua New Guinea" },
+  { code: "PH", name: "Philippines" },
+  { code: "PK", name: "Pakistan" },
+  { code: "PL", name: "Poland" },
+  { code: "PM", name: "Saint Pierre and Miquelon" },
+  { code: "PN", name: "Pitcairn Islands" },
+  { code: "PR", name: "Puerto Rico" },
+  { code: "PS", name: "Palestine" },
+  { code: "PT", name: "Portugal" },
+  { code: "PW", name: "Palau" },
+  { code: "PY", name: "Paraguay" },
+  { code: "QA", name: "Qatar" },
+  { code: "RE", name: "Réunion" },
+  { code: "RO", name: "Romania" },
+  { code: "RS", name: "Serbia" },
+  { code: "RU", name: "Russia" },
+  { code: "RW", name: "Rwanda" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "SB", name: "Solomon Islands" },
+  { code: "SC", name: "Seychelles" },
+  { code: "SD", name: "Sudan" },
+  { code: "SE", name: "Sweden" },
+  { code: "SG", name: "Singapore" },
+  { code: "SH", name: "Saint Helena, Ascension and Tristan da Cunha" },
+  { code: "SI", name: "Slovenia" },
+  { code: "SJ", name: "Svalbard and Jan Mayen" },
+  { code: "SK", name: "Slovakia" },
+  { code: "SL", name: "Sierra Leone" },
+  { code: "SM", name: "San Marino" },
+  { code: "SN", name: "Senegal" },
+  { code: "SO", name: "Somalia" },
+  { code: "SR", name: "Suriname" },
+  { code: "SS", name: "South Sudan" },
+  { code: "ST", name: "São Tomé and Príncipe" },
+  { code: "SV", name: "El Salvador" },
+  { code: "SX", name: "Sint Maarten" },
+  { code: "SY", name: "Syria" },
+  { code: "SZ", name: "Eswatini" },
+  { code: "TC", name: "Turks and Caicos Islands" },
+  { code: "TD", name: "Chad" },
+  { code: "TF", name: "French Southern and Antarctic Lands" },
+  { code: "TG", name: "Togo" },
+  { code: "TH", name: "Thailand" },
+  { code: "TJ", name: "Tajikistan" },
+  { code: "TK", name: "Tokelau" },
+  { code: "TL", name: "Timor-Leste" },
+  { code: "TM", name: "Turkmenistan" },
+  { code: "TN", name: "Tunisia" },
+  { code: "TO", name: "Tonga" },
+  { code: "TR", name: "Turkey" },
+  { code: "TT", name: "Trinidad and Tobago" },
+  { code: "TV", name: "Tuvalu" },
+  { code: "TW", name: "Taiwan" },
+  { code: "TZ", name: "Tanzania" },
+  { code: "UA", name: "Ukraine" },
+  { code: "UG", name: "Uganda" },
+  { code: "UM", name: "United States Minor Outlying Islands" },
+  { code: "US", name: "United States" },
+  { code: "UY", name: "Uruguay" },
+  { code: "UZ", name: "Uzbekistan" },
+  { code: "VA", name: "Vatican City" },
+  { code: "VC", name: "Saint Vincent and the Grenadines" },
+  { code: "VE", name: "Venezuela" },
+  { code: "VG", name: "British Virgin Islands" },
+  { code: "VI", name: "United States Virgin Islands" },
+  { code: "VN", name: "Vietnam" },
+  { code: "VU", name: "Vanuatu" },
+  { code: "WF", name: "Wallis and Futuna" },
+  { code: "WS", name: "Samoa" },
+  { code: "XK", name: "Kosovo" },
+  { code: "YE", name: "Yemen" },
+  { code: "YT", name: "Mayotte" },
+  { code: "ZA", name: "South Africa" },
+  { code: "ZM", name: "Zambia" },
+  { code: "ZW", name: "Zimbabwe" },
 ];
 
-// Custom hook to load the initial selected country
-const useSelectedCountry = (countryCode) => {
-  const [selectedCountry, setSelectedCountry] = useState(null);
-  const [loading, setLoading] = useState(false);
+// Popular countries list (shown at the top of the dropdown)
+const POPULAR_COUNTRIES = [
+  "US",
+  "GB",
+  "CA",
+  "AU",
+  "DE",
+  "FR",
+  "IT",
+  "ES",
+  "NL",
+  "BR",
+  "IN",
+  "CN",
+  "JP",
+  "KR",
+  "SG",
+  "AE",
+  "SA",
+  "EG",
+  "ZA",
+  "MX",
+];
 
-  useEffect(() => {
-    const fetchSelectedCountry = async () => {
-      if (!countryCode) {
-        setSelectedCountry(null);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `https://restcountries.com/v3.1/alpha/${countryCode}`
-        );
-        if (!response.ok) {
-          throw new Error("Country not found");
-        }
-
-        const [country] = await response.json();
-        setSelectedCountry({
-          value: country.cca2,
-          label: country.name.common,
-          flagUrl: country.flags.svg,
-        });
-      } catch (error) {
-        console.error("Error loading selected country:", error);
-        // Fallback to just showing the code
-        setSelectedCountry({
-          value: countryCode,
-          label: countryCode,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSelectedCountry();
-  }, [countryCode]);
-
-  return { selectedCountry, loading };
-};
-
-// Custom hook to load popular countries
-const usePopularCountries = () => {
-  const [popularCountries, setPopularCountries] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPopularCountries = async () => {
-      try {
-        // Fetch all popular countries in one request
-        const countryCodes = POPULAR_COUNTRIES.map(
-          (country) => country.code
-        ).join(",");
-        const response = await fetch(
-          `https://restcountries.com/v3.1/alpha?codes=${countryCodes}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch popular countries");
-        }
-
-        const countries = await response.json();
-
-        // Map and sort according to our popular countries order
-        const sortedCountries = POPULAR_COUNTRIES.map((popularCountry) => {
-          const country = countries.find((c) => c.cca2 === popularCountry.code);
-          return country
-            ? {
-                value: country.cca2,
-                label: country.name.common,
-                flagUrl: country.flags.svg,
-              }
-            : {
-                value: popularCountry.code,
-                label: popularCountry.name,
-              };
-        }).filter(Boolean);
-
-        setPopularCountries(sortedCountries);
-      } catch (error) {
-        console.error("Error loading popular countries:", error);
-        // Fallback to basic popular countries without flags
-        setPopularCountries(
-          POPULAR_COUNTRIES.map((country) => ({
-            value: country.code,
-            label: country.name,
-          }))
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPopularCountries();
-  }, []);
-
-  return { popularCountries, loading };
+// Helper function to get flag URL
+const getFlagUrl = (countryCode) => {
+  return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
 };
 
 const CountrySelect = ({
@@ -137,62 +293,56 @@ const CountrySelect = ({
   placeholder = "Select country",
   className = "react-select-container",
   isRequired = false,
+  isSearchable = true,
+  isClearable = true,
 }) => {
-  // Use custom hooks
-  const { selectedCountry, loading: selectedLoading } =
-    useSelectedCountry(value);
-  const { popularCountries, loading: popularLoading } = usePopularCountries();
+  // Memoize the formatted country options
+  const countryOptions = useMemo(() => {
+    // Create a single flat list with popular countries at the top
+    const popularCountries = [];
+    const otherCountries = [];
 
-  // Create a memoized function to load country options
-  const loadCountryOptions = useCallback(
-    async (inputValue) => {
-      // If no input, return popular countries
-      if (!inputValue || inputValue.length === 0) {
-        return popularCountries;
+    ALL_COUNTRIES.forEach((country) => {
+      const option = {
+        value: country.code,
+        label: country.name,
+        flagUrl: getFlagUrl(country.code),
+        isPopular: POPULAR_COUNTRIES.includes(country.code),
+      };
+
+      if (option.isPopular) {
+        popularCountries.push(option);
+      } else {
+        otherCountries.push(option);
       }
+    });
 
-      // If input is less than 2 characters, still show popular countries
-      if (inputValue.length < 2) {
-        // Filter popular countries by input
-        return popularCountries.filter((country) =>
-          country.label.toLowerCase().includes(inputValue.toLowerCase())
-        );
-      }
+    // Sort popular countries by the order in POPULAR_COUNTRIES array
+    popularCountries.sort((a, b) => {
+      return (
+        POPULAR_COUNTRIES.indexOf(a.value) - POPULAR_COUNTRIES.indexOf(b.value)
+      );
+    });
 
-      try {
-        // Search all countries using REST Countries API
-        const response = await fetch(
-          `https://restcountries.com/v3.1/name/${encodeURIComponent(
-            inputValue
-          )}`
-        );
+    // Return a flat array with popular countries first, then all others
+    return [...popularCountries, ...otherCountries];
+  }, []);
 
-        if (!response.ok) {
-          if (response.status === 404) {
-            // No countries found, try to filter popular countries as fallback
-            return popularCountries.filter((country) =>
-              country.label.toLowerCase().includes(inputValue.toLowerCase())
-            );
-          }
-          throw new Error("Failed to fetch countries");
-        }
+  // Find the selected country option
+  const selectedCountry = useMemo(() => {
+    if (!value) return null;
 
-        const countries = await response.json();
-        return countries.map((country) => ({
-          value: country.cca2,
-          label: country.name.common,
-          flagUrl: country.flags.svg,
-        }));
-      } catch (error) {
-        console.error("Error searching countries:", error);
-        // Fallback to filtering popular countries
-        return popularCountries.filter((country) =>
-          country.label.toLowerCase().includes(inputValue.toLowerCase())
-        );
-      }
-    },
-    [popularCountries]
-  );
+    // Find in all options
+    const found = countryOptions.find((option) => option.value === value);
+    if (found) return found;
+
+    // Fallback if country code not found
+    return {
+      value: value,
+      label: value,
+      flagUrl: getFlagUrl(value),
+    };
+  }, [value, countryOptions]);
 
   // Format the select option to include flags
   const formatOptionLabel = ({ label, flagUrl }) => (
@@ -201,7 +351,13 @@ const CountrySelect = ({
         <img
           src={flagUrl}
           alt={`${label} flag`}
-          style={{ width: "20px", height: "15px", marginRight: "10px" }}
+          style={{
+            width: "20px",
+            height: "15px",
+            marginRight: "10px",
+            objectFit: "cover",
+            flexShrink: 0,
+          }}
           onError={(e) => {
             e.target.style.display = "none";
           }}
@@ -211,28 +367,37 @@ const CountrySelect = ({
     </div>
   );
 
+  // Custom filter function to search by country name or code
+  const filterOption = (option, inputValue) => {
+    if (!inputValue) return true;
+
+    const searchValue = inputValue.toLowerCase();
+    return (
+      option.label.toLowerCase().includes(searchValue) ||
+      option.value.toLowerCase().includes(searchValue)
+    );
+  };
+
   return (
-    <AsyncSelect
-      cacheOptions
-      defaultOptions={popularCountries.length > 0 ? popularCountries : true}
-      loadOptions={loadCountryOptions}
+    <Select
+      options={countryOptions}
+      value={selectedCountry}
+      onChange={(option) => onChange(name, option?.value || "")}
       getOptionValue={(option) => option.value}
       getOptionLabel={(option) => option.label}
       formatOptionLabel={formatOptionLabel}
-      value={selectedCountry}
-      isLoading={selectedLoading || popularLoading}
-      loadingMessage={() => "Loading countries..."}
-      noOptionsMessage={({ inputValue }) =>
-        !inputValue || inputValue.length === 0
-          ? "Loading popular countries..."
-          : "No countries found"
-      }
+      filterOption={filterOption}
       placeholder={placeholder}
       className={className}
       classNamePrefix="react-select"
+      isSearchable={isSearchable}
+      isClearable={isClearable}
       aria-required={isRequired}
-      onChange={(option) => onChange(name, option?.value || "")}
-      cacheUniqueId={name}
+      noOptionsMessage={({ inputValue }) =>
+        inputValue
+          ? `No countries found for "${inputValue}"`
+          : "No countries available"
+      }
     />
   );
 };

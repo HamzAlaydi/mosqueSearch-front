@@ -256,13 +256,15 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
   return (
     <div
-      className={`bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer ${isListView ? "flex h-[180px]" : "flex flex-col h-[420px]"
-        }`}
+      className={`bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer ${
+        isListView ? "flex h-[180px]" : "flex flex-col h-[420px]"
+      }`}
       onClick={() => onClick(match)}
     >
       <div
-        className={`${isListView ? "w-1/3 h-full" : "h-48"
-          } relative overflow-hidden`}
+        className={`${
+          isListView ? "w-1/3 h-full" : "h-48"
+        } relative overflow-hidden`}
       >
         <Image
           src={
@@ -273,8 +275,9 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
           alt={`${match?.firstName || "User"}'s profile`}
           width={500}
           height={500}
-          className={`object-cover ${isListView ? "w-full h-full" : "w-full h-48"
-            } ${shouldBlur ? "blur-sm" : ""}`}
+          className={`object-cover ${
+            isListView ? "w-full h-full" : "w-full h-48"
+          } ${shouldBlur ? "blur-sm" : ""}`}
         />
         <div className="absolute top-2 left-2 flex items-center gap-2 z-10 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1">
           <div className="flex items-center gap-1">
@@ -317,15 +320,17 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
       </div>
 
       <div
-        className={`p-4 ${isListView ? "w-2/3" : "flex-1 flex flex-col justify-between"
-          }`}
+        className={`p-4 ${
+          isListView ? "w-2/3" : "flex-1 flex flex-col justify-between"
+        }`}
       >
         <div className="flex flex-row w-full">
           <div className="flex flex-col flex-1 min-w-0 gap-2">
             <div
               className="flex items-center gap-2 max-w-[160px] truncate"
-              title={`${match.firstName || "UnKnown User"} ${match.lastName || ""
-                }`}
+              title={`${match.firstName || "UnKnown User"} ${
+                match.lastName || ""
+              }`}
             >
               {match.firstName || "UnKnown User"} {match.lastName || ""},{" "}
               <span className="font-normal">{match.age}</span>
@@ -397,13 +402,13 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
                   </span>
                 );
               }
-              if (match.prayerFrequency === "always") {
+              if (match.prayerFrequency) {
                 badges.push(
                   <span
                     key="prayerFrequency"
                     className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs"
                   >
-                    Prays Always
+                    Prays {match.prayerFrequency}
                   </span>
                 );
               }
@@ -464,11 +469,16 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
             {/* Photo Request Button - Changes color if already requested */}
             <button
               onClick={handleRequestPhoto}
-              className={`p-1 rounded-full hover:bg-gray-100 cursor-pointer transition-colors ${hasRequestedPhoto
-                ? "bg-green-100 text-green-600 hover:bg-green-200"
-                : "text-gray-700"
-                }`}
-              title={hasRequestedPhoto ? "Photo Request Sent" : "Request Profile Photo"}
+              className={`p-1 rounded-full hover:bg-gray-100 cursor-pointer transition-colors ${
+                hasRequestedPhoto
+                  ? "bg-green-100 text-green-600 hover:bg-green-200"
+                  : "text-gray-700"
+              }`}
+              title={
+                hasRequestedPhoto
+                  ? "Photo Request Sent"
+                  : "Request Profile Photo"
+              }
             >
               <ImageIcon size={18} />
             </button>
@@ -489,11 +499,14 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
             {match.gender !== "male" && (
               <button
                 onClick={handleRequestWali}
-                className={`p-1 rounded-full hover:bg-gray-100 cursor-pointer transition-colors ${hasRequestedWali
-                  ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
-                  : "text-gray-700"
-                  }`}
-                title={hasRequestedWali ? "Wali Request Sent" : "Request Wali Info"}
+                className={`p-1 rounded-full hover:bg-gray-100 cursor-pointer transition-colors ${
+                  hasRequestedWali
+                    ? "bg-green-100 text-green-600 hover:bg-green-200"
+                    : "text-gray-700"
+                }`}
+                title={
+                  hasRequestedWali ? "Wali Request Sent" : "Request Wali Info"
+                }
               >
                 <UserCheck size={18} />
               </button>
@@ -501,10 +514,11 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
 
             {/* Message Button - Changes color and text if already messaged */}
             <button
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm hover:opacity-90 transition-all cursor-pointer ${hasMessagedUser
-                ? "bg-green-500 text-white border border-green-600"
-                : "bg-primary text-white hover:bg-primary-dark"
-                }`}
+              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm hover:opacity-90 transition-all cursor-pointer ${
+                hasMessagedUser
+                  ? "bg-green-500 text-white border border-green-600"
+                  : "bg-primary text-white hover:bg-primary-dark"
+              }`}
               onClick={handleMessageClick}
             >
               <MessageCircle size={14} />
@@ -568,10 +582,12 @@ const MatchCard = ({ match, isListView, onClick, isInterested }) => {
         title={isBlocked ? "Confirm Unblock" : "Confirm Block"}
         message={
           isBlocked
-            ? `Are you sure you want to unblock ${match.firstName || "this user"
-            }?`
-            : `Are you sure you want to block ${match.firstName || "this user"
-            }? Blocking will prevent them from seeing your profile and messaging you, and vice versa.`
+            ? `Are you sure you want to unblock ${
+                match.firstName || "this user"
+              }?`
+            : `Are you sure you want to block ${
+                match.firstName || "this user"
+              }? Blocking will prevent them from seeing your profile and messaging you, and vice versa.`
         }
         confirmText={isBlocked ? "Unblock" : "Block"}
         cancelText="Cancel"
