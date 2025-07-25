@@ -856,22 +856,7 @@ export default function OptimizedMosqueMap({
       )}
 
       {/* Zoom Controls */}
-      <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
-        <button
-          onClick={handleZoomIn}
-          className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center text-2xl font-bold border border-gray-300 hover:bg-gray-100 focus:outline-none"
-          aria-label="Zoom in"
-        >
-          +
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center text-2xl font-bold border border-gray-300 hover:bg-gray-100 focus:outline-none"
-          aria-label="Zoom out"
-        >
-          −
-        </button>
-      </div>
+      <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2"></div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 // shared / constants / backendLink.js;
-export const rootRoute = "https://mosquematch.com/api";
+export const rootRoute = "https://mosquezawaj.com/api";
 export const backendLink =
-  process.env.NEXT_PUBLIC_API_URL || "https://mosquematch.com/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://mosquezawaj.com/api";
 
 //
 // export const rootRoute = "http://localhost:5000/api";
