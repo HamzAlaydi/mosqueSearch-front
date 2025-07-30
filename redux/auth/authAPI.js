@@ -97,6 +97,14 @@ export const authAPI = createApi({
         body: { email },
       }),
     }),
+    // New endpoint for email validation
+    checkEmail: builder.mutation({
+      query: (email) => ({
+        url: "/auth/check-email",
+        method: "POST",
+        body: { email },
+      }),
+    }),
   }),
 });
 
@@ -109,4 +117,5 @@ export const {
   useResetPasswordMutation,
   useVerifyEmailMutation,
   useResendVerificationMutation,
+  useCheckEmailMutation,
 } = authAPI;

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Select from "react-select";
 
 const ALL_COUNTRIES = [
-  { code: "GB", name: "United Kingdom" },
+  { code: "GB", name: "United Kingdom" }, // Moved to top
   { code: "AF", name: "Afghanistan" },
   { code: "AX", name: "Åland Islands" },
   { code: "AL", name: "Albania" },
@@ -256,30 +256,6 @@ const ALL_COUNTRIES = [
   { code: "ZW", name: "Zimbabwe" },
 ];
 
-// Popular countries list (shown at the top of the dropdown)
-const POPULAR_COUNTRIES = [
-  "US",
-  "GB",
-  "CA",
-  "AU",
-  "DE",
-  "FR",
-  "IT",
-  "ES",
-  "NL",
-  "BR",
-  "IN",
-  "CN",
-  "JP",
-  "KR",
-  "SG",
-  "AE",
-  "SA",
-  "EG",
-  "ZA",
-  "MX",
-];
-
 // Helper function to get flag URL
 const getFlagUrl = (countryCode) => {
   return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
@@ -297,34 +273,17 @@ const CountrySelect = ({
 }) => {
   // Memoize the formatted country options
   const countryOptions = useMemo(() => {
-    // Create a single flat list with popular countries at the top
-    const popularCountries = [];
-    const otherCountries = [];
-
-    ALL_COUNTRIES.forEach((country) => {
-      const option = {
-        value: country.code,
-        label: country.name,
-        flagUrl: getFlagUrl(country.code),
-        isPopular: POPULAR_COUNTRIES.includes(country.code),
-      };
-
-      if (option.isPopular) {
-        popularCountries.push(option);
-      } else {
-        otherCountries.push(option);
-      }
-    });
-
-    // Sort popular countries by the order in POPULAR_COUNTRIES array
-    popularCountries.sort((a, b) => {
-      return (
-        POPULAR_COUNTRIES.indexOf(a.value) - POPULAR_COUNTRIES.indexOf(b.value)
-      );
-    });
-
-    // Return a flat array with popular countries first, then all others
-    return [...popularCountries, ...otherCountries];
+    // UK always first
+    const uk = ALL_COUNTRIES.find(c => c.code === "GB");
+    // All others except UK, sorted A-Z by name
+    const others = ALL_COUNTRIES.filter(c => c.code !== "GB").sort((a, b) => a.name.localeCompare(b.name));
+    // Map to select options
+    const options = [uk, ...others].map(country => ({
+      value: country.code,
+      label: country.name,
+      flagUrl: getFlagUrl(country.code),
+    }));
+    return options;
   }, []);
 
   // Find the selected country option

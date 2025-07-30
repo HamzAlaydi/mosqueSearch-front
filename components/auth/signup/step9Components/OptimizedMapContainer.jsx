@@ -35,13 +35,15 @@ const OptimizedMapContainer = ({
       </div>
 
       {/* Original MapContainer but with effectiveDistance */}
-      <MapContainer
-        userLocation={userLocation}
-        distance={effectiveDistance} // Use debounced distance value
-        attachedMosques={attachedMosques}
-        toggleMosqueAttachment={toggleMosqueAttachment}
-        setError={setError}
-      />
+      <div className="w-full h-full">
+        <MapContainer
+          userLocation={userLocation}
+          distance={effectiveDistance} // Use debounced distance value
+          attachedMosques={attachedMosques}
+          toggleMosqueAttachment={toggleMosqueAttachment}
+          setError={setError}
+        />
+      </div>
     </>
   );
 };

@@ -44,7 +44,7 @@ const SignupForm = () => {
     const resultAction = await dispatch(submitRegistration(values));
     setSubmitting(false);
     // Only show toast if on step 1 (i.e., just submitted step 9)
-    if (currentStep === 1) {
+    if (currentStep === 9) {
       if (resultAction.payload?.message) {
         toast.success(resultAction.payload.message);
       } else if (resultAction.payload?.error) {
@@ -127,97 +127,90 @@ const SignupForm = () => {
   }
 
   return (
-    <div className="auth-container">
+    <>
       {currentStep === 9 ? (
-        // No .auth-card or .auth-header for step 9, just a minimal wrapper
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "1200px",
-            margin: "0 auto",
-            padding: "2rem 0",
-          }}
-        >
-          <SignupStep9
-            onSubmit={handleSubmit}
-            prevStep={prevStep}
-            formData={formData}
-          />
-        </div>
+        // Step 9 - full screen layout without auth-container
+        <SignupStep9
+          onSubmit={handleSubmit}
+          prevStep={prevStep}
+          formData={formData}
+        />
       ) : (
-        <div className="auth-card">
-          <div className="auth-header">
-            <h1>
-              {currentStep === 1 ? "Create Account" : "Complete Your Profile"}
-            </h1>
-            <p>
-              Step {currentStep} of {totalSteps}
-            </p>
-            <ProgressBar step={currentStep} totalSteps={totalSteps} />
-          </div>
-          {currentStep === 1 && (
-            <SignupStep1 nextStep={handleStepSubmit} formData={formData} />
-          )}
-          {currentStep === 2 && (
-            <SignupStep2
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          {currentStep === 3 && (
-            <SignupStep3
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          {currentStep === 4 && (
-            <SignupStep4
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          {currentStep === 5 && (
-            <SignupStep5
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          {currentStep === 6 && (
-            <SignupStep6
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          {currentStep === 7 && (
-            <SignupStep7
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          {currentStep === 8 && (
-            <SignupStep8
-              nextStep={handleStepSubmit}
-              prevStep={prevStep}
-              formData={formData}
-            />
-          )}
-          <div className="auth-footer">
-            <p>
-              Already have an account?{" "}
-              <Link href="/auth/login" className="auth-link">
-                Sign in
-              </Link>
-            </p>
+        <div className="auth-container">
+          <div className="auth-card">
+            <div className="auth-header">
+              <h1>
+                {currentStep === 1 ? "Create Account" : "Complete Your Profile"}
+              </h1>
+              <p>
+                Step {currentStep} of {totalSteps}
+              </p>
+              <ProgressBar step={currentStep} totalSteps={totalSteps} />
+            </div>
+            {currentStep === 1 && (
+              <SignupStep1 nextStep={handleStepSubmit} formData={formData} />
+            )}
+            {currentStep === 2 && (
+              <SignupStep2
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            {currentStep === 3 && (
+              <SignupStep3
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            {currentStep === 4 && (
+              <SignupStep4
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            {currentStep === 5 && (
+              <SignupStep5
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            {currentStep === 6 && (
+              <SignupStep6
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            {currentStep === 7 && (
+              <SignupStep7
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            {currentStep === 8 && (
+              <SignupStep8
+                nextStep={handleStepSubmit}
+                prevStep={prevStep}
+                formData={formData}
+              />
+            )}
+            <div className="auth-footer">
+              <p>
+                Already have an account?{" "}
+                <Link href="/auth/login" className="auth-link">
+                  Sign in
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

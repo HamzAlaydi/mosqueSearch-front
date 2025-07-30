@@ -10,12 +10,13 @@ import {
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { calculateAge, getAvatar } from "@/shared/helper/defaultData";
+import toast from "react-hot-toast";
 import "./InterestsModal.mobile.css";
 
 export default function InterestsModal({ isOpen, onClose }) {
   const dispatch = useDispatch();
   const router = useRouter();
-  const { userInterests, loading } = useSelector((state) => state.matches);
+  const { userInterests, loading, error } = useSelector((state) => state.matches);
   const [localInterests, setLocalInterests] = useState([]);
   const [actionLoading, setActionLoading] = useState("");
 
@@ -26,8 +27,17 @@ export default function InterestsModal({ isOpen, onClose }) {
   }, [isOpen, dispatch]);
 
   useEffect(() => {
-    setLocalInterests(userInterests);
+    if (userInterests && Array.isArray(userInterests)) {
+      setLocalInterests(userInterests);
+    }
   }, [userInterests]);
+
+  // Show error toast if there's an error
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   const handleViewProfile = (userId) => {
     onClose();
@@ -35,15 +45,17 @@ export default function InterestsModal({ isOpen, onClose }) {
   };
 
   const handleRemoveInterest = async (interestId) => {
+    if (actionLoading === interestId) return; // Prevent double clicks
+    
     setActionLoading(interestId);
     try {
       await dispatch(removeInterest(interestId)).unwrap();
-      // Update local state immediately after successful removal
-      setLocalInterests((prev) =>
-        prev.filter((item) => item._id !== interestId)
-      );
+      toast.success("Removed from interests successfully");
+      // Don't manually update local state - let Redux handle it
+      // The Redux state will be updated automatically by the reducer
     } catch (error) {
       console.error("Failed to remove interest:", error);
+      toast.error("Failed to remove from interests. Please try again.");
     } finally {
       setActionLoading("");
     }
@@ -91,7 +103,7 @@ export default function InterestsModal({ isOpen, onClose }) {
             <div className="grid grid-cols-1 gap-4">
               {localInterests.map((interest, index) => (
                 <div
-                  key={interest._id || index}
+                  key={interest._id || `interest-${index}`}
                   className="border border-gray-200 rounded-lg p-4 flex items-center bg-white"
                 >
                   <div className="h-16 w-16 bg-gray-200 rounded-full mr-4 overflow-hidden">
@@ -143,7 +155,7 @@ export default function InterestsModal({ isOpen, onClose }) {
                     <button
                       onClick={() => handleRemoveInterest(interest._id)}
                       disabled={actionLoading === interest._id}
-                      className="p-2 text-red-500 rounded-full hover:bg-red-50 transition"
+                      className="p-2 text-red-500 rounded-full hover:bg-red-50 transition disabled:opacity-50"
                     >
                       {actionLoading === interest._id ? (
                         <Loader size={16} className="animate-spin" />

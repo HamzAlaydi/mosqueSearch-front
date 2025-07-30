@@ -7,6 +7,7 @@ import {
   Marker,
   InfoWindow,
   Circle,
+  OverlayView,
 } from "@react-google-maps/api";
 import { MarkerClustererF } from "@react-google-maps/api";
 import {
@@ -107,10 +108,12 @@ const MapContainer = ({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [selectedMosque, setSelectedMosque] = useState(null);
   const [hoveredMosqueId, setHoveredMosqueId] = useState(null);
+  const [hoveredLabelId, setHoveredLabelId] = useState(null);
   const [infoWindowOpen, setInfoWindowOpen] = useState(false);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null); // Store map instance in a ref for persistence
+  const [mapZoom, setMapZoom] = useState(12);
 
   // Use the useLoadScript hook instead of LoadScript component
   const { isLoaded, loadError } = useLoadScript({
@@ -429,13 +432,18 @@ const MapContainer = ({
     setSelectedMosque(null);
     setInfoWindowOpen(false);
     setHoveredMosqueId(null);
+    setHoveredLabelId(null);
   }, []);
 
-  // Map load handler
+  // On map load, also set up zoom listener
   const onMapLoad = useCallback((mapInstance) => {
     mapInstanceRef.current = mapInstance; // Store in ref for persistence
     setMap(mapInstance);
     setIsMapLoaded(true);
+    setMapZoom(mapInstance.getZoom());
+    mapInstance.addListener('zoom_changed', () => {
+      setMapZoom(mapInstance.getZoom());
+    });
   }, []);
 
   // Trigger map fitting when filtered mosques or map state changes
@@ -603,6 +611,21 @@ const MapContainer = ({
     });
   };
 
+  // Helper to get pixel position for a lat/lng
+  const getPixelPosition = (lat, lng) => {
+    if (!mapInstanceRef.current) return null;
+    const projection = mapInstanceRef.current.getProjection && mapInstanceRef.current.getProjection();
+    if (!projection) return null;
+    const point = projection.fromLatLngToPoint(new window.google.maps.LatLng(lat, lng));
+    if (!point) return null;
+    // Google Maps API returns point in world coordinates, need to convert to pixel
+    const scale = 1 << mapInstanceRef.current.getZoom();
+    return {
+      x: point.x * scale,
+      y: point.y * scale,
+    };
+  };
+
   // Render InfoWindow content
   const renderInfoWindowContent = useCallback(
     (mosque) => {
@@ -745,16 +768,17 @@ const MapContainer = ({
 
   return (
     <div
-      className="mb-4 relative"
-      style={{ width: "100%", height: "100%", minHeight: "400px" }}
+      className="relative w-full h-full"
+      style={{ width: "100%", height: "100%", minHeight: "300px" }}
     >
       {/* This div will contain the actual map element */}
       <div
         id="google-map-container"
+        className="w-full h-full"
         style={{
           width: "100%",
           height: "100%",
-          minHeight: "400px",
+          minHeight: "300px",
           borderRadius: "8px",
           overflow: "hidden",
           position: "relative",
@@ -764,14 +788,17 @@ const MapContainer = ({
           mapContainerStyle={{
             width: "100%",
             height: "100%",
-            minHeight: "400px",
+            minHeight: "300px",
             borderRadius: "8px",
           }}
           center={userLocation || DEFAULT_CENTER}
           zoom={userLocation ? 12 : 2}
           options={MAP_OPTIONS}
           onLoad={onMapLoad}
-          onClick={handleInfoWindowClose}
+          onClick={() => {
+            handleInfoWindowClose();
+            setHoveredLabelId(null);
+          }}
         >
           {isMapLoaded && userLocation && (
             <>
@@ -815,7 +842,10 @@ const MapContainer = ({
                     <Marker
                       key={mosque.id}
                       position={mosque.location}
-                      onClick={() => toggleMosqueAttachment(mosque)}
+                      onClick={() => {
+                        toggleMosqueAttachment(mosque);
+                        setHoveredLabelId(null);
+                      }}
                       onMouseOver={() => setHoveredMosqueId(mosque.id)}
                       onMouseOut={() => setHoveredMosqueId(null)}
                       icon={createMarkerIcon(
@@ -830,7 +860,61 @@ const MapContainer = ({
               }
             </MarkerClustererF>
           )}
+
+          {/* Mosque name labels when zoomed in */}
+          {isMapLoaded && mapZoom >= 15 && filteredMosques.map((mosque) => {
+            if (!mosque.location) return null;
+            return (
+              <OverlayView
+                key={mosque.id}
+                position={{
+                  lat: mosque.location.lat,
+                  lng: mosque.location.lng,
+                }}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <div
+                  style={{
+                    background: "none",
+                    color: "#d32f2f",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    fontFamily: "Segoe UI, Roboto, Arial, sans-serif",
+                    whiteSpace: "nowrap",
+                    marginLeft: 22,
+                    marginTop: -8,
+                    display: "inline-block",
+                    padding: 0,
+                    border: "none",
+                    boxShadow: "none",
+                    letterSpacing: "0.01em",
+                    textShadow: "0 1px 0 #fff, 0 1.5px 2px rgba(0,0,0,0.08)",
+                    zIndex: hoveredLabelId === mosque.id ? 9999 : 1000,
+                  }}
+                  onMouseEnter={() => setHoveredLabelId(mosque.id)}
+                  onMouseLeave={() => setHoveredLabelId(null)}
+                >
+                  {mosque.name}
+                </div>
+              </OverlayView>
+            );
+          })}
         </GoogleMap>
+        {/* Debug info */}
+        {isMapLoaded && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            padding: '5px',
+            fontSize: '12px',
+            zIndex: 10000
+          }}>
+            Zoom: {mapZoom} | Mosques: {filteredMosques.length} | Show Labels: {mapZoom >= 15 ? 'YES' : 'NO'}
+          </div>
+        )}
       </div>
 
       {/* UI overlays */}

@@ -3,6 +3,8 @@ import * as Yup from "yup";
 import Link from "next/link";
 import LocationSelect from "@/components/common/LocationSelect";
 import LanguageSelect from "@/components/common/LanguageSelect";
+import { useState } from "react";
+import { useCheckEmailMutation } from "@/redux/auth/authAPI";
 
 // Step 1 Validation schema
 const imamSignupStep1Schema = Yup.object().shape({
@@ -28,6 +30,34 @@ const imamSignupStep1Schema = Yup.object().shape({
 });
 
 const ImamSignupStep1 = ({ onSubmit, formData }) => {
+  const [checkEmail, { isLoading: isCheckingEmail }] = useCheckEmailMutation();
+  const [emailError, setEmailError] = useState("");
+
+  // Custom validation function for email
+  const validateEmail = async (email) => {
+    if (!email) return "Email address is required";
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address";
+    }
+
+    try {
+      const result = await checkEmail(email).unwrap();
+      if (result.exists) {
+        setEmailError("This email address is already registered");
+        return "This email address is already registered";
+      } else {
+        setEmailError("");
+        return undefined; // No error
+      }
+    } catch (error) {
+      console.error("Email validation error:", error);
+      return "Error checking email availability. Please try again.";
+    }
+  };
+
   const initialValues = {
     firstName: formData.firstName || "",
     lastName: formData.lastName || "",
@@ -45,9 +75,20 @@ const ImamSignupStep1 = ({ onSubmit, formData }) => {
     <Formik
       initialValues={initialValues}
       validationSchema={imamSignupStep1Schema}
-      onSubmit={onSubmit}
+      onSubmit={async (values, { setSubmitting, setFieldError }) => {
+        // Validate email before proceeding
+        const emailValidationError = await validateEmail(values.email);
+        if (emailValidationError) {
+          setFieldError("email", emailValidationError);
+          setSubmitting(false);
+          return;
+        }
+
+        // If email is valid, proceed to next step
+        onSubmit(values);
+      }}
     >
-      {({ setFieldValue, values, isSubmitting }) => (
+      {({ setFieldValue, values, isSubmitting, setFieldError }) => (
         <Form className="auth-form">
           {/* First Name and Last Name in the same row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,12 +132,26 @@ const ImamSignupStep1 = ({ onSubmit, formData }) => {
               id="email"
               className="form-input"
               placeholder="Enter your email address"
+              onBlur={async (e) => {
+                const email = e.target.value;
+                if (email) {
+                  const error = await validateEmail(email);
+                  if (error) {
+                    setFieldError("email", error);
+                  }
+                }
+              }}
             />
             <ErrorMessage
               name="email"
               component="div"
               className="error-message"
             />
+            {isCheckingEmail && (
+              <div className="text-blue-600 text-sm mt-1">
+                Checking email availability...
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -197,8 +252,12 @@ const ImamSignupStep1 = ({ onSubmit, formData }) => {
             />
           </div>
 
-          <button type="submit" className="auth-button" disabled={isSubmitting}>
-            {isSubmitting ? "Processing..." : "Next"}
+          <button 
+            type="submit" 
+            className="auth-button" 
+            disabled={isSubmitting || isCheckingEmail}
+          >
+            {isSubmitting ? "Validating..." : "Next"}
           </button>
         </Form>
       )}

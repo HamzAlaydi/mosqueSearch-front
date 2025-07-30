@@ -317,7 +317,6 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
   return (
     <div className="relative mb-4">
       <div className="flex items-center border border-gray-300 rounded-full shadow-sm mb-2">
-        {/* <MapPin size={16} className="text-primary ml-3" /> */}
         <input
           ref={searchInputRef}
           type="text"
@@ -326,7 +325,7 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
               ? "Search for any location, city, zip code, or address"
               : "Loading map services... You can type to search once ready"
           }
-          className="flex-grow px-2 py-2 focus:outline-none text-sm rounded-full"
+          className="flex-grow px-3 py-3 focus:outline-none text-sm rounded-full"
           value={searchQuery}
           onChange={(e) => {
             const value = e.target.value;
@@ -344,7 +343,7 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
         {searchQuery && (
           <button
             type="button"
-            className="p-1 text-gray-500 hover:text-gray-700"
+            className="p-2 text-gray-500 hover:text-gray-700"
             onClick={() => {
               setSearchQuery("");
               setShowSearchResults(false);
@@ -366,15 +365,15 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
           </button>
           <button
             type="button"
-            className="bg-primary p-1.5 rounded-full text-black mr-1 flex items-center justify-center h-8 w-8 min-w-0 min-h-0"
+            className="bg-primary p-2 rounded-full text-black mr-1 flex items-center justify-center h-10 w-10 min-w-0 min-h-0"
             onClick={() => handleLocationSearch(searchQuery)}
             disabled={searchingLocation || !searchQuery.trim()}
             aria-label="Search locations"
           >
             {searchingLocation ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" />
             ) : (
-              <Search size={14} />
+              <Search size={16} />
             )}
           </button>
         </div>
@@ -406,14 +405,14 @@ const LocationSearch = ({ userLocation, setUserLocation, setError }) => {
           {searchResults.map((result, index) => (
             <div
               key={index}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+              className="px-4 py-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
               onClick={() => handleSelectLocation(result)}
               role="option"
               aria-selected="false"
             >
-              <div className="flex items-center gap-2">
-                <MapPin size={14} className="text-gray-400 flex-shrink-0" />
-                <div className="overflow-hidden">
+              <div className="flex items-center gap-3">
+                <MapPin size={16} className="text-gray-400 flex-shrink-0" />
+                <div className="overflow-hidden flex-1">
                   <div className="font-medium text-sm truncate">
                     {result.mainText}
                   </div>

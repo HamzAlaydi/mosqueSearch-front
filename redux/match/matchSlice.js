@@ -624,8 +624,21 @@ const matchSlice = createSlice({
         // when the selection changes, or clearAllFilters.
         // state.matches = []; // Don't clear unless explicitly removing all selected mosques
       })
+      .addCase(fetchUserInterests.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchUserInterests.fulfilled, (state, action) => {
         state.userInterests = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchUserInterests.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(addInterest.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
       .addCase(addInterest.fulfilled, (state, action) => {
         // The payload is the femaleId that was successfully interested in
@@ -655,11 +668,35 @@ const matchSlice = createSlice({
           displayedMatch.isInterested = true;
         }
 
-        // Add to userInterests list, if it's not already there (assuming userInterests stores IDs or full objects)
-        if (!state.userInterests.includes(interestedFemaleId)) {
-          // Assuming userInterests stores IDs
-          state.userInterests.push(interestedFemaleId);
+        // Add to userInterests list - handle full objects properly
+        const existingInterest = state.userInterests.find(
+          (item) => item._id === interestedFemaleId
+        );
+        if (!existingInterest) {
+          // We need to find the full user object from matches to add to interests
+          const userToAdd = state.matches.find(
+            (match) => match._id === interestedFemaleId
+          ) || 
+          state.professionalMatches.find(
+            (match) => match._id === interestedFemaleId
+          ) ||
+          state.MosqueZawajes.find(
+            (match) => match._id === interestedFemaleId
+          );
+          
+          if (userToAdd) {
+            state.userInterests.push(userToAdd);
+          }
         }
+        state.loading = false;
+      })
+      .addCase(addInterest.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(removeInterest.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
       .addCase(removeInterest.fulfilled, (state, action) => {
         // The payload is the femaleId that was successfully de-interested from
@@ -689,10 +726,22 @@ const matchSlice = createSlice({
           displayedMatch.isInterested = false;
         }
 
-        // Remove from userInterests list
+        // Remove from userInterests list - handle both ID strings and full objects
         state.userInterests = state.userInterests.filter(
-          (item) => item !== deinterestedFemaleId
-        ); // Assuming userInterests stores IDs
+          (item) => {
+            // If item is a string (ID), compare directly
+            if (typeof item === 'string') {
+              return item !== deinterestedFemaleId;
+            }
+            // If item is an object, compare by _id
+            return item._id !== deinterestedFemaleId;
+          }
+        );
+        state.loading = false;
+      })
+      .addCase(removeInterest.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
       .addCase(initializeUserMosques.fulfilled, (state, action) => {
         const defaultMosques = action.payload;
